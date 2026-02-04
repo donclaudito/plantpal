@@ -38,10 +38,16 @@ export default function Shifts() {
 
   const queryClient = useQueryClient();
 
-  const { data: user } = useQuery({
+  const { data: user, isLoading: isLoadingUser, error: userError } = useQuery({
     queryKey: ['user'],
     queryFn: () => base44.auth.me(),
   });
+
+  React.useEffect(() => {
+    if (userError && !isLoadingUser) {
+      base44.auth.redirectToLogin();
+    }
+  }, [userError, isLoadingUser]);
 
   const { data: shifts = [] } = useQuery({
     queryKey: ['shifts', user?.email],
