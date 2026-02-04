@@ -268,17 +268,49 @@ export default function Relatorios() {
       </div>
 
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-md">
-        <label className="block text-xs font-black text-slate-600 uppercase mb-2">Mês</label>
-        <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {availableMonths.map(month => (
-              <SelectItem key={month} value={month}>{formatMonth(month)}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-xs font-black text-slate-600 uppercase mb-2">Mês</label>
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {availableMonths.map(month => (
+                  <SelectItem key={month} value={month}>{formatMonth(month)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="block text-xs font-black text-slate-600 uppercase mb-2">Hospital</label>
+            <Select value={selectedHospital} onValueChange={setSelectedHospital}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {hospitals.map(h => (
+                  <SelectItem key={h.id} value={h.name}>{h.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="block text-xs font-black text-slate-600 uppercase mb-2">Médico</label>
+            <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {doctors.map(d => (
+                  <SelectItem key={d.id} value={d.full_name}>{d.full_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
 
       {/* Relatório por Hospital */}
