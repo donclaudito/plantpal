@@ -3,6 +3,28 @@ import { Trash2, Check, Plus } from 'lucide-react';
 
 const weekDays = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
 
+const getDoctorColor = (doctorName) => {
+  if (!doctorName) return { bg: 'bg-blue-100 dark:bg-blue-900/30', border: 'border-blue-300 dark:border-blue-700' };
+  
+  const colors = [
+    { bg: 'bg-blue-100 dark:bg-blue-900/30', border: 'border-blue-300 dark:border-blue-700' },
+    { bg: 'bg-purple-100 dark:bg-purple-900/30', border: 'border-purple-300 dark:border-purple-700' },
+    { bg: 'bg-pink-100 dark:bg-pink-900/30', border: 'border-pink-300 dark:border-pink-700' },
+    { bg: 'bg-orange-100 dark:bg-orange-900/30', border: 'border-orange-300 dark:border-orange-700' },
+    { bg: 'bg-teal-100 dark:bg-teal-900/30', border: 'border-teal-300 dark:border-teal-700' },
+    { bg: 'bg-indigo-100 dark:bg-indigo-900/30', border: 'border-indigo-300 dark:border-indigo-700' },
+    { bg: 'bg-cyan-100 dark:bg-cyan-900/30', border: 'border-cyan-300 dark:border-cyan-700' },
+    { bg: 'bg-amber-100 dark:bg-amber-900/30', border: 'border-amber-300 dark:border-amber-700' },
+  ];
+  
+  let hash = 0;
+  for (let i = 0; i < doctorName.length; i++) {
+    hash = doctorName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  return colors[Math.abs(hash) % colors.length];
+};
+
 export default function CalendarView({ 
   calendarDays, 
   currentMonth, 
@@ -76,20 +98,21 @@ export default function CalendarView({
                       {dayData.day}
                     </button>
                     
-                    {dayData.shifts.length === 0 && (
-                      <button
-                        onClick={() => onDayClick(dayData.date)}
-                        className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100"
-                      >
-                        <Plus size={14} />
-                      </button>
-                    )}
+                    <button
+                      onClick={() => onDayClick(dayData.date)}
+                      className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100"
+                    >
+                      <Plus size={14} />
+                    </button>
                   </div>
                   
                   <div className="space-y-1.5">
                     {dayData.shifts.map(shift => {
                       const isSelected = selectedShifts.includes(shift.id);
                       const isDragging = draggedShift?.id === shift.id;
+                      const isPaid = shift.status === 'Pago';
+                      const doctorColor = getDoctorColor(shift.doctor_name);
+                      
                       return (
                         <div
                           key={shift.id}
@@ -99,9 +122,9 @@ export default function CalendarView({
                           className={`group relative p-2 rounded-xl text-xs transition-all cursor-move hover:shadow-lg ${
                             isDragging ? 'opacity-50 scale-95' : ''
                           } ${
-                            shift.status === 'Pago'
-                              ? 'bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700'
-                              : 'bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700'
+                            isPaid
+                              ? 'bg-green-100 dark:bg-green-900/30 border-2 border-green-400 dark:border-green-600'
+                              : `${doctorColor.bg} border ${doctorColor.border}`
                           } ${isSelected ? 'ring-2 ring-blue-600 dark:ring-blue-400' : ''}`}
                           onClick={(e) => {
                             if (!isDragging) {
