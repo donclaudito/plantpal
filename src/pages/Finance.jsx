@@ -76,12 +76,14 @@ export default function Finance() {
 
     if (!config) return 0;
 
-    if (period === '6h') return config.valor_6h || 0;
-    if (period === '12h') return config.valor_12h || 0;
-    if (period === 'retaguarda') return config.valor_retaguarda || 0;
-    if (period === 'coordenador') return config.valor_coordenador || 0;
-
-    return 0;
+    switch (period) {
+      case '6h': return config.valor_6h || 0;
+      case '12h':
+      case 'mais tarde': return config.valor_12h || 0; // 'mais tarde' falls back to '12h' value
+      case 'retaguarda': return config.valor_retaguarda || 0;
+      case 'coordenador': return config.valor_coordenador || 0;
+      default: return 0;
+    }
   };
 
   const calculateAllDiscounts = (doctorId, hospitalId, baseValue) => {
@@ -171,19 +173,19 @@ export default function Finance() {
           grossValue: 0,
           discountValue: 0,
           netValue: 0,
-          discountDetails: null,
+          discountDetails: [], // Inicializar como array vazio
         };
       }
 
       const baseValue = calculateBaseValue(doctorId, hospitalId, period);
-      const discountResult = calculateAllDiscounts(doctorId, hospitalId, baseValue);
-      const netValue = baseValue - discountResult.totalValue;
+      const discountResult = calculateAllDiscounts(doctorId, hospitalId, baseValue); // Usar calculateAllDiscounts
+      const netValue = baseValue - discountResult.totalValue; // Usar totalValue
 
       grouped[key].quantity += 1;
       grouped[key].grossValue += baseValue;
-      grouped[key].discountValue += discountResult.totalValue;
+      grouped[key].discountValue += discountResult.totalValue; // Usar totalValue
       grouped[key].netValue += netValue;
-      if (discountResult.details.length > 0) {
+      if (discountResult.details.length > 0) { // Verificar se há detalhes
         grouped[key].discountDetails = discountResult.details;
       }
     });
