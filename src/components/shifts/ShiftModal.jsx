@@ -286,12 +286,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
             </div>
           </div>
 
-          {formData.value > 0 && (
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border-2 border-blue-200 dark:border-blue-800">
-              <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Valor calculado automaticamente:</p>
-              <p className="text-2xl font-black text-blue-600 dark:text-blue-400">R$ {formData.value.toFixed(2)}</p>
-            </div>
-          )}
+
 
           <div className="flex gap-3 pt-4">
             <button

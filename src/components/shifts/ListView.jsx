@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, Calendar, Clock, DollarSign } from 'lucide-react';
+import { Trash2, Calendar, Clock } from 'lucide-react';
 
 export default function ListView({ 
   shifts, 
@@ -63,7 +63,7 @@ export default function ListView({
                 </button>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-700 p-3 rounded-xl">
                   <Calendar className="text-blue-600 dark:text-blue-400" size={20} />
                   <div>
@@ -82,15 +82,7 @@ export default function ListView({
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-700 p-3 rounded-xl">
-                  <DollarSign className="text-green-600 dark:text-green-400" size={20} />
-                  <div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase">Valor</p>
-                    <p className="text-sm font-black text-slate-900 dark:text-white">
-                      R$ {shift.value.toFixed(2)}
-                    </p>
-                  </div>
-                </div>
+
               </div>
               
               <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700">
