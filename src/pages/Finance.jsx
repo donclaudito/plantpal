@@ -62,6 +62,34 @@ export default function Finance() {
     enabled: !!user,
   });
 
+  const calculateBaseValue = (doctorId, hospitalId, period) => {
+    let config = configValores.find(c => c.doctor_id === doctorId && c.hospital_id === hospitalId);
+    if (!config) {
+      config = configValores.find(c => c.doctor_id === doctorId && !c.hospital_id);
+    }
+    if (!config) {
+      config = configValores.find(c => !c.doctor_id && c.hospital_id === hospitalId);
+    }
+    if (!config) {
+      config = configValores.find(c => !c.doctor_id && !c.hospital_id);
+    }
+
+    if (!config) return 0;
+
+    switch (period) {
+      case '6h':
+        return config.valor_6h || 0;
+      case '12h':
+        return config.valor_12h || 0;
+      case 'retaguarda':
+        return config.valor_retaguarda || 0;
+      case 'coordenador':
+        return config.valor_coordenador || 0;
+      default:
+        return 0;
+    }
+  };
+
   const calculateDiscount = (doctorId, hospitalId, baseValue) => {
     let desconto = configDescontos.find(d => d.doctor_id === doctorId && d.hospital_id === hospitalId);
     if (!desconto) {
@@ -130,10 +158,14 @@ export default function Finance() {
       const discount = calculateDiscount(doctorId, hospitalId, baseValue);
       const netValue = baseValue - discount;
 
+      const calculatedBaseValue = calculateBaseValue(doctorId, hospitalId, period);
+      const calculatedDiscount = calculateDiscount(doctorId, hospitalId, calculatedBaseValue);
+      const calculatedNetValue = calculatedBaseValue - calculatedDiscount;
+
       grouped[key].quantity += 1;
-      grouped[key].grossValue += baseValue;
-      grouped[key].discountValue += discount;
-      grouped[key].netValue += netValue;
+      grouped[key].grossValue += calculatedBaseValue;
+      grouped[key].discountValue += calculatedDiscount;
+      grouped[key].netValue += calculatedNetValue;
     });
 
     return Object.values(grouped);
