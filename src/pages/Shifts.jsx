@@ -7,11 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Download, Upload, FileText, Edit, Trash2, Calendar, LayoutGrid, List } from 'lucide-react';
+import { Plus, Download, Upload, FileText, Edit, Trash2, Calendar as CalendarIcon, LayoutGrid, List, CalendarDays } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import MonthlyCalendarView from '../components/shifts/MonthlyCalendarView';
 
 export default function Shifts() {
   const [showForm, setShowForm] = useState(false);
@@ -27,8 +28,10 @@ export default function Shifts() {
     notes: ''
   });
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterDoctor, setFilterDoctor] = useState('all');
+  const [filterHospital, setFilterHospital] = useState('all');
   const [selectedShifts, setSelectedShifts] = useState([]);
-  const [viewMode, setViewMode] = useState('list'); // 'list' or 'grid'
+  const [viewMode, setViewMode] = useState('list'); // 'list', 'grid', or 'calendar'
 
   const queryClient = useQueryClient();
 
@@ -40,6 +43,11 @@ export default function Shifts() {
   const { data: doctors = [] } = useQuery({
     queryKey: ['doctors'],
     queryFn: () => base44.entities.Doctor.list('-created_date')
+  });
+
+  const { data: hospitals = [] } = useQuery({
+    queryKey: ['hospitals'],
+    queryFn: () => base44.entities.Hospital.list('-created_date')
   });
 
   const createMutation = useMutation({
@@ -252,9 +260,23 @@ export default function Shifts() {
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
-  const filteredShifts = filterStatus === 'all' 
-    ? shifts 
-    : shifts.filter(s => s.status === filterStatus);
+  const filteredShifts = shifts.filter(s => {
+    const statusMatch = filterStatus === 'all' || s.status === filterStatus;
+    const doctorMatch = filterDoctor === 'all' || s.doctor_name === filterDoctor;
+    const hospitalMatch = filterHospital === 'all' || s.hospital === filterHospital;
+    return statusMatch && doctorMatch && hospitalMatch;
+  });
+
+  const uniqueDoctors = [...new Set(shifts.map(s => s.doctor_name))].sort();
+  const uniqueHospitals = [...new Set(shifts.map(s => s.hospital))].sort();
+
+  const handleAddShiftWithDate = (dateStr) => {
+    setFormData({
+      ...formData,
+      date: dateStr
+    });
+    setShowForm(true);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
@@ -333,7 +355,7 @@ export default function Shifts() {
                     variant={viewMode === 'list' ? 'default' : 'ghost'}
                     size="sm"
                     onClick={() => setViewMode('list')}
-                    className="rounded-r-none"
+                    className="rounded-r-none border-r"
                   >
                     <List className="w-4 h-4" />
                   </Button>
@@ -341,23 +363,63 @@ export default function Shifts() {
                     variant={viewMode === 'grid' ? 'default' : 'ghost'}
                     size="sm"
                     onClick={() => setViewMode('grid')}
-                    className="rounded-l-none"
+                    className="rounded-none border-r"
                   >
                     <LayoutGrid className="w-4 h-4" />
                   </Button>
+                  <Button
+                    variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('calendar')}
+                    className="rounded-l-none"
+                  >
+                    <CalendarDays className="w-4 h-4" />
+                  </Button>
                 </div>
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Filtrar Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="Agendado">Agendado</SelectItem>
-                    <SelectItem value="Realizado">Realizado</SelectItem>
-                    <SelectItem value="Cancelado">Cancelado</SelectItem>
-                    <SelectItem value="Pago">Pago</SelectItem>
-                  </SelectContent>
-                </Select>
+                {viewMode === 'calendar' && (
+                  <>
+                    <Select value={filterDoctor} onValueChange={setFilterDoctor}>
+                      <SelectTrigger className="w-40">
+                        <SelectValue placeholder="Filtrar Médico" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos Médicos</SelectItem>
+                        {uniqueDoctors.map((doctor) => (
+                          <SelectItem key={doctor} value={doctor}>
+                            {doctor}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={filterHospital} onValueChange={setFilterHospital}>
+                      <SelectTrigger className="w-40">
+                        <SelectValue placeholder="Filtrar Hospital" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos Hospitais</SelectItem>
+                        {uniqueHospitals.map((hospital) => (
+                          <SelectItem key={hospital} value={hospital}>
+                            {hospital}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
+                {viewMode !== 'calendar' && (
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="Filtrar Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="Agendado">Agendado</SelectItem>
+                      <SelectItem value="Realizado">Realizado</SelectItem>
+                      <SelectItem value="Cancelado">Cancelado</SelectItem>
+                      <SelectItem value="Pago">Pago</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
                 {selectedShifts.length > 0 && (
                   <Button variant="destructive" size="sm" onClick={handleDeleteSelected} className="gap-2">
                     <Trash2 className="w-4 h-4" />
@@ -374,6 +436,15 @@ export default function Shifts() {
           <CardContent>
             {isLoading ? (
               <p className="text-center text-gray-600">Carregando...</p>
+            ) : viewMode === 'calendar' ? (
+              <MonthlyCalendarView
+                shifts={shifts}
+                filterDoctor={filterDoctor}
+                filterHospital={filterHospital}
+                onAddShift={handleAddShiftWithDate}
+                onDeleteShift={(id) => deleteMutation.mutate(id)}
+                getStatusColor={getStatusColor}
+              />
             ) : filteredShifts.length === 0 ? (
               <p className="text-center text-gray-600">Nenhum plantão encontrado</p>
             ) : viewMode === 'list' ? (
@@ -392,7 +463,7 @@ export default function Shifts() {
                       />
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <Calendar className="w-4 h-4 text-gray-500" />
+                          <CalendarIcon className="w-4 h-4 text-gray-500" />
                           <span className="font-semibold text-gray-900">
                             {format(new Date(shift.date), "dd/MM/yyyy", { locale: ptBR })}
                           </span>
@@ -455,7 +526,7 @@ export default function Shifts() {
                         </div>
                       </div>
                       <CardTitle className="text-lg flex items-center gap-2 mt-2">
-                        <Calendar className="w-5 h-5 text-blue-600" />
+                        <CalendarIcon className="w-5 h-5 text-blue-600" />
                         {format(new Date(shift.date), "dd/MM/yyyy", { locale: ptBR })}
                       </CardTitle>
                     </CardHeader>
