@@ -6,7 +6,7 @@ import CalendarView from '@/components/shifts/CalendarView';
 import ListView from '@/components/shifts/ListView';
 import ShiftModal from '@/components/shifts/ShiftModal';
 import ShiftDetailsModal from '@/components/shifts/ShiftDetailsModal';
-import ImportShifts from '@/components/shifts/ImportShifts';
+import ImportShiftsCSV from '@/components/shifts/ImportShiftsCSV';
 import DeleteConfirmation from '@/components/common/DeleteConfirmation';
 import Toast from '@/components/common/Toast';
 
