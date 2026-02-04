@@ -39,13 +39,19 @@ export default function Deposits() {
 
   const { data: doctors = [] } = useQuery({
     queryKey: ['doctors', user?.email],
-    queryFn: () => base44.entities.Doctor.list('full_name'),
+    queryFn: async () => {
+      const all = await base44.entities.Doctor.list('full_name');
+      return all.filter(d => d.created_by === user?.email);
+    },
     enabled: !!user,
   });
 
   const { data: hospitals = [] } = useQuery({
     queryKey: ['hospitals', user?.email],
-    queryFn: () => base44.entities.Hospital.list('name'),
+    queryFn: async () => {
+      const all = await base44.entities.Hospital.list('name');
+      return all.filter(h => h.created_by === user?.email);
+    },
     enabled: !!user,
   });
 
