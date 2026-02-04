@@ -253,9 +253,26 @@ export default function Settings() {
                           {config.hospital_id ? getHospitalName(config.hospital_id) : 'Todos os hospitais'}
                         </p>
                         <p className="text-sm text-gray-600 mt-1">{config.descricao}</p>
-                        <p className="text-lg font-bold text-red-600 mt-2">
-                          {config.tipo_desconto === 'percentual' ? `${config.valor_desconto}%` : `R$ ${config.valor_desconto.toFixed(2)}`}
-                        </p>
+                        <div className="mt-2 space-y-1">
+                          <p className="text-sm">
+                            <span className="text-gray-600">Desconto:</span>
+                            <span className="font-bold text-orange-600 ml-2">
+                              {config.tipo_desconto === 'percentual' ? `${config.valor_desconto}%` : `R$ ${config.valor_desconto.toFixed(2)}`}
+                            </span>
+                          </p>
+                          {config.contador_percentual > 0 && (
+                            <p className="text-sm">
+                              <span className="text-gray-600">Contador:</span>
+                              <span className="font-bold text-purple-600 ml-2">{config.contador_percentual}%</span>
+                            </p>
+                          )}
+                          {config.imposto_percentual > 0 && (
+                            <p className="text-sm">
+                              <span className="text-gray-600">Imposto:</span>
+                              <span className="font-bold text-pink-600 ml-2">{config.imposto_percentual}%</span>
+                            </p>
+                          )}
+                        </div>
                       </div>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" onClick={() => setEditingDesconto(config)}>
@@ -358,6 +375,8 @@ function DescontoForm({ doctors, hospitals, initialData, onSave, onCancel }) {
     hospital_id: '',
     tipo_desconto: 'percentual',
     valor_desconto: 0,
+    contador_percentual: 0,
+    imposto_percentual: 0,
     descricao: '',
   });
 
@@ -410,6 +429,16 @@ function DescontoForm({ doctors, hospitals, initialData, onSave, onCancel }) {
         <div>
           <Label>Valor do Desconto</Label>
           <Input type="number" step="0.01" value={formData.valor_desconto} onChange={(e) => setFormData({ ...formData, valor_desconto: parseFloat(e.target.value) || 0 })} />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <Label>Contador (%)</Label>
+          <Input type="number" step="0.01" value={formData.contador_percentual || ''} onChange={(e) => setFormData({ ...formData, contador_percentual: parseFloat(e.target.value) || 0 })} placeholder="Ex: 5" />
+        </div>
+        <div>
+          <Label>Imposto (%)</Label>
+          <Input type="number" step="0.01" value={formData.imposto_percentual || ''} onChange={(e) => setFormData({ ...formData, imposto_percentual: parseFloat(e.target.value) || 0 })} placeholder="Ex: 15" />
         </div>
         <div>
           <Label>Descrição</Label>
