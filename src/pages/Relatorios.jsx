@@ -193,7 +193,7 @@ export default function Relatorios() {
       byDoctor: Object.values(byDoctor),
       byDoctorHospital: Object.values(byDoctorHospital),
     };
-  }, [shifts, selectedMonth, configValores, configDescontos]);
+  }, [shifts, selectedMonth, selectedHospital, selectedDoctor, configValores, configDescontos]);
 
   const availableMonths = useMemo(() => {
     const months = new Set();
