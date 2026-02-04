@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Download, Upload, FileText, Edit, Trash2, Calendar } from 'lucide-react';
+import { Plus, Download, Upload, FileText, Edit, Trash2, Calendar, LayoutGrid, List } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -28,6 +28,7 @@ export default function Shifts() {
   });
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedShifts, setSelectedShifts] = useState([]);
+  const [viewMode, setViewMode] = useState('list'); // 'list' or 'grid'
 
   const queryClient = useQueryClient();
 
@@ -281,6 +282,24 @@ export default function Shifts() {
             <div className="flex justify-between items-center">
               <CardTitle>Lista de Plantões</CardTitle>
               <div className="flex gap-2">
+                <div className="flex border rounded-lg">
+                  <Button
+                    variant={viewMode === 'list' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('list')}
+                    className="rounded-r-none"
+                  >
+                    <List className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('grid')}
+                    className="rounded-l-none"
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                  </Button>
+                </div>
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
                   <SelectTrigger className="w-40">
                     <SelectValue placeholder="Filtrar Status" />
@@ -311,7 +330,7 @@ export default function Shifts() {
               <p className="text-center text-gray-600">Carregando...</p>
             ) : filteredShifts.length === 0 ? (
               <p className="text-center text-gray-600">Nenhum plantão encontrado</p>
-            ) : (
+            ) : viewMode === 'list' ? (
               <div className="space-y-2">
                 {filteredShifts.map((shift) => (
                   <div
@@ -362,6 +381,67 @@ export default function Shifts() {
                       </Button>
                     </div>
                   </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredShifts.map((shift) => (
+                  <Card key={shift.id} className="hover:shadow-lg transition-shadow">
+                    <CardHeader className="pb-3">
+                      <div className="flex justify-between items-start">
+                        <input
+                          type="checkbox"
+                          checked={selectedShifts.includes(shift.id)}
+                          onChange={() => toggleSelectShift(shift.id)}
+                          className="w-4 h-4 mt-1"
+                        />
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(shift)}>
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteMutation.mutate(shift.id)}
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </Button>
+                        </div>
+                      </div>
+                      <CardTitle className="text-lg flex items-center gap-2 mt-2">
+                        <Calendar className="w-5 h-5 text-blue-600" />
+                        {format(new Date(shift.date), "dd/MM/yyyy", { locale: ptBR })}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <div className="text-xs text-gray-600 mb-1">Médico</div>
+                        <div className="font-semibold">{shift.doctor_name}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-600 mb-1">Hospital</div>
+                        <div className="text-sm">{shift.hospital}</div>
+                      </div>
+                      <div className="flex gap-2 flex-wrap">
+                        <Badge className={getStatusColor(shift.status)}>
+                          {shift.status}
+                        </Badge>
+                        {shift.shift_type && (
+                          <Badge variant="outline">{shift.shift_type}</Badge>
+                        )}
+                      </div>
+                      <div className="pt-2 border-t">
+                        <div className="text-sm font-semibold text-green-600">
+                          R$ {shift.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                      {shift.notes && (
+                        <div className="text-xs text-gray-500 italic pt-2 border-t">
+                          {shift.notes}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             )}
