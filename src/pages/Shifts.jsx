@@ -54,7 +54,7 @@ export default function Shifts() {
   const { data: doctors = [] } = useQuery({
     queryKey: ['doctors', user?.email],
     queryFn: async () => {
-      const all = await base44.entities.Doctor.list('name');
+      const all = await base44.entities.Doctor.list('full_name');
       return all.filter(d => d.created_by === user?.email);
     },
     enabled: !!user,
@@ -396,7 +396,7 @@ export default function Shifts() {
               className="bg-transparent text-xs font-black uppercase tracking-widest border-none focus:ring-0 cursor-pointer text-slate-600 dark:text-slate-300 pr-8"
             >
               <option value="TODOS">TODOS MÉDICOS</option>
-              {doctors.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+              {doctors.map(d => <option key={d.id} value={d.full_name}>{d.full_name}</option>)}
             </select>
           </div>
           

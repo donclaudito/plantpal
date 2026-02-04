@@ -33,7 +33,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
       setFormData({
         ...formData,
         doctorId: doctor.id,
-        doctorName: doctor.name,
+        doctorName: doctor.full_name,
         specialty: doctor.specialty || 'CIRURGIA GERAL'
       });
     }
@@ -95,7 +95,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
               >
                 <option value="">Selecione um médico</option>
                 {doctors.map(d => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
+                  <option key={d.id} value={d.id}>{d.full_name}</option>
                 ))}
               </select>
             </div>
