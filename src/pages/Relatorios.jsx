@@ -211,11 +211,12 @@ export default function Relatorios() {
     });
 
     return {
+      totals,
       byHospital: Object.values(byHospital),
       byDoctor: Object.values(byDoctor),
       byDoctorHospital: Object.values(byDoctorHospital),
     };
-  }, [shifts, selectedMonth, selectedHospital, selectedDoctor, configValores, configDescontos]);
+  }, [shifts, selectedMonth, selectedHospital, selectedDoctor, hospitals, configValores, configDescontos]);
 
   const availableMonths = useMemo(() => {
     const months = new Set();
