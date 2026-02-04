@@ -318,12 +318,24 @@ export default function Deposits() {
   const sendWhatsApp = () => {
     if (!selectedDeposit) return;
     
+    const descontos = selectedDeposit.descontosDetalhados || selectedDeposit.descontos_detalhados || [];
+    let descontosText = '';
+    if (descontos.length > 0) {
+      descontosText = '\n\nDetalhes dos Descontos:\n' + descontos.map(desc => {
+        const descText = desc.tipo === 'percentual' 
+          ? `- ${desc.descricao} (${desc.valor_config}%): R$ ${desc.valor_calculado.toFixed(2)}`
+          : `- ${desc.descricao}: R$ ${desc.valor_calculado.toFixed(2)}`;
+        return descText;
+      }).join('\n');
+    }
+    
     const message = `Prezado(a) Dr(a) ${selectedDeposit.doctorName || selectedDeposit.doctor_name},
 
 Segue seu holerite de pagamento referente ao mês de competência ${formatMonth(selectedDeposit.mesCompetencia || selectedDeposit.mes_competencia)} no hospital ${selectedDeposit.hospitalName || selectedDeposit.hospital_name}.
 
-Valor Bruto: R$ ${((selectedDeposit.valorBruto || selectedDeposit.valor_bruto) || 0).toFixed(2)}
-Descontos: R$ ${((selectedDeposit.valorDescontos || selectedDeposit.valor_descontos) || 0).toFixed(2)}
+Número de Plantões: ${selectedDeposit.numPlantoes || selectedDeposit.num_plantoes}
+Valor Bruto: R$ ${((selectedDeposit.valorBruto || selectedDeposit.valor_bruto) || 0).toFixed(2)}${descontosText}
+Total de Descontos: R$ ${((selectedDeposit.valorDescontos || selectedDeposit.valor_descontos) || 0).toFixed(2)}
 Valor Líquido: R$ ${((selectedDeposit.valorLiquido || selectedDeposit.valor_liquido) || 0).toFixed(2)}`;
 
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
