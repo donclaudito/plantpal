@@ -111,8 +111,20 @@ export default function Finance() {
       descontoValue = desconto.valor_desconto;
     }
 
-    const contadorValue = baseValue * (desconto.contador_percentual || 0) / 100;
-    const impostoValue = baseValue * (desconto.imposto_percentual || 0) / 100;
+    let contadorValue = 0;
+    if (desconto.contador_tipo_desconto === 'percentual') {
+      contadorValue = baseValue * (desconto.contador_valor_desconto || 0) / 100;
+    } else {
+      contadorValue = desconto.contador_valor_desconto || 0;
+    }
+
+    let impostoValue = 0;
+    if (desconto.imposto_tipo_desconto === 'percentual') {
+      impostoValue = baseValue * (desconto.imposto_valor_desconto || 0) / 100;
+    } else {
+      impostoValue = desconto.imposto_valor_desconto || 0;
+    }
+
     const totalDeductions = descontoValue + contadorValue + impostoValue;
 
     return { 

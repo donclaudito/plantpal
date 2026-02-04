@@ -260,16 +260,20 @@ export default function Settings() {
                               {config.tipo_desconto === 'percentual' ? `${config.valor_desconto}%` : `R$ ${config.valor_desconto.toFixed(2)}`}
                             </span>
                           </p>
-                          {config.contador_percentual > 0 && (
+                          {config.contador_valor_desconto > 0 && (
                             <p className="text-sm">
                               <span className="text-gray-600">Contador:</span>
-                              <span className="font-bold text-purple-600 ml-2">{config.contador_percentual}%</span>
+                              <span className="font-bold text-purple-600 ml-2">
+                                {config.contador_tipo_desconto === 'percentual' ? `${config.contador_valor_desconto}%` : `R$ ${config.contador_valor_desconto.toFixed(2)}`}
+                              </span>
                             </p>
                           )}
-                          {config.imposto_percentual > 0 && (
+                          {config.imposto_valor_desconto > 0 && (
                             <p className="text-sm">
                               <span className="text-gray-600">Imposto:</span>
-                              <span className="font-bold text-pink-600 ml-2">{config.imposto_percentual}%</span>
+                              <span className="font-bold text-pink-600 ml-2">
+                                {config.imposto_tipo_desconto === 'percentual' ? `${config.imposto_valor_desconto}%` : `R$ ${config.imposto_valor_desconto.toFixed(2)}`}
+                              </span>
                             </p>
                           )}
                         </div>
@@ -370,15 +374,17 @@ function ValorForm({ doctors, hospitals, initialData, onSave, onCancel }) {
 }
 
 function DescontoForm({ doctors, hospitals, initialData, onSave, onCancel }) {
-  const [formData, setFormData] = useState(initialData || {
-    doctor_id: '',
-    hospital_id: '',
-    tipo_desconto: 'percentual',
-    valor_desconto: 0,
-    contador_percentual: 0,
-    imposto_percentual: 0,
-    descricao: '',
-  });
+        const [formData, setFormData] = useState(initialData || {
+          doctor_id: '',
+          hospital_id: '',
+          tipo_desconto: 'percentual',
+          valor_desconto: 0,
+          contador_tipo_desconto: 'percentual',
+          contador_valor_desconto: 0,
+          imposto_tipo_desconto: 'percentual',
+          imposto_valor_desconto: 0,
+          descricao: '',
+        });
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -431,19 +437,45 @@ function DescontoForm({ doctors, hospitals, initialData, onSave, onCancel }) {
           <Input type="number" step="0.01" value={formData.valor_desconto} onChange={(e) => setFormData({ ...formData, valor_desconto: parseFloat(e.target.value) || 0 })} />
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label>Contador (%)</Label>
-          <Input type="number" step="0.01" value={formData.contador_percentual || ''} onChange={(e) => setFormData({ ...formData, contador_percentual: parseFloat(e.target.value) || 0 })} placeholder="Ex: 5" />
+          <Label>Tipo de Contador</Label>
+          <Select value={formData.contador_tipo_desconto || 'percentual'} onValueChange={(v) => setFormData({ ...formData, contador_tipo_desconto: v })}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="percentual">Percentual (%)</SelectItem>
+              <SelectItem value="valor_fixo">Valor Fixo (R$)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div>
-          <Label>Imposto (%)</Label>
-          <Input type="number" step="0.01" value={formData.imposto_percentual || ''} onChange={(e) => setFormData({ ...formData, imposto_percentual: parseFloat(e.target.value) || 0 })} placeholder="Ex: 15" />
+          <Label>Valor do Contador</Label>
+          <Input type="number" step="0.01" value={formData.contador_valor_desconto || ''} onChange={(e) => setFormData({ ...formData, contador_valor_desconto: parseFloat(e.target.value) || 0 })} placeholder="Ex: 5" />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label>Tipo de Imposto</Label>
+          <Select value={formData.imposto_tipo_desconto || 'percentual'} onValueChange={(v) => setFormData({ ...formData, imposto_tipo_desconto: v })}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="percentual">Percentual (%)</SelectItem>
+              <SelectItem value="valor_fixo">Valor Fixo (R$)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div>
-          <Label>Descrição</Label>
-          <Input value={formData.descricao} onChange={(e) => setFormData({ ...formData, descricao: e.target.value })} placeholder="Ex: Desconto INSS" />
+          <Label>Valor do Imposto</Label>
+          <Input type="number" step="0.01" value={formData.imposto_valor_desconto || ''} onChange={(e) => setFormData({ ...formData, imposto_valor_desconto: parseFloat(e.target.value) || 0 })} placeholder="Ex: 15" />
         </div>
+      </div>
+      <div>
+        <Label>Descrição</Label>
+        <Input value={formData.descricao} onChange={(e) => setFormData({ ...formData, descricao: e.target.value })} placeholder="Ex: Desconto INSS" />
       </div>
       <div className="flex gap-2">
         <Button type="button" variant="outline" onClick={onCancel}>
