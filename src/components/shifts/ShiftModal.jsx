@@ -184,6 +184,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
                 <option value="12h">12h</option>
                 <option value="6h">6h</option>
                 <option value="retaguarda">Retaguarda</option>
+                <option value="mais tarde">Mais tarde</option>
               </select>
             </div>
           </div>
