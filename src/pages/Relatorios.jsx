@@ -290,6 +290,26 @@ export default function Relatorios() {
         </Button>
       </div>
 
+      {/* Totais Gerais */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-md">
+          <p className="text-xs font-black text-slate-600 uppercase mb-2">Nº Plantões</p>
+          <p className="text-3xl font-black text-slate-900">{reports.totals.numShifts}</p>
+        </div>
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-md">
+          <p className="text-xs font-black text-slate-600 uppercase mb-2">Total Custo Bruto</p>
+          <p className="text-3xl font-black text-slate-900">R$ {reports.totals.bruto.toFixed(2)}</p>
+        </div>
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-md">
+          <p className="text-xs font-black text-slate-600 uppercase mb-2">Total Descontos</p>
+          <p className="text-3xl font-black text-red-600">R$ {reports.totals.descontos.toFixed(2)}</p>
+        </div>
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-md">
+          <p className="text-xs font-black text-slate-600 uppercase mb-2">Total Custo Líquido</p>
+          <p className="text-3xl font-black text-blue-600">R$ {reports.totals.liquido.toFixed(2)}</p>
+        </div>
+      </div>
+
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-md">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
