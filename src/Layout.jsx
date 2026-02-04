@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { Home, LogOut } from 'lucide-react';
@@ -7,6 +7,11 @@ import { Button } from '@/components/ui/button';
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
+  }, []);
 
   const handleLogout = () => {
     base44.auth.logout();
