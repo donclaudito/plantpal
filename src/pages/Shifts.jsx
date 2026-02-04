@@ -460,15 +460,7 @@ export default function Shifts() {
         </div>
       )}
 
-      {!showImport && (
-        <button
-          onClick={() => setShowImport(true)}
-          className="mb-6 w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-500 dark:to-indigo-500 text-white rounded-2xl font-black text-sm uppercase tracking-wider hover:from-blue-700 hover:to-indigo-700 dark:hover:from-blue-600 dark:hover:to-indigo-600 transition-all shadow-lg flex items-center justify-center gap-2"
-        >
-          <FileSpreadsheet size={20} />
-          Importar do Google Sheets
-        </button>
-      )}
+
 
       {viewMode === 'calendar' ? (
         <CalendarView 
