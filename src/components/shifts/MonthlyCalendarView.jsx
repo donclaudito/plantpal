@@ -39,8 +39,17 @@ export default function MonthlyCalendarView({
       return isSameDay(shiftDate, day);
     });
     
-    // Ordenar por nome do médico
-    return dayShifts.sort((a, b) => a.doctor_name.localeCompare(b.doctor_name));
+    // Agrupar por médico
+    const groupedByDoctor = dayShifts.reduce((acc, shift) => {
+      const doctor = shift.doctor_name;
+      if (!acc[doctor]) {
+        acc[doctor] = [];
+      }
+      acc[doctor].push(shift);
+      return acc;
+    }, {});
+    
+    return groupedByDoctor;
   };
 
   const handlePreviousMonth = () => {
@@ -96,7 +105,7 @@ export default function MonthlyCalendarView({
 
           {/* Dias do mês */}
           {daysInMonth.map((day) => {
-            const dayShifts = getShiftsForDay(day);
+            const dayShiftsGrouped = getShiftsForDay(day);
             const isToday = isSameDay(day, new Date());
 
             return (
@@ -119,44 +128,48 @@ export default function MonthlyCalendarView({
                   </Button>
                 </div>
 
-                {/* Plantões do dia */}
-                <div className="space-y-1 overflow-y-auto max-h-[80px]">
-                  {dayShifts.map((shift) => (
-                    <div
-                      key={shift.id}
-                      className="text-xs p-1.5 rounded bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors group/shift"
-                    >
-                      <div className="flex justify-between items-start gap-1">
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-gray-900 truncate">
-                            {shift.doctor_name}
-                          </div>
-                          <div className="text-gray-600 truncate text-[10px]">
-                            {shift.hospital}
-                          </div>
-                          <div className="flex gap-1 mt-1 flex-wrap">
-                            <Badge className={`${getStatusColor(shift.status)} text-[9px] px-1 py-0`}>
-                              {shift.status}
-                            </Badge>
-                            {shift.shift_type && (
-                              <Badge variant="outline" className="text-[9px] px-1 py-0">
-                                {shift.shift_type}
-                              </Badge>
-                            )}
+                {/* Plantões do dia agrupados por médico */}
+                <div className="space-y-2 overflow-y-auto max-h-[80px]">
+                  {Object.entries(dayShiftsGrouped).map(([doctorName, shifts]) => (
+                    <div key={doctorName} className="space-y-1">
+                      <div className="text-[10px] font-bold text-gray-700 truncate border-b border-gray-300 pb-0.5">
+                        {doctorName}
+                      </div>
+                      {shifts.map((shift) => (
+                        <div
+                          key={shift.id}
+                          className="text-xs p-1 rounded bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors group/shift"
+                        >
+                          <div className="flex justify-between items-start gap-1">
+                            <div className="flex-1 min-w-0">
+                              <div className="text-gray-600 truncate text-[10px]">
+                                {shift.hospital}
+                              </div>
+                              <div className="flex gap-1 mt-0.5 flex-wrap">
+                                <Badge className={`${getStatusColor(shift.status)} text-[9px] px-1 py-0`}>
+                                  {shift.status}
+                                </Badge>
+                                {shift.shift_type && (
+                                  <Badge variant="outline" className="text-[9px] px-1 py-0">
+                                    {shift.shift_type}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 opacity-0 group-hover/shift:opacity-100 transition-opacity flex-shrink-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteShift(shift.id);
+                              }}
+                            >
+                              <Trash2 className="w-3 h-3 text-red-600" />
+                            </Button>
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-4 w-4 opacity-0 group-hover/shift:opacity-100 transition-opacity flex-shrink-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDeleteShift(shift.id);
-                          }}
-                        >
-                          <Trash2 className="w-3 h-3 text-red-600" />
-                        </Button>
-                      </div>
+                      ))}
                     </div>
                   ))}
                 </div>
