@@ -12,7 +12,8 @@ export default function CalendarView({
   onUpdateShiftDate,
   selectedShifts,
   onToggleSelect,
-  onToggleSelectAll
+  onToggleSelectAll,
+  onViewShiftDetails
 }) {
   const todayStr = new Date().toISOString().split('T')[0];
 

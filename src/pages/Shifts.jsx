@@ -5,6 +5,7 @@ import { Plus, Calendar as CalendarIcon, Filter, List, X, FileSpreadsheet, Downl
 import CalendarView from '@/components/shifts/CalendarView';
 import ListView from '@/components/shifts/ListView';
 import ShiftModal from '@/components/shifts/ShiftModal';
+import ShiftDetailsModal from '@/components/shifts/ShiftDetailsModal';
 import ImportShifts from '@/components/shifts/ImportShifts';
 import DeleteConfirmation from '@/components/common/DeleteConfirmation';
 import Toast from '@/components/common/Toast';
@@ -32,6 +33,7 @@ export default function Shifts() {
   const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, id: '', name: '' });
   const [isSyncingSheets, setIsSyncingSheets] = useState(false);
   const [selectedShifts, setSelectedShifts] = useState([]);
+  const [viewDetailsShift, setViewDetailsShift] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -478,6 +480,7 @@ export default function Shifts() {
           selectedShifts={selectedShifts}
           onToggleSelect={toggleSelectShift}
           onToggleSelectAll={toggleSelectAll}
+          onViewShiftDetails={(shift) => setViewDetailsShift(shift)}
         />
       ) : (
         <ListView 
@@ -518,6 +521,12 @@ export default function Shifts() {
         name={deleteConfirmation.name}
         onConfirm={() => deleteShiftMutation.mutate(deleteConfirmation.id)}
         onCancel={() => setDeleteConfirmation({ isOpen: false, id: '', name: '' })}
+      />
+
+      <ShiftDetailsModal 
+        shift={viewDetailsShift}
+        isOpen={!!viewDetailsShift}
+        onClose={() => setViewDetailsShift(null)}
       />
     </div>
   );
