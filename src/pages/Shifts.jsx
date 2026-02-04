@@ -126,31 +126,77 @@ export default function Shifts() {
     try {
       const text = await file.text();
       const lines = text.split('\n').filter(line => line.trim());
-      const headers = lines[0].split(',').map(h => h.trim());
+      
+      // Parse CSV (primeira linha pode ou não ser cabeçalho)
+      const hasHeader = isNaN(lines[0].split(',')[0].replace(/[\/\-]/g, ''));
+      const dataLines = hasHeader ? lines.slice(1) : lines;
 
-      const shifts = lines.slice(1).map(line => {
-        const values = line.split(',').map(v => v.trim());
-        const shift = {};
-        headers.forEach((header, index) => {
-          if (values[index]) {
-            if (header === 'value') {
-              shift[header] = parseFloat(values[index]);
-            } else {
-              shift[header] = values[index];
-            }
+      const shifts = dataLines.map(line => {
+        // Parse CSV considerando valores entre aspas
+        const values = line.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g)?.map(v => v.replace(/^"|"$/g, '').trim()) || [];
+        
+        // Mapeamento: date, doctor_name, hospital_name, shift_type_label, sector, notes, status
+        let [dateStr, doctor_name, hospital_name, shift_type_label, sector, notes, status] = values;
+
+        // Normalização de data: converter para YYYY-MM-DD
+        let normalizedDate = '';
+        if (dateStr) {
+          // Se for apenas dia (ex: "2" ou "02"), assumir fevereiro de 2026
+          if (/^\d{1,2}$/.test(dateStr)) {
+            const day = dateStr.padStart(2, '0');
+            normalizedDate = `2026-02-${day}`;
           }
-        });
-        return shift;
-      }).filter(shift => shift.date && shift.doctor_name && shift.hospital && shift.value);
+          // Se for DD/MM/YYYY
+          else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
+            const [day, month, year] = dateStr.split('/');
+            normalizedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+          }
+          // Se for DD/MM (sem ano), assumir 2026
+          else if (/^\d{1,2}\/\d{1,2}$/.test(dateStr)) {
+            const [day, month] = dateStr.split('/');
+            normalizedDate = `2026-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+          }
+          // Se já estiver em formato YYYY-MM-DD
+          else if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            normalizedDate = dateStr;
+          }
+        }
+
+        // Mapear shift_type_label para shift_type
+        let shift_type = 'Diurno'; // padrão
+        if (shift_type_label) {
+          const label = shift_type_label.toLowerCase();
+          if (label.includes('noite') || label.includes('noturno')) {
+            shift_type = 'Noturno';
+          } else if (label.includes('24')) {
+            shift_type = '24h';
+          } else if (label.includes('dia') || label.includes('diurno')) {
+            shift_type = 'Diurno';
+          }
+        }
+
+        // Status padrão: "Agendado" se ausente
+        const finalStatus = status && status.trim() !== '' ? status : 'Agendado';
+
+        return {
+          date: normalizedDate,
+          doctor_name: doctor_name || '',
+          hospital: hospital_name || '',
+          shift_type: shift_type,
+          value: 0, // Valor padrão, será necessário ajustar manualmente
+          status: finalStatus,
+          notes: notes || ''
+        };
+      }).filter(shift => shift.date && shift.doctor_name && shift.hospital);
 
       if (shifts.length === 0) {
-        alert('Nenhum plantão válido encontrado no arquivo.');
+        alert('Nenhum plantão válido encontrado no arquivo. Verifique o formato: data,médico,hospital,tipo,setor,observações,status');
         return;
       }
 
       await base44.entities.Shift.bulkCreate(shifts);
       queryClient.invalidateQueries(['shifts']);
-      alert(`${shifts.length} plantão(ões) importado(s) com sucesso!`);
+      alert(`${shifts.length} plantão(ões) importado(s) com sucesso! Nota: valores foram definidos como 0, ajuste manualmente.`);
     } catch (error) {
       alert('Erro ao importar arquivo: ' + error.message);
     }
@@ -173,8 +219,8 @@ export default function Shifts() {
   };
 
   const handleDownloadTemplate = () => {
-    const template = 'date,doctor_name,hospital,shift_type,value,status,notes\n2026-02-10,João Silva,Hospital Central,Diurno,1500,Agendado,';
-    const blob = new Blob([template], { type: 'text/csv' });
+    const template = 'date,doctor_name,hospital_name,shift_type_label,sector,notes,status\n02/02/2026,RODRIGO,cssm,12h Noite,URGÊNCIA,,AGENDADO\n03/02/2026,TANAKA,cssm,12h Noite,URGÊNCIA,,PENDENTE\n15,FABIOLA,Hospital Central,12h Dia,EMERGÊNCIA,Plantão extra,AGENDADO';
+    const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
