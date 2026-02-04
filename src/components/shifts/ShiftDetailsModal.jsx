@@ -1,7 +1,7 @@
 import React from 'react';
-import { X, Calendar, Clock, DollarSign, MapPin, User, Stethoscope, Check } from 'lucide-react';
+import { X, Calendar, Clock, DollarSign, MapPin, User, Stethoscope, Check, Pencil, Trash2 } from 'lucide-react';
 
-export default function ShiftDetailsModal({ shift, isOpen, onClose }) {
+export default function ShiftDetailsModal({ shift, isOpen, onClose, onEdit, onDelete }) {
   if (!isOpen || !shift) return null;
 
   return (
@@ -92,9 +92,32 @@ export default function ShiftDetailsModal({ shift, isOpen, onClose }) {
             </div>
           </div>
 
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                onDelete(shift.id, shift.doctor_name);
+                onClose();
+              }}
+              className="flex-1 py-4 bg-red-600 dark:bg-red-500 text-white rounded-xl font-bold hover:bg-red-700 dark:hover:bg-red-600 transition-colors flex items-center justify-center gap-2"
+            >
+              <Trash2 size={18} />
+              Eliminar
+            </button>
+            <button
+              onClick={() => {
+                onEdit(shift);
+                onClose();
+              }}
+              className="flex-1 py-4 bg-blue-600 dark:bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+            >
+              <Pencil size={18} />
+              Editar
+            </button>
+          </div>
+          
           <button
             onClick={onClose}
-            className="w-full py-4 bg-slate-900 dark:bg-slate-700 text-white rounded-xl font-bold hover:bg-slate-800 dark:hover:bg-slate-600 transition-colors"
+            className="w-full py-4 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
           >
             Fechar
           </button>

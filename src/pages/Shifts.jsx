@@ -34,6 +34,7 @@ export default function Shifts() {
   const [isSyncingSheets, setIsSyncingSheets] = useState(false);
   const [selectedShifts, setSelectedShifts] = useState([]);
   const [viewDetailsShift, setViewDetailsShift] = useState(null);
+  const [editingShift, setEditingShift] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -509,11 +510,22 @@ export default function Shifts() {
 
       <ShiftModal 
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSave={(data) => createShiftMutation.mutate(data)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingShift(null);
+        }}
+        onSave={(data) => {
+          if (editingShift) {
+            updateShiftMutation.mutate({ id: editingShift.id, data });
+          } else {
+            createShiftMutation.mutate(data);
+          }
+          setEditingShift(null);
+        }}
         doctors={doctors}
         hospitals={hospitals}
         initialDate={selectedDate}
+        editingShift={editingShift}
       />
 
       <DeleteConfirmation 
@@ -527,6 +539,11 @@ export default function Shifts() {
         shift={viewDetailsShift}
         isOpen={!!viewDetailsShift}
         onClose={() => setViewDetailsShift(null)}
+        onEdit={(shift) => {
+          setEditingShift(shift);
+          setIsModalOpen(true);
+        }}
+        onDelete={handleDeleteShift}
       />
     </div>
   );
