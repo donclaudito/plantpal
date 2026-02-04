@@ -18,7 +18,9 @@ const specialties = [
   "CIRURGIA GERAL", "CLÍNICA MÉDICA", "PEDIATRIA", "GINECOLOGIA", "ORTOPEDIA", "ANESTESIA", "GASTROENTEROLOGIA", "CIRURGIA DIGESTIVA", "OUTRA"
 ];
 
-export default function Shifts({ currentMonth = new Date().getMonth(), currentYear = new Date().getFullYear() }) {
+export default function Shifts() {
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [viewMode, setViewMode] = useState('calendar');
   const [filterSpecialty, setFilterSpecialty] = useState('TODAS');
   const [filterDoctor, setFilterDoctor] = useState('TODOS');
@@ -118,6 +120,29 @@ export default function Shifts({ currentMonth = new Date().getMonth(), currentYe
   const showToast = (text, type = 'success') => {
     setMessage({ text, type });
     setTimeout(() => setMessage(null), 3000);
+  };
+
+  const handlePreviousMonth = () => {
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(currentYear - 1);
+    } else {
+      setCurrentMonth(currentMonth - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (currentMonth === 11) {
+      setCurrentMonth(0);
+      setCurrentYear(currentYear + 1);
+    } else {
+      setCurrentMonth(currentMonth + 1);
+    }
+  };
+
+  const handleToday = () => {
+    setCurrentMonth(new Date().getMonth());
+    setCurrentYear(new Date().getFullYear());
   };
 
   const filteredShifts = useMemo(() => {
@@ -305,7 +330,39 @@ export default function Shifts({ currentMonth = new Date().getMonth(), currentYe
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col gap-4 mb-8">
+        <div className="flex items-center justify-between bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-md">
+          <button
+            onClick={handlePreviousMonth}
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+          >
+            <svg className="w-6 h-6 text-slate-700 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-wide">
+            {monthNames[currentMonth]} {currentYear}
+          </h2>
+          
+          <div className="flex gap-2">
+            <button
+              onClick={handleToday}
+              className="px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-xl font-bold text-sm hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+            >
+              Hoje
+            </button>
+            <button
+              onClick={handleNextMonth}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+            >
+              <svg className="w-6 h-6 text-slate-700 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
         <div className="flex gap-2 items-center flex-wrap">
             {selectedShifts.length > 0 && (
               <button
@@ -385,10 +442,6 @@ export default function Shifts({ currentMonth = new Date().getMonth(), currentYe
               <List size={18} />
             </button>
           </div>
-        </div>
-        
-        <div className="hidden md:flex text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest bg-white dark:bg-slate-800 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm items-center gap-2">
-          <CalendarIcon size={14}/> {monthNames[currentMonth]} {currentYear}
         </div>
       </div>
 
