@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Calendar as CalendarIcon, Filter, List, X, FileSpreadsheet, Download } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, Filter, List, X, Download } from 'lucide-react';
 import CalendarView from '@/components/shifts/CalendarView';
 import ListView from '@/components/shifts/ListView';
 import ShiftModal from '@/components/shifts/ShiftModal';
@@ -32,7 +32,6 @@ export default function Shifts() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [message, setMessage] = useState(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, id: '', name: '' });
-  const [isSyncingSheets, setIsSyncingSheets] = useState(false);
   const [selectedShifts, setSelectedShifts] = useState([]);
   const [viewDetailsShift, setViewDetailsShift] = useState(null);
   const [editingShift, setEditingShift] = useState(null);
@@ -276,27 +275,6 @@ export default function Shifts() {
     link.href = URL.createObjectURL(blob);
     link.download = `plantoes_${monthNames[currentMonth]}_${currentYear}.csv`;
     link.click();
-  };
-
-  const syncToGoogleSheets = async () => {
-    setIsSyncingSheets(true);
-    try {
-      const { data } = await base44.functions.invoke('syncShiftsToSheets', {
-        month: currentMonth,
-        year: currentYear
-      });
-      
-      if (data.success) {
-        showToast(`${data.shiftsCount} plantões sincronizados!`);
-        window.open(data.spreadsheetUrl, '_blank');
-      } else {
-        showToast(data.error || 'Erro ao sincronizar', 'error');
-      }
-    } catch (error) {
-      showToast(error.message || 'Erro ao sincronizar', 'error');
-    } finally {
-      setIsSyncingSheets(false);
-    }
   };
 
   return (
