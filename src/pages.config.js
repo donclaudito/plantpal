@@ -52,9 +52,9 @@ import Doctors from './pages/Doctors';
 import Finance from './pages/Finance';
 import Home from './pages/Home';
 import Hospitals from './pages/Hospitals';
+import Relatorios from './pages/Relatorios';
 import Settings from './pages/Settings';
 import Shifts from './pages/Shifts';
-import Relatorios from './pages/Relatorios';
 import __Layout from './Layout.jsx';
 
 
@@ -64,9 +64,9 @@ export const PAGES = {
     "Finance": Finance,
     "Home": Home,
     "Hospitals": Hospitals,
+    "Relatorios": Relatorios,
     "Settings": Settings,
     "Shifts": Shifts,
-    "Relatorios": Relatorios,
 }
 
 export const pagesConfig = {
