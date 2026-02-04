@@ -1,689 +1,471 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Plus, Download, Upload, FileText, Edit, Trash2, Calendar as CalendarIcon, LayoutGrid, List, CalendarDays } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import MonthlyCalendarView from '../components/shifts/MonthlyCalendarView';
+import { Plus, Calendar as CalendarIcon, Filter, List, X, FileSpreadsheet, Download } from 'lucide-react';
+import CalendarView from '@/components/shifts/CalendarView';
+import ListView from '@/components/shifts/ListView';
+import ShiftModal from '@/components/shifts/ShiftModal';
+import ImportShifts from '@/components/shifts/ImportShifts';
+import DeleteConfirmation from '@/components/common/DeleteConfirmation';
+import Toast from '@/components/common/Toast';
 
-export default function Shifts() {
-  const [showForm, setShowForm] = useState(false);
-  const [editingShift, setEditingShift] = useState(null);
-  const [formData, setFormData] = useState({
-    date: '',
-    doctor_id: '',
-    doctor_name: '',
-    hospital: '',
-    shift_type: 'Diurno',
-    value: '',
-    status: 'Realizado',
-    notes: ''
-  });
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterDoctor, setFilterDoctor] = useState('all');
-  const [filterHospital, setFilterHospital] = useState('all');
+const monthNames = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+];
+
+const specialties = [
+  "CIRURGIA GERAL", "CLÍNICA MÉDICA", "PEDIATRIA", "GINECOLOGIA", "ORTOPEDIA", "ANESTESIA", "GASTROENTEROLOGIA", "CIRURGIA DIGESTIVA", "OUTRA"
+];
+
+export default function Shifts({ currentMonth = new Date().getMonth(), currentYear = new Date().getFullYear() }) {
+  const [viewMode, setViewMode] = useState('calendar');
+  const [filterSpecialty, setFilterSpecialty] = useState('TODAS');
+  const [filterDoctor, setFilterDoctor] = useState('TODOS');
+  const [filterWeek, setFilterWeek] = useState('TODAS');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [message, setMessage] = useState(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, id: '', name: '' });
+  const [isSyncingSheets, setIsSyncingSheets] = useState(false);
   const [selectedShifts, setSelectedShifts] = useState([]);
-  const [viewMode, setViewMode] = useState('list'); // 'list', 'grid', or 'calendar'
 
   const queryClient = useQueryClient();
 
-  const { data: shifts = [], isLoading } = useQuery({
-    queryKey: ['shifts'],
-    queryFn: () => base44.entities.Shift.list('-date')
+  const { data: user } = useQuery({
+    queryKey: ['user'],
+    queryFn: () => base44.auth.me(),
+  });
+
+  const { data: shifts = [] } = useQuery({
+    queryKey: ['shifts', user?.email],
+    queryFn: async () => {
+      const allShifts = await base44.entities.Shift.list('-date');
+      return allShifts.filter(s => s.created_by === user?.email);
+    },
+    enabled: !!user,
+    staleTime: 1000 * 60 * 5,
+    cacheTime: 1000 * 60 * 10,
   });
 
   const { data: doctors = [] } = useQuery({
-    queryKey: ['doctors'],
-    queryFn: () => base44.entities.Doctor.list('-created_date')
+    queryKey: ['doctors', user?.email],
+    queryFn: async () => {
+      const all = await base44.entities.Doctor.list('name');
+      return all.filter(d => d.created_by === user?.email);
+    },
+    enabled: !!user,
+    staleTime: 1000 * 60 * 30,
+    cacheTime: 1000 * 60 * 60,
   });
 
   const { data: hospitals = [] } = useQuery({
-    queryKey: ['hospitals'],
-    queryFn: () => base44.entities.Hospital.list('-created_date')
+    queryKey: ['hospitals', user?.email],
+    queryFn: async () => {
+      const all = await base44.entities.Hospital.list('name');
+      return all.filter(h => h.created_by === user?.email);
+    },
+    enabled: !!user,
+    staleTime: 1000 * 60 * 30,
+    cacheTime: 1000 * 60 * 60,
   });
 
-  const createMutation = useMutation({
+  const createShiftMutation = useMutation({
     mutationFn: (data) => base44.entities.Shift.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['shifts']);
-      resetForm();
-    }
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      setIsModalOpen(false);
+      showToast('Plantão registado!');
+    },
   });
 
-  const updateMutation = useMutation({
+  const updateShiftMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Shift.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['shifts']);
-      resetForm();
-    }
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      showToast('Plantão atualizado!');
+    },
   });
 
-  const deleteMutation = useMutation({
+  const deleteShiftMutation = useMutation({
     mutationFn: (id) => base44.entities.Shift.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries(['shifts']);
-    }
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      setDeleteConfirmation({ isOpen: false, id: '', name: '' });
+      showToast('Plantão removido!');
+    },
   });
 
-  const resetForm = () => {
-    setFormData({
-      date: '',
-      doctor_id: '',
-      doctor_name: '',
-      hospital: '',
-      shift_type: 'Diurno',
-      value: '',
-      status: 'Realizado',
-      notes: ''
-    });
-    setEditingShift(null);
-    setShowForm(false);
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids) => {
+      const results = await Promise.allSettled(ids.map(id => base44.entities.Shift.delete(id)));
+      const successful = results.filter(r => r.status === 'fulfilled').length;
+      const failed = results.filter(r => r.status === 'rejected').length;
+      return { successful, failed, total: ids.length };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      setSelectedShifts([]);
+      if (result.failed > 0) {
+        showToast(`${result.successful} plantões removidos (${result.failed} já não existiam)`);
+      } else {
+        showToast(`${result.successful} plantões removidos!`);
+      }
+    },
+  });
+
+  const showToast = (text, type = 'success') => {
+    setMessage({ text, type });
+    setTimeout(() => setMessage(null), 3000);
   };
 
-  const handleEdit = (shift) => {
-    setEditingShift(shift);
-    setFormData({
-      date: shift.date,
-      doctor_id: shift.doctor_id || '',
-      doctor_name: shift.doctor_name,
-      hospital: shift.hospital,
-      shift_type: shift.shift_type || 'Diurno',
-      value: shift.value.toString(),
-      status: shift.status || 'Agendado',
-      notes: shift.notes || ''
-    });
-    setShowForm(true);
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const data = {
-      ...formData,
-      value: parseFloat(formData.value)
-    };
-    if (editingShift) {
-      updateMutation.mutate({ id: editingShift.id, data });
-    } else {
-      createMutation.mutate(data);
-    }
-  };
-
-  const handleDoctorSelect = (doctorId) => {
-    const doctor = doctors.find(d => d.id === doctorId);
-    if (doctor) {
-      setFormData({
-        ...formData,
-        doctor_id: doctor.id,
-        doctor_name: doctor.full_name
-      });
-    }
-  };
-
-  const handleFileImport = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    try {
-      const text = await file.text();
-      const lines = text.split('\n').filter(line => line.trim());
+  const filteredShifts = useMemo(() => {
+    return shifts.filter(s => {
+      if (!s.date) return false;
       
-      // Parse CSV (primeira linha pode ou não ser cabeçalho)
-      const hasHeader = isNaN(lines[0].split(',')[0].replace(/[\/\-]/g, ''));
-      const dataLines = hasHeader ? lines.slice(1) : lines;
+      const dateParts = s.date.split('-').map(Number);
+      if (dateParts.length < 2) return false;
+      
+      const [year, month] = dateParts;
+      const matchMonth = month === currentMonth + 1 && year === currentYear;
 
-      const shifts = dataLines.map(line => {
-        // Parse CSV considerando valores entre aspas
-        const values = line.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g)?.map(v => v.replace(/^"|"$/g, '').trim()) || [];
-        
-        // Mapeamento: date, doctor_name, hospital_name, shift_type_label, sector, notes, status
-        let [dateStr, doctor_name, hospital_name, shift_type_label, sector, notes, status] = values;
+      const normalizedFilterDoctor = filterDoctor === 'TODOS' ? 'TODOS' : filterDoctor.trim().toUpperCase();
+      const normalizedDoctorName = (s.doctorName || '').trim().toUpperCase();
+      const matchDoctor = normalizedFilterDoctor === 'TODOS' || normalizedDoctorName === normalizedFilterDoctor;
 
-        // Normalização de data: converter para YYYY-MM-DD
-        let normalizedDate = '';
-        if (dateStr) {
-          // Se for apenas dia (ex: "2" ou "02"), assumir fevereiro de 2026
-          if (/^\d{1,2}$/.test(dateStr)) {
-            const day = dateStr.padStart(2, '0');
-            normalizedDate = `2026-02-${day}`;
-          }
-          // Se for DD/MM/YYYY
-          else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
-            const [day, month, year] = dateStr.split('/');
-            normalizedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-          }
-          // Se for DD/MM (sem ano), assumir 2026
-          else if (/^\d{1,2}\/\d{1,2}$/.test(dateStr)) {
-            const [day, month] = dateStr.split('/');
-            normalizedDate = `2026-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-          }
-          // Se já estiver em formato YYYY-MM-DD
-          else if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-            normalizedDate = dateStr;
-          }
-        }
+      const matchSpecialty = filterSpecialty === 'TODAS' || (s.specialty || '').toUpperCase() === filterSpecialty.toUpperCase();
 
-        // Mapear shift_type_label para shift_type
-        let shift_type = 'Diurno'; // padrão
-        if (shift_type_label) {
-          const label = shift_type_label.toLowerCase();
-          if (label.includes('noite') || label.includes('noturno')) {
-            shift_type = 'Noturno';
-          } else if (label.includes('24')) {
-            shift_type = '24h';
-          } else if (label.includes('dia') || label.includes('diurno')) {
-            shift_type = 'Diurno';
-          }
-        }
-
-        // Status padrão: "Realizado" se ausente
-        const finalStatus = status && status.trim() !== '' ? status : 'Realizado';
-
-        return {
-          date: normalizedDate,
-          doctor_name: doctor_name || '',
-          hospital: hospital_name || '',
-          shift_type: shift_type,
-          value: 0, // Valor padrão, será necessário ajustar manualmente
-          status: finalStatus,
-          notes: notes || ''
-        };
-      }).filter(shift => shift.date && shift.doctor_name && shift.hospital);
-
-      if (shifts.length === 0) {
-        alert('Nenhum plantão válido encontrado no arquivo. Verifique o formato: data,médico,hospital,tipo,setor,observações,status');
-        return;
+      let matchWeek = true;
+      if (filterWeek !== 'TODAS') {
+        const weekNum = parseInt(filterWeek);
+        const [, , day] = s.date.split('-').map(Number);
+        const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
+        const adjustedFirstDay = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
+        const weekOfMonth = Math.ceil((day + adjustedFirstDay) / 7);
+        matchWeek = weekOfMonth === weekNum;
       }
 
-      await base44.entities.Shift.bulkCreate(shifts);
-      queryClient.invalidateQueries(['shifts']);
-      alert(`${shifts.length} plantão(ões) importado(s) com sucesso! Nota: valores foram definidos como 0, ajuste manualmente.`);
-    } catch (error) {
-      alert('Erro ao importar arquivo: ' + error.message);
+      return matchMonth && matchDoctor && matchSpecialty && matchWeek;
+    }).sort((a, b) => b.date.localeCompare(a.date));
+  }, [shifts, currentMonth, currentYear, filterDoctor, filterSpecialty, filterWeek]);
+
+  const calendarDays = useMemo(() => {
+    const firstDay = new Date(currentYear, currentMonth, 1);
+    const dayOfWeek = firstDay.getDay();
+    const adjustedFirstDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const days = [];
+
+    for (let i = 0; i < adjustedFirstDay; i++) {
+      days.push({ day: null, date: null, shifts: [] });
     }
+
+    for (let i = 1; i <= daysInMonth; i++) {
+      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+      const dayShifts = filteredShifts.filter(s => s.date === dateStr);
+      days.push({ day: i, date: dateStr, shifts: dayShifts });
+    }
+
+    return days;
+  }, [currentMonth, currentYear, filteredShifts]);
+
+  const handleDayClick = (date) => {
+    setSelectedDate(date);
+    setIsModalOpen(true);
   };
 
-  const handleExport = () => {
-    const headers = ['date', 'doctor_name', 'hospital', 'shift_type', 'value', 'status', 'notes'];
-    const csv = [
-      headers.join(','),
-      ...shifts.map(s => headers.map(h => s[h] || '').join(','))
-    ].join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'plantoes.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
+  const handleDeleteShift = (id, name) => {
+    setDeleteConfirmation({ isOpen: true, id, name });
   };
 
-  const handleDownloadTemplate = () => {
-    const template = 'date,doctor_name,hospital_name,shift_type_label,sector,notes,status\n02/02/2026,RODRIGO,cssm,12h Noite,URGÊNCIA,,AGENDADO\n03/02/2026,TANAKA,cssm,12h Noite,URGÊNCIA,,PENDENTE\n15,FABIOLA,Hospital Central,12h Dia,EMERGÊNCIA,Plantão extra,AGENDADO';
-    const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'modelo_plantoes.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
+  const handleTogglePaid = (id, paid) => {
+    updateShiftMutation.mutate({ id, data: { paid } });
+  };
+
+  const handleUpdateShiftDate = (id, newDate) => {
+    updateShiftMutation.mutate({ id, data: { date: newDate } });
   };
 
   const toggleSelectShift = (id) => {
-    setSelectedShifts(prev =>
-      prev.includes(id) ? prev.filter(shiftId => shiftId !== id) : [...prev, id]
+    setSelectedShifts(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     );
   };
 
-  const handleDeleteSelected = async () => {
-    for (const id of selectedShifts) {
-      await deleteMutation.mutateAsync(id);
+  const toggleSelectAll = () => {
+    if (selectedShifts.length === filteredShifts.length) {
+      setSelectedShifts([]);
+    } else {
+      setSelectedShifts(filteredShifts.map(s => s.id));
     }
-    setSelectedShifts([]);
   };
 
-  const getStatusColor = (status) => {
-    const colors = {
-      'Realizado': 'bg-green-100 text-green-800',
-      'Cancelado': 'bg-red-100 text-red-800',
-      'Pago': 'bg-purple-100 text-purple-800'
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+  const handleBulkDelete = () => {
+    if (selectedShifts.length === 0) return;
+    if (confirm(`Tem certeza que deseja eliminar ${selectedShifts.length} plantões selecionados?`)) {
+      bulkDeleteMutation.mutate(selectedShifts);
+    }
   };
 
-  const filteredShifts = shifts.filter(s => {
-    const statusMatch = filterStatus === 'all' || s.status === filterStatus;
-    const doctorMatch = filterDoctor === 'all' || s.doctor_name === filterDoctor;
-    const hospitalMatch = filterHospital === 'all' || s.hospital === filterHospital;
-    return statusMatch && doctorMatch && hospitalMatch;
-  });
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-400 dark:text-slate-500 font-bold">A carregar plantões...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const uniqueDoctors = [...new Set(shifts.map(s => s.doctor_name))].sort();
-  const uniqueHospitals = [...new Set(shifts.map(s => s.hospital))].sort();
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayShifts = filteredShifts.filter(s => s.date === todayStr);
+  const upcomingShifts = filteredShifts.filter(s => s.date > todayStr).sort((a, b) => a.date.localeCompare(b.date));
+  const nextShift = upcomingShifts[0];
 
-  const handleAddShiftWithDate = (dateStr) => {
-    setFormData({
-      ...formData,
-      date: dateStr
-    });
-    setShowForm(true);
+  const exportToCSV = () => {
+    const headers = ['Data', 'Hospital', 'Médico', 'Especialidade', 'Tipo', 'Horas', 'Valor', 'Status'];
+    const rows = filteredShifts.map(s => [
+      new Date(s.date + 'T00:00:00').toLocaleDateString('pt-PT'),
+      s.unit,
+      s.doctorName,
+      s.specialty,
+      s.type,
+      s.hours,
+      `R$ ${s.value.toFixed(2)}`,
+      s.paid ? 'Pago' : 'Pendente'
+    ]);
+    
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `plantoes_${monthNames[currentMonth]}_${currentYear}.csv`;
+    link.click();
+  };
+
+  const syncToGoogleSheets = async () => {
+    setIsSyncingSheets(true);
+    try {
+      const { data } = await base44.functions.invoke('syncShiftsToSheets', {
+        month: currentMonth,
+        year: currentYear
+      });
+      
+      if (data.success) {
+        showToast(`${data.shiftsCount} plantões sincronizados!`);
+        window.open(data.spreadsheetUrl, '_blank');
+      } else {
+        showToast(data.error || 'Erro ao sincronizar', 'error');
+      }
+    } catch (error) {
+      showToast(error.message || 'Erro ao sincronizar', 'error');
+    } finally {
+      setIsSyncingSheets(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Gestão de Plantões</h1>
-          <Button onClick={() => setShowForm(true)} className="gap-2 bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4" />
-            Adicionar Plantão
-          </Button>
-        </div>
+    <div className="animate-in fade-in duration-300">
+      <Toast message={message?.text} type={message?.type} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Total de Plantões</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-blue-600">{shifts.length}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Valor Total</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-green-600">
-                R$ {shifts.reduce((sum, s) => sum + (s.value || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Realizados</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-green-600">
-                {shifts.filter(s => s.status === 'Realizado').length}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Importar Plantões</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <Input
-                  type="file"
-                  accept=".csv"
-                  onChange={handleFileImport}
-                  className="flex-1"
-                />
-                <Button variant="outline" onClick={handleDownloadTemplate} className="gap-2">
-                  <FileText className="w-4 h-4" />
-                  Modelo
-                </Button>
-              </div>
-              <p className="text-sm text-gray-600">💡 Dica: Use o botão "Modelo" para descarregar exemplo.</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle>Lista de Plantões</CardTitle>
-              <div className="flex gap-2">
-                <div className="flex border rounded-lg">
-                  <Button
-                    variant={viewMode === 'list' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('list')}
-                    className="rounded-r-none border-r"
-                  >
-                    <List className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('grid')}
-                    className="rounded-none border-r"
-                  >
-                    <LayoutGrid className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'calendar' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('calendar')}
-                    className="rounded-l-none"
-                  >
-                    <CalendarDays className="w-4 h-4" />
-                  </Button>
-                </div>
-                {viewMode === 'calendar' && (
-                  <>
-                    <Select value={filterDoctor} onValueChange={setFilterDoctor}>
-                      <SelectTrigger className="w-40">
-                        <SelectValue placeholder="Filtrar Médico" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos Médicos</SelectItem>
-                        {uniqueDoctors.map((doctor) => (
-                          <SelectItem key={doctor} value={doctor}>
-                            {doctor}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={filterHospital} onValueChange={setFilterHospital}>
-                      <SelectTrigger className="w-40">
-                        <SelectValue placeholder="Filtrar Hospital" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos Hospitais</SelectItem>
-                        {uniqueHospitals.map((hospital) => (
-                          <SelectItem key={hospital} value={hospital}>
-                            {hospital}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </>
-                )}
-                {viewMode !== 'calendar' && (
-                  <Select value={filterStatus} onValueChange={setFilterStatus}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="Filtrar Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="Realizado">Realizado</SelectItem>
-                      <SelectItem value="Cancelado">Cancelado</SelectItem>
-                      <SelectItem value="Pago">Pago</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-                {selectedShifts.length > 0 && (
-                  <Button variant="destructive" size="sm" onClick={handleDeleteSelected} className="gap-2">
-                    <Trash2 className="w-4 h-4" />
-                    Excluir ({selectedShifts.length})
-                  </Button>
-                )}
-                <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
-                  <Download className="w-4 h-4" />
-                  Exportar
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <p className="text-center text-gray-600">Carregando...</p>
-            ) : viewMode === 'calendar' ? (
-              <MonthlyCalendarView
-                shifts={shifts}
-                filterDoctor={filterDoctor}
-                filterHospital={filterHospital}
-                onAddShift={handleAddShiftWithDate}
-                onEditShift={handleEdit}
-                onDeleteShift={(id) => deleteMutation.mutate(id)}
-                getStatusColor={getStatusColor}
-              />
-            ) : filteredShifts.length === 0 ? (
-              <p className="text-center text-gray-600">Nenhum plantão encontrado</p>
-            ) : viewMode === 'list' ? (
-              <div className="space-y-2">
-                {filteredShifts.map((shift) => (
-                  <div
-                    key={shift.id}
-                    className="flex items-center justify-between p-4 bg-white border rounded-lg hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-center gap-4 flex-1">
-                      <input
-                        type="checkbox"
-                        checked={selectedShifts.includes(shift.id)}
-                        onChange={() => toggleSelectShift(shift.id)}
-                        className="w-4 h-4"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <CalendarIcon className="w-4 h-4 text-gray-500" />
-                          <span className="font-semibold text-gray-900">
-                            {format(new Date(shift.date), "dd/MM/yyyy", { locale: ptBR })}
-                          </span>
-                          <Badge className={getStatusColor(shift.status)}>
-                            {shift.status}
-                          </Badge>
-                          {shift.shift_type && (
-                            <Badge variant="outline">{shift.shift_type}</Badge>
-                          )}
-                        </div>
-                        <div className="text-sm text-gray-700">
-                          <span className="font-medium">{shift.doctor_name}</span> - {shift.hospital}
-                        </div>
-                        <div className="text-sm font-semibold text-green-600 mt-1">
-                          R$ {shift.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </div>
-                        {shift.notes && (
-                          <div className="text-xs text-gray-500 mt-1">{shift.notes}</div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(shift)}>
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteMutation.mutate(shift.id)}
-                      >
-                        <Trash2 className="w-4 h-4 text-red-600" />
-                      </Button>
-                    </div>
-                  </div>
+      {todayShifts.length > 0 ? (
+        <div className="bg-gradient-to-r from-red-500 to-rose-600 dark:from-red-600 dark:to-rose-700 text-white p-4 rounded-2xl mb-6 shadow-lg dark:shadow-red-900/30 animate-pulse">
+          <div className="flex items-center gap-3">
+            <div className="w-3 h-3 bg-white rounded-full animate-ping"></div>
+            <div className="flex-1">
+              <p className="font-black text-sm uppercase tracking-wide">Hoje está de plantão!</p>
+              <p className="text-xs opacity-90 mt-1">
+                Médicos de serviço: {todayShifts.map((s, i) => (
+                  <span key={s.id}>
+                    <strong>{s.doctorName}</strong> em {s.unit} ({s.type})
+                    {i < todayShifts.length - 1 ? ' • ' : ''}
+                  </span>
                 ))}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredShifts.map((shift) => (
-                  <Card key={shift.id} className="hover:shadow-lg transition-shadow">
-                    <CardHeader className="pb-3">
-                      <div className="flex justify-between items-start">
-                        <input
-                          type="checkbox"
-                          checked={selectedShifts.includes(shift.id)}
-                          onChange={() => toggleSelectShift(shift.id)}
-                          className="w-4 h-4 mt-1"
-                        />
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(shift)}>
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => deleteMutation.mutate(shift.id)}
-                          >
-                            <Trash2 className="w-4 h-4 text-red-600" />
-                          </Button>
-                        </div>
-                      </div>
-                      <CardTitle className="text-lg flex items-center gap-2 mt-2">
-                        <CalendarIcon className="w-5 h-5 text-blue-600" />
-                        {format(new Date(shift.date), "dd/MM/yyyy", { locale: ptBR })}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div>
-                        <div className="text-xs text-gray-600 mb-1">Médico</div>
-                        <div className="font-semibold">{shift.doctor_name}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-600 mb-1">Hospital</div>
-                        <div className="text-sm">{shift.hospital}</div>
-                      </div>
-                      <div className="flex gap-2 flex-wrap">
-                        <Badge className={getStatusColor(shift.status)}>
-                          {shift.status}
-                        </Badge>
-                        {shift.shift_type && (
-                          <Badge variant="outline">{shift.shift_type}</Badge>
-                        )}
-                      </div>
-                      <div className="pt-2 border-t">
-                        <div className="text-sm font-semibold text-green-600">
-                          R$ {shift.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </div>
-                      </div>
-                      {shift.notes && (
-                        <div className="text-xs text-gray-500 italic pt-2 border-t">
-                          {shift.notes}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 dark:from-blue-600 dark:to-indigo-700 text-white p-4 rounded-2xl mb-6 shadow-lg dark:shadow-blue-900/30">
+          <div className="flex items-center gap-3">
+            <div className="w-3 h-3 bg-white rounded-full"></div>
+            <div className="flex-1">
+              <p className="font-black text-sm uppercase tracking-wide">
+                {filterDoctor !== 'TODOS' ? `${filterDoctor} está de folga hoje.` : 'Hoje está de folga!'}
+              </p>
+              {nextShift && (
+                <p className="text-xs opacity-90 mt-2">
+                  Próximo plantão: {new Date(nextShift.date + 'T00:00:00').toLocaleDateString('pt-PT', { day: 'numeric', month: 'long' })} • <strong>{nextShift.doctorName}</strong> em {nextShift.unit} ({nextShift.type})
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div className="flex gap-2 items-center flex-wrap">
+            {selectedShifts.length > 0 && (
+              <button
+                onClick={handleBulkDelete}
+                className="flex items-center gap-2 bg-red-600 dark:bg-red-500 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-red-700 dark:hover:bg-red-600 transition-colors shadow-md"
+              >
+                <X size={16} /> Eliminar {selectedShifts.length}
+              </button>
             )}
-          </CardContent>
-        </Card>
-
-        <Dialog open={showForm} onOpenChange={setShowForm}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingShift ? 'Editar Plantão' : 'Adicionar Plantão'}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="date">Data *</Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="shift_type">Tipo de Plantão</Label>
-                  <Select
-                    value={formData.shift_type}
-                    onValueChange={(value) => setFormData({ ...formData, shift_type: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Diurno">Diurno</SelectItem>
-                      <SelectItem value="Noturno">Noturno</SelectItem>
-                      <SelectItem value="24h">24h</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="doctor">Médico *</Label>
-                <Select
-                  value={formData.doctor_id}
-                  onValueChange={handleDoctorSelect}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um médico" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {doctors.map((doctor) => (
-                      <SelectItem key={doctor.id} value={doctor.id}>
-                        {doctor.full_name} - {doctor.specialty}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="hospital">Hospital *</Label>
-                <Input
-                  id="hospital"
-                  value={formData.hospital}
-                  onChange={(e) => setFormData({ ...formData, hospital: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="value">Valor (R$) *</Label>
-                  <Input
-                    id="value"
-                    type="number"
-                    step="0.01"
-                    value={formData.value}
-                    onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="status">Status</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value) => setFormData({ ...formData, status: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Realizado">Realizado</SelectItem>
-                      <SelectItem value="Cancelado">Cancelado</SelectItem>
-                      <SelectItem value="Pago">Pago</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="notes">Observações</Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  rows={3}
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  Cancelar
-                </Button>
-                <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                  Salvar
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+            <button
+              onClick={exportToCSV}
+              className="flex items-center gap-2 bg-green-600 dark:bg-green-500 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-green-700 dark:hover:bg-green-600 transition-colors shadow-md"
+            >
+              <Download size={16} /> CSV
+            </button>
+          
+          <button
+            onClick={syncToGoogleSheets}
+            disabled={isSyncingSheets}
+            className="flex items-center gap-2 bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <FileSpreadsheet size={16} /> 
+            {isSyncingSheets ? 'Sincronizando...' : 'Google Sheets'}
+          </button>
+          
+          <div className="flex gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 w-fit">
+            <div className="p-2 text-slate-400 dark:text-slate-500"><Filter size={16}/></div>
+            <select 
+              value={filterDoctor} 
+              onChange={e => setFilterDoctor(e.target.value)}
+              className="bg-transparent text-xs font-black uppercase tracking-widest border-none focus:ring-0 cursor-pointer text-slate-600 dark:text-slate-300 pr-8"
+            >
+              <option value="TODOS">TODOS MÉDICOS</option>
+              {doctors.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+            </select>
+          </div>
+          
+          <div className="flex gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 w-fit">
+            <div className="p-2 text-slate-400 dark:text-slate-500"><Filter size={16}/></div>
+            <select 
+              value={filterWeek} 
+              onChange={e => setFilterWeek(e.target.value)}
+              className="bg-transparent text-xs font-black uppercase tracking-widest border-none focus:ring-0 cursor-pointer text-slate-600 dark:text-slate-300 pr-8"
+            >
+              <option value="TODAS">TODAS SEMANAS</option>
+              <option value="1">SEMANA 1</option>
+              <option value="2">SEMANA 2</option>
+              <option value="3">SEMANA 3</option>
+              <option value="4">SEMANA 4</option>
+              <option value="5">SEMANA 5</option>
+            </select>
+          </div>
+          
+          <div className="flex gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 w-fit">
+            <div className="p-2 text-slate-400 dark:text-slate-500"><Filter size={16}/></div>
+            <select 
+              value={filterSpecialty} 
+              onChange={e => setFilterSpecialty(e.target.value)}
+              className="bg-transparent text-xs font-black uppercase tracking-widest border-none focus:ring-0 cursor-pointer text-slate-600 dark:text-slate-300 pr-8"
+            >
+              <option value="TODAS">TODAS ESPECIALIDADES</option>
+              {specialties.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          
+          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700">
+            <button 
+              onClick={() => setViewMode('calendar')}
+              className={`p-2 rounded-xl transition-all ${viewMode === 'calendar' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`}
+            >
+              <CalendarIcon size={18} />
+            </button>
+            <button 
+              onClick={() => setViewMode('list')}
+              className={`p-2 rounded-xl transition-all ${viewMode === 'list' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`}
+            >
+              <List size={18} />
+            </button>
+          </div>
+        </div>
+        
+        <div className="hidden md:flex text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest bg-white dark:bg-slate-800 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm items-center gap-2">
+          <CalendarIcon size={14}/> {monthNames[currentMonth]} {currentYear}
+        </div>
       </div>
+
+      {showImport && (
+        <div className="mb-8">
+          <ImportShifts showToast={showToast} />
+          <button
+            onClick={() => setShowImport(false)}
+            className="mt-4 w-full py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-2xl font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+          >
+            Fechar Importação
+          </button>
+        </div>
+      )}
+
+      {!showImport && (
+        <button
+          onClick={() => setShowImport(true)}
+          className="mb-6 w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-500 dark:to-indigo-500 text-white rounded-2xl font-black text-sm uppercase tracking-wider hover:from-blue-700 hover:to-indigo-700 dark:hover:from-blue-600 dark:hover:to-indigo-600 transition-all shadow-lg flex items-center justify-center gap-2"
+        >
+          <FileSpreadsheet size={20} />
+          Importar do Google Sheets
+        </button>
+      )}
+
+      {viewMode === 'calendar' ? (
+        <CalendarView 
+          calendarDays={calendarDays}
+          currentMonth={currentMonth}
+          currentYear={currentYear}
+          onDayClick={handleDayClick}
+          onDeleteShift={handleDeleteShift}
+          onUpdateShiftDate={handleUpdateShiftDate}
+          selectedShifts={selectedShifts}
+          onToggleSelect={toggleSelectShift}
+          onToggleSelectAll={toggleSelectAll}
+        />
+      ) : (
+        <ListView 
+          shifts={filteredShifts}
+          onTogglePaid={handleTogglePaid}
+          onDeleteShift={handleDeleteShift}
+          selectedShifts={selectedShifts}
+          onToggleSelect={toggleSelectShift}
+          onToggleSelectAll={toggleSelectAll}
+        />
+      )}
+      
+      <button 
+        onClick={() => { setSelectedDate(null); setIsModalOpen(true); }}
+        className="md:hidden fixed bottom-20 right-4 w-14 h-14 bg-blue-600 dark:bg-blue-500 text-white rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all flex items-center justify-center z-40"
+      >
+        <Plus size={24} strokeWidth={3} />
+      </button>
+
+      <button 
+        onClick={() => { setSelectedDate(null); setIsModalOpen(true); }}
+        className="hidden md:flex w-full bg-slate-900 dark:bg-slate-700 text-white font-black py-5 rounded-[2rem] hover:bg-slate-800 dark:hover:bg-slate-600 transition-all items-center justify-center gap-3 shadow-xl active:scale-95 uppercase tracking-widest text-sm"
+      >
+        <Plus size={20} strokeWidth={3} /> Novo Plantão
+      </button>
+
+      <ShiftModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={(data) => createShiftMutation.mutate(data)}
+        doctors={doctors}
+        hospitals={hospitals}
+        initialDate={selectedDate}
+      />
+
+      <DeleteConfirmation 
+        isOpen={deleteConfirmation.isOpen}
+        name={deleteConfirmation.name}
+        onConfirm={() => deleteShiftMutation.mutate(deleteConfirmation.id)}
+        onCancel={() => setDeleteConfirmation({ isOpen: false, id: '', name: '' })}
+      />
     </div>
   );
 }
