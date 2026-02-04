@@ -84,31 +84,50 @@ export default function Finance() {
     return 0;
   };
 
-  const calculateDiscount = (doctorId, hospitalId, baseValue) => {
-    let desconto = configDescontos.find(d => d.doctor_id === doctorId && d.hospital_id === hospitalId);
-    if (!desconto) {
-      desconto = configDescontos.find(d => d.doctor_id === doctorId && !d.hospital_id);
-    }
-    if (!desconto) {
-      desconto = configDescontos.find(d => !d.doctor_id && d.hospital_id === hospitalId);
-    }
-    if (!desconto) {
-      desconto = configDescontos.find(d => !d.doctor_id && !d.hospital_id);
+  const calculateAllDiscounts = (doctorId, hospitalId, baseValue) => {
+    const applicableDiscounts = [];
+
+    // Buscar descontos específicos (médico + hospital)
+    const specific = configDescontos.filter(d => d.doctor_id === doctorId && d.hospital_id === hospitalId);
+    applicableDiscounts.push(...specific);
+
+    // Buscar descontos por médico (sem hospital específico)
+    const byDoctor = configDescontos.filter(d => d.doctor_id === doctorId && !d.hospital_id);
+    applicableDiscounts.push(...byDoctor);
+
+    // Buscar descontos por hospital (sem médico específico)
+    const byHospital = configDescontos.filter(d => !d.doctor_id && d.hospital_id === hospitalId);
+    applicableDiscounts.push(...byHospital);
+
+    // Buscar descontos globais (sem médico nem hospital)
+    const global = configDescontos.filter(d => !d.doctor_id && !d.hospital_id);
+    applicableDiscounts.push(...global);
+
+    if (applicableDiscounts.length === 0) {
+      return { totalValue: 0, details: [] };
     }
 
-    if (!desconto) return { value: 0, details: null };
+    let totalDiscount = 0;
+    const details = [];
 
-    const value = desconto.tipo_desconto === 'percentual' 
-      ? baseValue * desconto.valor_desconto / 100 
-      : desconto.valor_desconto;
+    applicableDiscounts.forEach(desconto => {
+      const value = desconto.tipo_desconto === 'percentual' 
+        ? baseValue * desconto.valor_desconto / 100 
+        : desconto.valor_desconto;
 
-    return {
-      value,
-      details: {
+      totalDiscount += value;
+
+      details.push({
         descricao: desconto.descricao,
         tipo: desconto.tipo_desconto,
-        valor_config: desconto.valor_desconto
-      }
+        valor_config: desconto.valor_desconto,
+        valor_calculado: value
+      });
+    });
+
+    return {
+      totalValue: totalDiscount,
+      details
     };
   };
 
@@ -157,14 +176,14 @@ export default function Finance() {
       }
 
       const baseValue = calculateBaseValue(doctorId, hospitalId, period);
-      const discountResult = calculateDiscount(doctorId, hospitalId, baseValue);
-      const netValue = baseValue - discountResult.value;
+      const discountResult = calculateAllDiscounts(doctorId, hospitalId, baseValue);
+      const netValue = baseValue - discountResult.totalValue;
 
       grouped[key].quantity += 1;
       grouped[key].grossValue += baseValue;
-      grouped[key].discountValue += discountResult.value;
+      grouped[key].discountValue += discountResult.totalValue;
       grouped[key].netValue += netValue;
-      if (discountResult.details) {
+      if (discountResult.details.length > 0) {
         grouped[key].discountDetails = discountResult.details;
       }
     });
@@ -374,12 +393,16 @@ export default function Finance() {
                   <td className="px-6 py-4 text-sm text-right font-bold text-green-600 dark:text-green-400">R$ {item.grossValue.toFixed(2)}</td>
                   <td className="px-6 py-4 text-sm">
                     <div className="font-bold text-red-600 dark:text-red-400">R$ {item.discountValue.toFixed(2)}</div>
-                    {item.discountDetails && (
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        {item.discountDetails.descricao} 
-                        {item.discountDetails.tipo === 'percentual' 
-                          ? ` (${item.discountDetails.valor_config}%)` 
-                          : ` (R$ ${item.discountDetails.valor_config.toFixed(2)})`}
+                    {item.discountDetails && item.discountDetails.length > 0 && (
+                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 space-y-1">
+                        {item.discountDetails.map((detail, idx) => (
+                          <div key={idx}>
+                            • {detail.descricao} 
+                            {detail.tipo === 'percentual' 
+                              ? ` (${detail.valor_config}%) = R$ ${detail.valor_calculado.toFixed(2)}` 
+                              : ` (R$ ${detail.valor_config.toFixed(2)})`}
+                          </div>
+                        ))}
                       </div>
                     )}
                   </td>
