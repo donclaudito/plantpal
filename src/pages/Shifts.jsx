@@ -24,7 +24,7 @@ export default function Shifts() {
     hospital: '',
     shift_type: 'Diurno',
     value: '',
-    status: 'Agendado',
+    status: 'Realizado',
     notes: ''
   });
   const [filterStatus, setFilterStatus] = useState('all');
@@ -81,7 +81,7 @@ export default function Shifts() {
       hospital: '',
       shift_type: 'Diurno',
       value: '',
-      status: 'Agendado',
+      status: 'Realizado',
       notes: ''
     });
     setEditingShift(null);
@@ -183,8 +183,8 @@ export default function Shifts() {
           }
         }
 
-        // Status padrão: "Agendado" se ausente
-        const finalStatus = status && status.trim() !== '' ? status : 'Agendado';
+        // Status padrão: "Realizado" se ausente
+        const finalStatus = status && status.trim() !== '' ? status : 'Realizado';
 
         return {
           date: normalizedDate,
@@ -252,7 +252,6 @@ export default function Shifts() {
 
   const getStatusColor = (status) => {
     const colors = {
-      'Agendado': 'bg-blue-100 text-blue-800',
       'Realizado': 'bg-green-100 text-green-800',
       'Cancelado': 'bg-red-100 text-red-800',
       'Pago': 'bg-purple-100 text-purple-800'
@@ -312,11 +311,11 @@ export default function Shifts() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Agendados</CardTitle>
+              <CardTitle className="text-lg">Realizados</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-orange-600">
-                {shifts.filter(s => s.status === 'Agendado').length}
+              <p className="text-3xl font-bold text-green-600">
+                {shifts.filter(s => s.status === 'Realizado').length}
               </p>
             </CardContent>
           </Card>
@@ -413,7 +412,6 @@ export default function Shifts() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="Agendado">Agendado</SelectItem>
                       <SelectItem value="Realizado">Realizado</SelectItem>
                       <SelectItem value="Cancelado">Cancelado</SelectItem>
                       <SelectItem value="Pago">Pago</SelectItem>
@@ -442,6 +440,7 @@ export default function Shifts() {
                 filterDoctor={filterDoctor}
                 filterHospital={filterHospital}
                 onAddShift={handleAddShiftWithDate}
+                onEditShift={handleEdit}
                 onDeleteShift={(id) => deleteMutation.mutate(id)}
                 getStatusColor={getStatusColor}
               />
@@ -655,7 +654,6 @@ export default function Shifts() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Agendado">Agendado</SelectItem>
                       <SelectItem value="Realizado">Realizado</SelectItem>
                       <SelectItem value="Cancelado">Cancelado</SelectItem>
                       <SelectItem value="Pago">Pago</SelectItem>

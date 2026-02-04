@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Trash2, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths } from 'date-fns';
@@ -11,8 +11,18 @@ export default function MonthlyCalendarView({
   filterHospital, 
   onAddShift, 
   onDeleteShift,
+  onEditShift,
   getStatusColor 
 }) {
+  // Mapeamento de cores por tipo de plantão
+  const getShiftTypeColor = (shiftType) => {
+    const colors = {
+      'Diurno': 'bg-yellow-50 border-yellow-300',
+      'Noturno': 'bg-blue-50 border-blue-300',
+      '24h': 'bg-purple-50 border-purple-300'
+    };
+    return colors[shiftType] || 'bg-gray-50 border-gray-300';
+  };
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const monthStart = startOfMonth(currentMonth);
@@ -138,11 +148,11 @@ export default function MonthlyCalendarView({
                       {shifts.map((shift) => (
                         <div
                           key={shift.id}
-                          className="text-xs p-1 rounded bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors group/shift"
+                          className={`text-xs p-1 rounded border transition-colors group/shift ${getShiftTypeColor(shift.shift_type)} hover:opacity-80`}
                         >
                           <div className="flex justify-between items-start gap-1">
                             <div className="flex-1 min-w-0">
-                              <div className="text-gray-600 truncate text-[10px]">
+                              <div className="text-gray-600 truncate text-[10px] font-medium">
                                 {shift.hospital}
                               </div>
                               <div className="flex gap-1 mt-0.5 flex-wrap">
@@ -156,17 +166,30 @@ export default function MonthlyCalendarView({
                                 )}
                               </div>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-4 w-4 opacity-0 group-hover/shift:opacity-100 transition-opacity flex-shrink-0"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDeleteShift(shift.id);
-                              }}
-                            >
-                              <Trash2 className="w-3 h-3 text-red-600" />
-                            </Button>
+                            <div className="flex gap-0.5 opacity-0 group-hover/shift:opacity-100 transition-opacity">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-4 w-4 flex-shrink-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEditShift(shift);
+                                }}
+                              >
+                                <Edit className="w-3 h-3 text-blue-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-4 w-4 flex-shrink-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onDeleteShift(shift.id);
+                                }}
+                              >
+                                <Trash2 className="w-3 h-3 text-red-600" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       ))}
