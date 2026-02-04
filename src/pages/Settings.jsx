@@ -253,30 +253,9 @@ export default function Settings() {
                           {config.hospital_id ? getHospitalName(config.hospital_id) : 'Todos os hospitais'}
                         </p>
                         <p className="text-sm text-gray-600 mt-1">{config.descricao}</p>
-                        <div className="mt-2 space-y-1">
-                          <p className="text-sm">
-                            <span className="text-gray-600">Desconto:</span>
-                            <span className="font-bold text-orange-600 ml-2">
-                              {config.tipo_desconto === 'percentual' ? `${config.valor_desconto}%` : `R$ ${config.valor_desconto.toFixed(2)}`}
-                            </span>
-                          </p>
-                          {config.contador_valor_desconto > 0 && (
-                            <p className="text-sm">
-                              <span className="text-gray-600">Contador:</span>
-                              <span className="font-bold text-purple-600 ml-2">
-                                {config.contador_tipo_desconto === 'percentual' ? `${config.contador_valor_desconto}%` : `R$ ${config.contador_valor_desconto.toFixed(2)}`}
-                              </span>
-                            </p>
-                          )}
-                          {config.imposto_valor_desconto > 0 && (
-                            <p className="text-sm">
-                              <span className="text-gray-600">Imposto:</span>
-                              <span className="font-bold text-pink-600 ml-2">
-                                {config.imposto_tipo_desconto === 'percentual' ? `${config.imposto_valor_desconto}%` : `R$ ${config.imposto_valor_desconto.toFixed(2)}`}
-                              </span>
-                            </p>
-                          )}
-                        </div>
+                        <p className="text-lg font-bold text-red-600 mt-2">
+                          {config.tipo_desconto === 'percentual' ? `${config.valor_desconto}%` : `R$ ${config.valor_desconto.toFixed(2)}`}
+                        </p>
                       </div>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" onClick={() => setEditingDesconto(config)}>
@@ -374,17 +353,13 @@ function ValorForm({ doctors, hospitals, initialData, onSave, onCancel }) {
 }
 
 function DescontoForm({ doctors, hospitals, initialData, onSave, onCancel }) {
-        const [formData, setFormData] = useState(initialData || {
-          doctor_id: '',
-          hospital_id: '',
-          tipo_desconto: 'percentual',
-          valor_desconto: 0,
-          contador_tipo_desconto: 'percentual',
-          contador_valor_desconto: 0,
-          imposto_tipo_desconto: 'percentual',
-          imposto_valor_desconto: 0,
-          descricao: '',
-        });
+  const [formData, setFormData] = useState(initialData || {
+    doctor_id: '',
+    hospital_id: '',
+    tipo_desconto: 'percentual',
+    valor_desconto: 0,
+    descricao: '',
+  });
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -436,46 +411,10 @@ function DescontoForm({ doctors, hospitals, initialData, onSave, onCancel }) {
           <Label>Valor do Desconto</Label>
           <Input type="number" step="0.01" value={formData.valor_desconto} onChange={(e) => setFormData({ ...formData, valor_desconto: parseFloat(e.target.value) || 0 })} />
         </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label>Tipo de Contador</Label>
-          <Select value={formData.contador_tipo_desconto || 'percentual'} onValueChange={(v) => setFormData({ ...formData, contador_tipo_desconto: v })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="percentual">Percentual (%)</SelectItem>
-              <SelectItem value="valor_fixo">Valor Fixo (R$)</SelectItem>
-            </SelectContent>
-          </Select>
+          <Label>Descrição</Label>
+          <Input value={formData.descricao} onChange={(e) => setFormData({ ...formData, descricao: e.target.value })} placeholder="Ex: Desconto INSS" />
         </div>
-        <div>
-          <Label>Valor do Contador</Label>
-          <Input type="number" step="0.01" value={formData.contador_valor_desconto || ''} onChange={(e) => setFormData({ ...formData, contador_valor_desconto: parseFloat(e.target.value) || 0 })} placeholder="Ex: 5" />
-        </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label>Tipo de Imposto</Label>
-          <Select value={formData.imposto_tipo_desconto || 'percentual'} onValueChange={(v) => setFormData({ ...formData, imposto_tipo_desconto: v })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="percentual">Percentual (%)</SelectItem>
-              <SelectItem value="valor_fixo">Valor Fixo (R$)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Valor do Imposto</Label>
-          <Input type="number" step="0.01" value={formData.imposto_valor_desconto || ''} onChange={(e) => setFormData({ ...formData, imposto_valor_desconto: parseFloat(e.target.value) || 0 })} placeholder="Ex: 15" />
-        </div>
-      </div>
-      <div>
-        <Label>Descrição</Label>
-        <Input value={formData.descricao} onChange={(e) => setFormData({ ...formData, descricao: e.target.value })} placeholder="Ex: Desconto INSS" />
       </div>
       <div className="flex gap-2">
         <Button type="button" variant="outline" onClick={onCancel}>

@@ -62,35 +62,7 @@ export default function Finance() {
     enabled: !!user,
   });
 
-  const calculateBaseValue = (doctorId, hospitalId, period) => {
-    let config = configValores.find(c => c.doctor_id === doctorId && c.hospital_id === hospitalId);
-    if (!config) {
-      config = configValores.find(c => c.doctor_id === doctorId && !c.hospital_id);
-    }
-    if (!config) {
-      config = configValores.find(c => !c.doctor_id && c.hospital_id === hospitalId);
-    }
-    if (!config) {
-      config = configValores.find(c => !c.doctor_id && !c.hospital_id);
-    }
-
-    if (!config) return 0;
-
-    switch (period) {
-      case '6h':
-        return config.valor_6h || 0;
-      case '12h':
-        return config.valor_12h || 0;
-      case 'retaguarda':
-        return config.valor_retaguarda || 0;
-      case 'coordenador':
-        return config.valor_coordenador || 0;
-      default:
-        return 0;
-    }
-  };
-
-  const calculateDeductions = (doctorId, hospitalId, baseValue) => {
+  const calculateDiscount = (doctorId, hospitalId, baseValue) => {
     let desconto = configDescontos.find(d => d.doctor_id === doctorId && d.hospital_id === hospitalId);
     if (!desconto) {
       desconto = configDescontos.find(d => d.doctor_id === doctorId && !d.hospital_id);
@@ -102,37 +74,13 @@ export default function Finance() {
       desconto = configDescontos.find(d => !d.doctor_id && !d.hospital_id);
     }
 
-    if (!desconto) return { desconto: 0, contador: 0, imposto: 0, total: 0 };
+    if (!desconto) return 0;
 
-    let descontoValue = 0;
     if (desconto.tipo_desconto === 'percentual') {
-      descontoValue = baseValue * desconto.valor_desconto / 100;
+      return baseValue * desconto.valor_desconto / 100;
     } else {
-      descontoValue = desconto.valor_desconto;
+      return desconto.valor_desconto;
     }
-
-    let contadorValue = 0;
-    if (desconto.contador_tipo_desconto === 'percentual') {
-      contadorValue = baseValue * (desconto.contador_valor_desconto || 0) / 100;
-    } else {
-      contadorValue = desconto.contador_valor_desconto || 0;
-    }
-
-    let impostoValue = 0;
-    if (desconto.imposto_tipo_desconto === 'percentual') {
-      impostoValue = baseValue * (desconto.imposto_valor_desconto || 0) / 100;
-    } else {
-      impostoValue = desconto.imposto_valor_desconto || 0;
-    }
-
-    const totalDeductions = descontoValue + contadorValue + impostoValue;
-
-    return { 
-      desconto: descontoValue, 
-      contador: contadorValue, 
-      imposto: impostoValue, 
-      total: totalDeductions 
-    };
   };
 
   const filteredShifts = useMemo(() => {
@@ -174,43 +122,34 @@ export default function Finance() {
           quantity: 0,
           grossValue: 0,
           discountValue: 0,
-          contadorValue: 0,
-          impostoValue: 0,
-          totalDeductions: 0,
           netValue: 0,
         };
       }
 
-      const calculatedBaseValue = calculateBaseValue(doctorId, hospitalId, period);
-      const deductions = calculateDeductions(doctorId, hospitalId, calculatedBaseValue);
-      const calculatedNetValue = calculatedBaseValue - deductions.total;
+      const baseValue = shift.value || 0;
+      const discount = calculateDiscount(doctorId, hospitalId, baseValue);
+      const netValue = baseValue - discount;
 
       grouped[key].quantity += 1;
-      grouped[key].grossValue += calculatedBaseValue;
-      grouped[key].discountValue += deductions.desconto;
-      grouped[key].contadorValue += deductions.contador;
-      grouped[key].impostoValue += deductions.imposto;
-      grouped[key].totalDeductions += deductions.total;
-      grouped[key].netValue += calculatedNetValue;
+      grouped[key].grossValue += baseValue;
+      grouped[key].discountValue += discount;
+      grouped[key].netValue += netValue;
     });
 
     return Object.values(grouped);
-  }, [filteredShifts, hospitals, configDescontos, configValores]);
+  }, [filteredShifts, hospitals, configDescontos]);
 
   const totals = useMemo(() => {
     return financialSummary.reduce((acc, item) => ({
       quantity: acc.quantity + item.quantity,
       grossValue: acc.grossValue + item.grossValue,
       discountValue: acc.discountValue + item.discountValue,
-      contadorValue: acc.contadorValue + item.contadorValue,
-      impostoValue: acc.impostoValue + item.impostoValue,
-      totalDeductions: acc.totalDeductions + item.totalDeductions,
       netValue: acc.netValue + item.netValue,
-    }), { quantity: 0, grossValue: 0, discountValue: 0, contadorValue: 0, impostoValue: 0, totalDeductions: 0, netValue: 0 });
+    }), { quantity: 0, grossValue: 0, discountValue: 0, netValue: 0 });
   }, [financialSummary]);
 
   const exportToCSV = () => {
-    const headers = ['Médico', 'Hospital', 'Período', 'Quantidade', 'Valor Bruto', 'Descontos', 'Contador', 'Imposto', 'Total Descontos', 'Valor Líquido'];
+    const headers = ['Médico', 'Hospital', 'Período', 'Quantidade', 'Valor Bruto', 'Descontos', 'Valor Líquido'];
     const rows = financialSummary.map(item => [
       item.doctorName,
       item.hospitalName,
@@ -218,9 +157,6 @@ export default function Finance() {
       item.quantity,
       `R$ ${item.grossValue.toFixed(2)}`,
       `R$ ${item.discountValue.toFixed(2)}`,
-      `R$ ${item.contadorValue.toFixed(2)}`,
-      `R$ ${item.impostoValue.toFixed(2)}`,
-      `R$ ${item.totalDeductions.toFixed(2)}`,
       `R$ ${item.netValue.toFixed(2)}`,
     ]);
 
@@ -231,9 +167,6 @@ export default function Finance() {
       totals.quantity,
       `R$ ${totals.grossValue.toFixed(2)}`,
       `R$ ${totals.discountValue.toFixed(2)}`,
-      `R$ ${totals.contadorValue.toFixed(2)}`,
-      `R$ ${totals.impostoValue.toFixed(2)}`,
-      `R$ ${totals.totalDeductions.toFixed(2)}`,
       `R$ ${totals.netValue.toFixed(2)}`,
     ]);
 
@@ -291,23 +224,9 @@ export default function Finance() {
         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-md">
           <div className="flex items-center gap-3 mb-2">
             <TrendingDown className="text-red-600 dark:text-red-400" size={24} />
-            <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase">Total Descontos</span>
+            <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase">Descontos</span>
           </div>
-          <p className="text-3xl font-black text-red-600 dark:text-red-400">R$ {totals.totalDeductions.toFixed(2)}</p>
-          <div className="mt-3 space-y-1 text-xs">
-            <div className="flex justify-between text-slate-600 dark:text-slate-400">
-              <span>Descontos:</span>
-              <span className="font-bold">R$ {totals.discountValue.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-slate-600 dark:text-slate-400">
-              <span>Contador:</span>
-              <span className="font-bold">R$ {totals.contadorValue.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-slate-600 dark:text-slate-400">
-              <span>Imposto:</span>
-              <span className="font-bold">R$ {totals.impostoValue.toFixed(2)}</span>
-            </div>
-          </div>
+          <p className="text-3xl font-black text-red-600 dark:text-red-400">R$ {totals.discountValue.toFixed(2)}</p>
         </div>
 
         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-md">
@@ -409,9 +328,6 @@ export default function Finance() {
                 <th className="px-6 py-4 text-right text-xs font-black text-slate-600 dark:text-slate-400 uppercase">Quantidade</th>
                 <th className="px-6 py-4 text-right text-xs font-black text-slate-600 dark:text-slate-400 uppercase">Valor Bruto</th>
                 <th className="px-6 py-4 text-right text-xs font-black text-slate-600 dark:text-slate-400 uppercase">Descontos</th>
-                <th className="px-6 py-4 text-right text-xs font-black text-slate-600 dark:text-slate-400 uppercase">Contador</th>
-                <th className="px-6 py-4 text-right text-xs font-black text-slate-600 dark:text-slate-400 uppercase">Imposto</th>
-                <th className="px-6 py-4 text-right text-xs font-black text-slate-600 dark:text-slate-400 uppercase">Total Descontos</th>
                 <th className="px-6 py-4 text-right text-xs font-black text-slate-600 dark:text-slate-400 uppercase">Valor Líquido</th>
               </tr>
             </thead>
@@ -423,16 +339,13 @@ export default function Finance() {
                   <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{item.period}</td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-slate-900 dark:text-white">{item.quantity}</td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-green-600 dark:text-green-400">R$ {item.grossValue.toFixed(2)}</td>
-                  <td className="px-6 py-4 text-sm text-right font-bold text-orange-600 dark:text-orange-400">R$ {item.discountValue.toFixed(2)}</td>
-                  <td className="px-6 py-4 text-sm text-right font-bold text-purple-600 dark:text-purple-400">R$ {item.contadorValue.toFixed(2)}</td>
-                  <td className="px-6 py-4 text-sm text-right font-bold text-pink-600 dark:text-pink-400">R$ {item.impostoValue.toFixed(2)}</td>
-                  <td className="px-6 py-4 text-sm text-right font-bold text-red-600 dark:text-red-400">R$ {item.totalDeductions.toFixed(2)}</td>
+                  <td className="px-6 py-4 text-sm text-right font-bold text-red-600 dark:text-red-400">R$ {item.discountValue.toFixed(2)}</td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-blue-600 dark:text-blue-400">R$ {item.netValue.toFixed(2)}</td>
                 </tr>
               ))}
               {financialSummary.length === 0 && (
                 <tr>
-                  <td colSpan="10" className="px-6 py-12 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan="7" className="px-6 py-12 text-center text-slate-400 dark:text-slate-500">
                     Nenhum plantão encontrado para os filtros selecionados
                   </td>
                 </tr>
@@ -444,10 +357,7 @@ export default function Finance() {
                   <td colSpan="3" className="px-6 py-4 text-sm font-black text-slate-900 dark:text-white uppercase">Total</td>
                   <td className="px-6 py-4 text-sm text-right font-black text-slate-900 dark:text-white">{totals.quantity}</td>
                   <td className="px-6 py-4 text-sm text-right font-black text-green-600 dark:text-green-400">R$ {totals.grossValue.toFixed(2)}</td>
-                  <td className="px-6 py-4 text-sm text-right font-black text-orange-600 dark:text-orange-400">R$ {totals.discountValue.toFixed(2)}</td>
-                  <td className="px-6 py-4 text-sm text-right font-black text-purple-600 dark:text-purple-400">R$ {totals.contadorValue.toFixed(2)}</td>
-                  <td className="px-6 py-4 text-sm text-right font-black text-pink-600 dark:text-pink-400">R$ {totals.impostoValue.toFixed(2)}</td>
-                  <td className="px-6 py-4 text-sm text-right font-black text-red-600 dark:text-red-400">R$ {totals.totalDeductions.toFixed(2)}</td>
+                  <td className="px-6 py-4 text-sm text-right font-black text-red-600 dark:text-red-400">R$ {totals.discountValue.toFixed(2)}</td>
                   <td className="px-6 py-4 text-sm text-right font-black text-blue-600 dark:text-blue-400">R$ {totals.netValue.toFixed(2)}</td>
                 </tr>
               </tfoot>

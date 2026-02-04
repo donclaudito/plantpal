@@ -48,21 +48,21 @@
  * The mainPage value must match a key in the PAGES object exactly.
  */
 import Doctors from './pages/Doctors';
-import Finance from './pages/Finance';
 import Home from './pages/Home';
 import Hospitals from './pages/Hospitals';
-import Settings from './pages/Settings';
 import Shifts from './pages/Shifts';
+import Settings from './pages/Settings';
+import Finance from './pages/Finance';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "Doctors": Doctors,
-    "Finance": Finance,
     "Home": Home,
     "Hospitals": Hospitals,
-    "Settings": Settings,
     "Shifts": Shifts,
+    "Settings": Settings,
+    "Finance": Finance,
 }
 
 export const pagesConfig = {
