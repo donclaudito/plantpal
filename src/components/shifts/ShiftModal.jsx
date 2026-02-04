@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
+import { useQuery } from '@tanstack/react-query';
 
 const specialties = [
   "CIRURGIA GERAL", "CLÍNICA MÉDICA", "PEDIATRIA", "GINECOLOGIA", "ORTOPEDIA", "ANESTESIA", "GASTROENTEROLOGIA", "CIRURGIA DIGESTIVA", "OUTRA"
@@ -18,6 +20,29 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
     period: '12h',
     value: 0,
     paid: false
+  });
+
+  const { data: user } = useQuery({
+    queryKey: ['user'],
+    queryFn: () => base44.auth.me(),
+  });
+
+  const { data: configValores = [] } = useQuery({
+    queryKey: ['configValores', user?.email],
+    queryFn: async () => {
+      const all = await base44.entities.ConfiguracaoPlantao.list();
+      return all.filter(c => c.created_by === user?.email);
+    },
+    enabled: !!user,
+  });
+
+  const { data: configDescontos = [] } = useQuery({
+    queryKey: ['configDescontos', user?.email],
+    queryFn: async () => {
+      const all = await base44.entities.ConfiguracaoDesconto.list();
+      return all.filter(c => c.created_by === user?.email);
+    },
+    enabled: !!user,
   });
 
   useEffect(() => {
@@ -39,17 +64,89 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
     }
   }, [initialDate, editingShift, doctors]);
 
+  const calculateValue = (doctorId, hospitalName, period) => {
+    const hospital = hospitals.find(h => h.name === hospitalName);
+    const hospitalId = hospital?.id;
+
+    let config = configValores.find(c => c.doctor_id === doctorId && c.hospital_id === hospitalId);
+    if (!config) {
+      config = configValores.find(c => c.doctor_id === doctorId && !c.hospital_id);
+    }
+    if (!config) {
+      config = configValores.find(c => !c.doctor_id && c.hospital_id === hospitalId);
+    }
+    if (!config) {
+      config = configValores.find(c => !c.doctor_id && !c.hospital_id);
+    }
+
+    let baseValue = 0;
+    if (config) {
+      switch (period) {
+        case '6h':
+          baseValue = config.valor_6h || 0;
+          break;
+        case '12h':
+          baseValue = config.valor_12h || 0;
+          break;
+        case 'retaguarda':
+          baseValue = config.valor_retaguarda || 0;
+          break;
+        case 'coordenador':
+          baseValue = config.valor_coordenador || 0;
+          break;
+        default:
+          baseValue = 0;
+      }
+    }
+
+    let desconto = configDescontos.find(d => d.doctor_id === doctorId && d.hospital_id === hospitalId);
+    if (!desconto) {
+      desconto = configDescontos.find(d => d.doctor_id === doctorId && !d.hospital_id);
+    }
+    if (!desconto) {
+      desconto = configDescontos.find(d => !d.doctor_id && d.hospital_id === hospitalId);
+    }
+    if (!desconto) {
+      desconto = configDescontos.find(d => !d.doctor_id && !d.hospital_id);
+    }
+
+    let finalValue = baseValue;
+    if (desconto) {
+      if (desconto.tipo_desconto === 'percentual') {
+        finalValue = baseValue - (baseValue * desconto.valor_desconto / 100);
+      } else {
+        finalValue = baseValue - desconto.valor_desconto;
+      }
+    }
+
+    return Math.max(0, finalValue);
+  };
+
   const handleDoctorChange = (e) => {
     const doctorId = e.target.value;
     const doctor = doctors.find(d => d.id === doctorId);
     if (doctor) {
+      const newValue = calculateValue(doctorId, formData.unit, formData.period);
       setFormData({
         ...formData,
         doctorId: doctor.id,
         doctorName: doctor.full_name,
-        specialty: doctor.specialty || 'CIRURGIA GERAL'
+        specialty: doctor.specialty || 'CIRURGIA GERAL',
+        value: newValue
       });
     }
+  };
+
+  const handleHospitalChange = (e) => {
+    const hospitalName = e.target.value;
+    const newValue = calculateValue(formData.doctorId, hospitalName, formData.period);
+    setFormData({ ...formData, unit: hospitalName, value: newValue });
+  };
+
+  const handlePeriodChange = (e) => {
+    const period = e.target.value;
+    const newValue = calculateValue(formData.doctorId, formData.unit, period);
+    setFormData({ ...formData, period, value: newValue });
   };
 
   const handleSubmit = (e) => {
@@ -61,7 +158,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
       hospital: formData.unit,
       shift_type: formData.type,
       period: formData.period,
-      value: 0,
+      value: formData.value,
       status: formData.paid ? 'Pago' : 'Realizado'
     };
     onSave(saveData);
@@ -146,7 +243,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
               </label>
               <select
                 value={formData.unit}
-                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                onChange={handleHospitalChange}
                 required
                 className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-700 border-2 border-transparent focus:border-blue-600 dark:focus:border-blue-400 rounded-xl font-bold text-slate-900 dark:text-white transition-colors"
               >
@@ -178,16 +275,23 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
               </label>
               <select
                 value={formData.period || '12h'}
-                onChange={(e) => setFormData({ ...formData, period: e.target.value })}
+                onChange={handlePeriodChange}
                 className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-700 border-2 border-transparent focus:border-blue-600 dark:focus:border-blue-400 rounded-xl font-bold text-slate-900 dark:text-white transition-colors"
               >
                 <option value="12h">12h</option>
                 <option value="6h">6h</option>
                 <option value="retaguarda">Retaguarda</option>
-                <option value="mais tarde">Mais tarde</option>
+                <option value="coordenador">Coordenador</option>
               </select>
             </div>
           </div>
+
+          {formData.value > 0 && (
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border-2 border-blue-200 dark:border-blue-800">
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Valor calculado automaticamente:</p>
+              <p className="text-2xl font-black text-blue-600 dark:text-blue-400">R$ {formData.value.toFixed(2)}</p>
+            </div>
+          )}
 
           <div className="flex gap-3 pt-4">
             <button
