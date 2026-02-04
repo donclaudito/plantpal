@@ -54,6 +54,7 @@ import Home from './pages/Home';
 import Hospitals from './pages/Hospitals';
 import Settings from './pages/Settings';
 import Shifts from './pages/Shifts';
+import Relatorios from './pages/Relatorios';
 import __Layout from './Layout.jsx';
 
 
@@ -65,6 +66,7 @@ export const PAGES = {
     "Hospitals": Hospitals,
     "Settings": Settings,
     "Shifts": Shifts,
+    "Relatorios": Relatorios,
 }
 
 export const pagesConfig = {
