@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 export default function Home() {
   const menuItems = [
     { name: 'Plantões', path: 'Shifts', icon: Calendar, description: 'Gerenciar plantões' },
-    { name: 'Calendário', path: 'Calendar', icon: Calendar, description: 'Visualizar calendário' },
     { name: 'Finanças', path: 'Finance', icon: DollarSign, description: 'Controle financeiro' },
     { name: 'Depósitos', path: 'Deposits', icon: FileText, description: 'Histórico de depósitos' },
     { name: 'Relatórios', path: 'Reports', icon: BarChart, description: 'Análises e relatórios' },
