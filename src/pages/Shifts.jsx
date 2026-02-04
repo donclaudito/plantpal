@@ -158,7 +158,7 @@ export default function Shifts() {
       const matchMonth = month === currentMonth + 1 && year === currentYear;
 
       const normalizedFilterDoctor = filterDoctor === 'TODOS' ? 'TODOS' : filterDoctor.trim().toUpperCase();
-      const normalizedDoctorName = (s.doctorName || '').trim().toUpperCase();
+      const normalizedDoctorName = (s.doctor_name || '').trim().toUpperCase();
       const matchDoctor = normalizedFilterDoctor === 'TODOS' || normalizedDoctorName === normalizedFilterDoctor;
 
       const matchSpecialty = filterSpecialty === 'TODAS' || (s.specialty || '').toUpperCase() === filterSpecialty.toUpperCase();
@@ -255,13 +255,13 @@ export default function Shifts() {
     const headers = ['Data', 'Hospital', 'Médico', 'Especialidade', 'Tipo', 'Horas', 'Valor', 'Status'];
     const rows = filteredShifts.map(s => [
       new Date(s.date + 'T00:00:00').toLocaleDateString('pt-PT'),
-      s.unit,
-      s.doctorName,
-      s.specialty,
-      s.type,
-      s.hours,
+      s.hospital,
+      s.doctor_name,
+      s.shift_type,
+      s.shift_type,
+      '-',
       `R$ ${s.value.toFixed(2)}`,
-      s.paid ? 'Pago' : 'Pendente'
+      s.status
     ]);
     
     const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
@@ -306,7 +306,7 @@ export default function Shifts() {
               <p className="text-xs opacity-90 mt-1">
                 Médicos de serviço: {todayShifts.map((s, i) => (
                   <span key={s.id}>
-                    <strong>{s.doctorName}</strong> em {s.unit} ({s.type})
+                    <strong>{s.doctor_name}</strong> em {s.hospital} ({s.shift_type})
                     {i < todayShifts.length - 1 ? ' • ' : ''}
                   </span>
                 ))}
@@ -324,7 +324,7 @@ export default function Shifts() {
               </p>
               {nextShift && (
                 <p className="text-xs opacity-90 mt-2">
-                  Próximo plantão: {new Date(nextShift.date + 'T00:00:00').toLocaleDateString('pt-PT', { day: 'numeric', month: 'long' })} • <strong>{nextShift.doctorName}</strong> em {nextShift.unit} ({nextShift.type})
+                  Próximo plantão: {new Date(nextShift.date + 'T00:00:00').toLocaleDateString('pt-PT', { day: 'numeric', month: 'long' })} • <strong>{nextShift.doctor_name}</strong> em {nextShift.hospital} ({nextShift.shift_type})
                 </p>
               )}
             </div>

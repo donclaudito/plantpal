@@ -37,15 +37,15 @@ export default function ShiftDetailsModal({ shift, isOpen, onClose }) {
                 <User className="text-blue-600 dark:text-blue-400" size={20} />
                 <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">Médico</span>
               </div>
-              <p className="text-lg font-black text-slate-900 dark:text-white">{shift.doctorName}</p>
+              <p className="text-lg font-black text-slate-900 dark:text-white">{shift.doctor_name}</p>
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl">
               <div className="flex items-center gap-3 mb-2">
                 <Stethoscope className="text-blue-600 dark:text-blue-400" size={20} />
-                <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">Especialidade</span>
+                <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tipo</span>
               </div>
-              <p className="text-lg font-black text-slate-900 dark:text-white">{shift.specialty}</p>
+              <p className="text-lg font-black text-slate-900 dark:text-white">{shift.shift_type}</p>
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl">
@@ -68,16 +68,16 @@ export default function ShiftDetailsModal({ shift, isOpen, onClose }) {
                 <MapPin className="text-blue-600 dark:text-blue-400" size={20} />
                 <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">Hospital</span>
               </div>
-              <p className="text-lg font-black text-slate-900 dark:text-white">{shift.unit}</p>
+              <p className="text-lg font-black text-slate-900 dark:text-white">{shift.hospital}</p>
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl">
               <div className="flex items-center gap-3 mb-2">
                 <Clock className="text-blue-600 dark:text-blue-400" size={20} />
-                <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tipo / Horas</span>
+                <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</span>
               </div>
               <p className="text-lg font-black text-slate-900 dark:text-white">
-                {shift.type} • {shift.hours}h
+                {shift.status}
               </p>
             </div>
 

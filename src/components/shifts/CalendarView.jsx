@@ -66,13 +66,13 @@ export default function CalendarView({
                           onClick={() => onViewShiftDetails(shift)}
                         >
                           <div className="font-black text-slate-800 dark:text-slate-200 truncate text-[10px] uppercase tracking-wide">
-                            {shift.doctorName}
+                            {shift.doctor_name}
                           </div>
                           <div className="text-slate-600 dark:text-slate-400 truncate text-[9px] mt-0.5">
-                            {shift.unit}
+                            {shift.hospital}
                           </div>
                           <div className="flex items-center justify-between mt-1">
-                            <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400">{shift.type}</span>
+                            <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400">{shift.shift_type}</span>
                             {shift.paid && (
                               <Check size={10} className="text-green-600 dark:text-green-400" />
                             )}
@@ -81,7 +81,7 @@ export default function CalendarView({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              onDeleteShift(shift.id, shift.doctorName);
+                              onDeleteShift(shift.id, shift.doctor_name);
                             }}
                             className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 dark:bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg"
                           >
