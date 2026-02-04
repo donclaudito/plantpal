@@ -26,6 +26,7 @@ export default function Shifts() {
   const [filterSpecialty, setFilterSpecialty] = useState('TODAS');
   const [filterDoctor, setFilterDoctor] = useState('TODOS');
   const [filterWeek, setFilterWeek] = useState('TODAS');
+  const [filterHospital, setFilterHospital] = useState('TODOS');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -164,6 +165,10 @@ export default function Shifts() {
 
       const matchSpecialty = filterSpecialty === 'TODAS' || (s.specialty || '').toUpperCase() === filterSpecialty.toUpperCase();
 
+      const normalizedFilterHospital = filterHospital === 'TODOS' ? 'TODOS' : filterHospital.trim().toUpperCase();
+      const normalizedHospital = (s.hospital || '').trim().toUpperCase();
+      const matchHospital = normalizedFilterHospital === 'TODOS' || normalizedHospital === normalizedFilterHospital;
+
       let matchWeek = true;
       if (filterWeek !== 'TODAS') {
         const weekNum = parseInt(filterWeek);
@@ -174,9 +179,9 @@ export default function Shifts() {
         matchWeek = weekOfMonth === weekNum;
       }
 
-      return matchMonth && matchDoctor && matchSpecialty && matchWeek;
+      return matchMonth && matchDoctor && matchSpecialty && matchWeek && matchHospital;
     }).sort((a, b) => b.date.localeCompare(a.date));
-  }, [shifts, currentMonth, currentYear, filterDoctor, filterSpecialty, filterWeek]);
+  }, [shifts, currentMonth, currentYear, filterDoctor, filterSpecialty, filterWeek, filterHospital]);
 
   const calendarDays = useMemo(() => {
     const firstDay = new Date(currentYear, currentMonth, 1);
@@ -382,15 +387,6 @@ export default function Shifts() {
               <Download size={16} /> CSV
             </button>
           
-          <button
-            onClick={syncToGoogleSheets}
-            disabled={isSyncingSheets}
-            className="flex items-center gap-2 bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <FileSpreadsheet size={16} /> 
-            {isSyncingSheets ? 'Sincronizando...' : 'Google Sheets'}
-          </button>
-          
           <div className="flex gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 w-fit">
             <div className="p-2 text-slate-400 dark:text-slate-500"><Filter size={16}/></div>
             <select 
@@ -419,6 +415,18 @@ export default function Shifts() {
             </select>
           </div>
           
+          <div className="flex gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 w-fit">
+            <div className="p-2 text-slate-400 dark:text-slate-500"><Filter size={16}/></div>
+            <select 
+              value={filterHospital} 
+              onChange={e => setFilterHospital(e.target.value)}
+              className="bg-transparent text-xs font-black uppercase tracking-widest border-none focus:ring-0 cursor-pointer text-slate-600 dark:text-slate-300 pr-8"
+            >
+              <option value="TODOS">TODOS HOSPITAIS</option>
+              {hospitals.map(h => <option key={h.id} value={h.name}>{h.name}</option>)}
+            </select>
+          </div>
+
           <div className="flex gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 w-fit">
             <div className="p-2 text-slate-400 dark:text-slate-500"><Filter size={16}/></div>
             <select 
