@@ -16,18 +16,18 @@ export default function ShiftDetailsModal({ shift, isOpen, onClose, onEdit, onDe
 
         <div className="p-6 space-y-6">
           <div className={`p-6 rounded-2xl border-2 ${
-            shift.paid 
+            shift.status === 'Pago'
               ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700' 
               : 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700'
           }`}>
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</span>
-              {shift.paid && <Check className="text-green-600 dark:text-green-400" size={20} />}
+              {shift.status === 'Pago' && <Check className="text-green-600 dark:text-green-400" size={20} />}
             </div>
             <p className={`text-2xl font-black ${
-              shift.paid ? 'text-green-700 dark:text-green-400' : 'text-blue-700 dark:text-blue-400'
+              shift.status === 'Pago' ? 'text-green-700 dark:text-green-400' : 'text-blue-700 dark:text-blue-400'
             }`}>
-              {shift.paid ? 'PAGO' : 'PENDENTE'}
+              {shift.status}
             </p>
           </div>
 

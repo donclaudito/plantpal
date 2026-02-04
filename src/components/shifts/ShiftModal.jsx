@@ -7,7 +7,7 @@ const specialties = [
 
 const shiftTypes = ["DIURNO", "NOTURNO", "24H"];
 
-export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals, initialDate }) {
+export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals, initialDate, editingShift }) {
   const [formData, setFormData] = useState({
     date: initialDate || '',
     doctorId: '',
@@ -21,10 +21,23 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
   });
 
   useEffect(() => {
-    if (initialDate) {
+    if (editingShift) {
+      const doctor = doctors.find(d => d.full_name === editingShift.doctor_name);
+      setFormData({
+        date: editingShift.date,
+        doctorId: editingShift.doctor_id || (doctor?.id || ''),
+        doctorName: editingShift.doctor_name,
+        specialty: editingShift.shift_type || 'CIRURGIA GERAL',
+        unit: editingShift.hospital,
+        type: editingShift.shift_type || 'DIURNO',
+        hours: 12,
+        value: editingShift.value,
+        paid: editingShift.status === 'Pago'
+      });
+    } else if (initialDate) {
       setFormData(prev => ({ ...prev, date: initialDate }));
     }
-  }, [initialDate]);
+  }, [initialDate, editingShift, doctors]);
 
   const handleDoctorChange = (e) => {
     const doctorId = e.target.value;
@@ -41,7 +54,16 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(formData);
+    const saveData = {
+      date: formData.date,
+      doctor_id: formData.doctorId,
+      doctor_name: formData.doctorName,
+      hospital: formData.unit,
+      shift_type: formData.type,
+      value: formData.value,
+      status: formData.paid ? 'Pago' : 'Realizado'
+    };
+    onSave(saveData);
     setFormData({
       date: '',
       doctorId: '',
@@ -62,7 +84,9 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
       <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
         <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-6 flex items-center justify-between">
-          <h2 className="text-2xl font-black text-slate-900 dark:text-white">Novo Plantão</h2>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white">
+            {editingShift ? 'Editar Plantão' : 'Novo Plantão'}
+          </h2>
           <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
             <X className="text-slate-400 dark:text-slate-500" size={24} />
           </button>
@@ -190,7 +214,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
               type="submit"
               className="flex-1 py-4 bg-blue-600 dark:bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
             >
-              Guardar Plantão
+              {editingShift ? 'Atualizar' : 'Guardar Plantão'}
             </button>
           </div>
         </form>
