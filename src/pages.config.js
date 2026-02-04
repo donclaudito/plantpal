@@ -49,12 +49,14 @@
  */
 import Home from './pages/Home';
 import Doctors from './pages/Doctors';
+import Shifts from './pages/Shifts';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "Home": Home,
     "Doctors": Doctors,
+    "Shifts": Shifts,
 }
 
 export const pagesConfig = {
