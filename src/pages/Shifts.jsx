@@ -51,10 +51,7 @@ export default function Shifts() {
 
   const { data: shifts = [] } = useQuery({
     queryKey: ['shifts', user?.email],
-    queryFn: async () => {
-      const allShifts = await base44.entities.Shift.list('-date');
-      return allShifts.filter(s => s.created_by === user?.email);
-    },
+    queryFn: () => base44.entities.Shift.list('-date'),
     enabled: !!user,
     staleTime: 1000 * 60 * 5,
     cacheTime: 1000 * 60 * 10,
@@ -62,10 +59,7 @@ export default function Shifts() {
 
   const { data: doctors = [] } = useQuery({
     queryKey: ['doctors', user?.email],
-    queryFn: async () => {
-      const all = await base44.entities.Doctor.list('full_name');
-      return all.filter(d => d.created_by === user?.email);
-    },
+    queryFn: () => base44.entities.Doctor.list('full_name'),
     enabled: !!user,
     staleTime: 1000 * 60 * 30,
     cacheTime: 1000 * 60 * 60,
@@ -73,10 +67,7 @@ export default function Shifts() {
 
   const { data: hospitals = [] } = useQuery({
     queryKey: ['hospitals', user?.email],
-    queryFn: async () => {
-      const all = await base44.entities.Hospital.list('name');
-      return all.filter(h => h.created_by === user?.email);
-    },
+    queryFn: () => base44.entities.Hospital.list('name'),
     enabled: !!user,
     staleTime: 1000 * 60 * 30,
     cacheTime: 1000 * 60 * 60,

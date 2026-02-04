@@ -29,19 +29,13 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
 
   const { data: configValores = [] } = useQuery({
     queryKey: ['configValores', user?.email],
-    queryFn: async () => {
-      const all = await base44.entities.ConfiguracaoPlantao.list();
-      return all.filter(c => c.created_by === user?.email);
-    },
+    queryFn: () => base44.entities.ConfiguracaoPlantao.list(),
     enabled: !!user,
   });
 
   const { data: configDescontos = [] } = useQuery({
     queryKey: ['configDescontos', user?.email],
-    queryFn: async () => {
-      const all = await base44.entities.ConfiguracaoDesconto.list();
-      return all.filter(c => c.created_by === user?.email);
-    },
+    queryFn: () => base44.entities.ConfiguracaoDesconto.list(),
     enabled: !!user,
   });
 
