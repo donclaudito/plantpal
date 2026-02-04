@@ -318,9 +318,6 @@ export default function Deposits() {
   const sendWhatsApp = () => {
     if (!selectedDeposit) return;
     
-    const doctor = doctors.find(d => d.id === (selectedDeposit.doctorId || selectedDeposit.doctor_id));
-    const phoneNumber = doctor?.phone?.replace(/\D/g, '') || '';
-    
     const message = `Prezado(a) Dr(a) ${selectedDeposit.doctorName || selectedDeposit.doctor_name},
 
 Segue seu holerite de pagamento referente ao mês de competência ${formatMonth(selectedDeposit.mesCompetencia || selectedDeposit.mes_competencia)} no hospital ${selectedDeposit.hospitalName || selectedDeposit.hospital_name}.
@@ -329,9 +326,7 @@ Valor Bruto: R$ ${((selectedDeposit.valorBruto || selectedDeposit.valor_bruto) |
 Descontos: R$ ${((selectedDeposit.valorDescontos || selectedDeposit.valor_descontos) || 0).toFixed(2)}
 Valor Líquido: R$ ${((selectedDeposit.valorLiquido || selectedDeposit.valor_liquido) || 0).toFixed(2)}`;
 
-    const whatsappUrl = phoneNumber 
-      ? `https://wa.me/55${phoneNumber}?text=${encodeURIComponent(message)}`
-      : `https://wa.me/?text=${encodeURIComponent(message)}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     
     window.open(whatsappUrl, '_blank');
     setShowAdminPrompt(false);
