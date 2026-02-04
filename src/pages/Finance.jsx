@@ -96,13 +96,20 @@ export default function Finance() {
       desconto = configDescontos.find(d => !d.doctor_id && !d.hospital_id);
     }
 
-    if (!desconto) return 0;
+    if (!desconto) return { value: 0, details: null };
 
-    if (desconto.tipo_desconto === 'percentual') {
-      return baseValue * desconto.valor_desconto / 100;
-    } else {
-      return desconto.valor_desconto;
-    }
+    const value = desconto.tipo_desconto === 'percentual' 
+      ? baseValue * desconto.valor_desconto / 100 
+      : desconto.valor_desconto;
+
+    return {
+      value,
+      details: {
+        descricao: desconto.descricao,
+        tipo: desconto.tipo_desconto,
+        valor_config: desconto.valor_desconto
+      }
+    };
   };
 
   const filteredShifts = useMemo(() => {
@@ -145,17 +152,21 @@ export default function Finance() {
           grossValue: 0,
           discountValue: 0,
           netValue: 0,
+          discountDetails: null,
         };
       }
 
       const baseValue = calculateBaseValue(doctorId, hospitalId, period);
-      const discount = calculateDiscount(doctorId, hospitalId, baseValue);
-      const netValue = baseValue - discount;
+      const discountResult = calculateDiscount(doctorId, hospitalId, baseValue);
+      const netValue = baseValue - discountResult.value;
 
       grouped[key].quantity += 1;
       grouped[key].grossValue += baseValue;
-      grouped[key].discountValue += discount;
+      grouped[key].discountValue += discountResult.value;
       grouped[key].netValue += netValue;
+      if (discountResult.details) {
+        grouped[key].discountDetails = discountResult.details;
+      }
     });
 
     return Object.values(grouped);
@@ -349,7 +360,7 @@ export default function Finance() {
                 <th className="px-6 py-4 text-left text-xs font-black text-slate-600 dark:text-slate-400 uppercase">Período</th>
                 <th className="px-6 py-4 text-right text-xs font-black text-slate-600 dark:text-slate-400 uppercase">Quantidade</th>
                 <th className="px-6 py-4 text-right text-xs font-black text-slate-600 dark:text-slate-400 uppercase">Valor Bruto</th>
-                <th className="px-6 py-4 text-right text-xs font-black text-slate-600 dark:text-slate-400 uppercase">Descontos</th>
+                <th className="px-6 py-4 text-left text-xs font-black text-slate-600 dark:text-slate-400 uppercase">Descontos (Detalhes)</th>
                 <th className="px-6 py-4 text-right text-xs font-black text-slate-600 dark:text-slate-400 uppercase">Valor Líquido</th>
               </tr>
             </thead>
@@ -361,7 +372,17 @@ export default function Finance() {
                   <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{item.period}</td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-slate-900 dark:text-white">{item.quantity}</td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-green-600 dark:text-green-400">R$ {item.grossValue.toFixed(2)}</td>
-                  <td className="px-6 py-4 text-sm text-right font-bold text-red-600 dark:text-red-400">R$ {item.discountValue.toFixed(2)}</td>
+                  <td className="px-6 py-4 text-sm">
+                    <div className="font-bold text-red-600 dark:text-red-400">R$ {item.discountValue.toFixed(2)}</div>
+                    {item.discountDetails && (
+                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        {item.discountDetails.descricao} 
+                        {item.discountDetails.tipo === 'percentual' 
+                          ? ` (${item.discountDetails.valor_config}%)` 
+                          : ` (R$ ${item.discountDetails.valor_config.toFixed(2)})`}
+                      </div>
+                    )}
+                  </td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-blue-600 dark:text-blue-400">R$ {item.netValue.toFixed(2)}</td>
                 </tr>
               ))}
