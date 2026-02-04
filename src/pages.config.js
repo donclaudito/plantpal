@@ -47,7 +47,6 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
-import Calendar from './pages/Calendar';
 import Doctors from './pages/Doctors';
 import Home from './pages/Home';
 import Hospitals from './pages/Hospitals';
@@ -56,7 +55,6 @@ import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "Calendar": Calendar,
     "Doctors": Doctors,
     "Home": Home,
     "Hospitals": Hospitals,
