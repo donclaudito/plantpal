@@ -33,7 +33,7 @@ export default function Layout({ children, currentPageName }) {
               <Link to={createPageUrl('Home')} className="text-xl font-bold text-blue-600">
                 REFUA CATAN
               </Link>
-              {currentPageName !== 'Home' && (
+              {user && user.role === 'admin' && currentPageName !== 'Home' && (
                 <Link to={createPageUrl('Home')}>
                   <Button variant="ghost" size="sm" className="gap-2">
                     <Home className="w-4 h-4" />
