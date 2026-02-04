@@ -154,10 +154,6 @@ export default function Finance() {
         };
       }
 
-      const baseValue = shift.value || 0;
-      const discount = calculateDiscount(doctorId, hospitalId, baseValue);
-      const netValue = baseValue - discount;
-
       const calculatedBaseValue = calculateBaseValue(doctorId, hospitalId, period);
       const calculatedDiscount = calculateDiscount(doctorId, hospitalId, calculatedBaseValue);
       const calculatedNetValue = calculatedBaseValue - calculatedDiscount;
@@ -169,7 +165,7 @@ export default function Finance() {
     });
 
     return Object.values(grouped);
-  }, [filteredShifts, hospitals, configDescontos]);
+  }, [filteredShifts, hospitals, configDescontos, configValores]);
 
   const totals = useMemo(() => {
     return financialSummary.reduce((acc, item) => ({
