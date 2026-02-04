@@ -330,8 +330,8 @@ Descontos: R$ ${(selectedDeposit.valorDescontos || selectedDeposit.valor_descont
 Valor Líquido: R$ ${(selectedDeposit.valorLiquido || selectedDeposit.valor_liquido).toFixed(2)}`;
 
     const whatsappUrl = phoneNumber 
-      ? `https://api.whatsapp.com/send?phone=55${phoneNumber}&text=${encodeURIComponent(message)}`
-      : `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+      ? `https://wa.me/55${phoneNumber}?text=${encodeURIComponent(message)}`
+      : `https://wa.me/?text=${encodeURIComponent(message)}`;
     
     window.open(whatsappUrl, '_blank');
     setShowAdminPrompt(false);
