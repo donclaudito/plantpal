@@ -70,16 +70,6 @@ export default function ShiftDetailsModal({ shift, isOpen, onClose, onEdit, onDe
               </div>
               <p className="text-lg font-black text-slate-900 dark:text-white">{shift.hospital}</p>
             </div>
-
-            <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl">
-              <div className="flex items-center gap-3 mb-2">
-                <DollarSign className="text-green-600 dark:text-green-400" size={20} />
-                <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">Valor</span>
-              </div>
-              <p className="text-2xl font-black text-green-600 dark:text-green-400">
-                R$ {shift.value.toFixed(2)}
-              </p>
-            </div>
           </div>
 
           <div className="flex gap-3">
