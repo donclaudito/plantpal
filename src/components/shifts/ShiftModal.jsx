@@ -60,7 +60,17 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
         paid: editingShift.status === 'Pago'
       });
     } else if (initialDate) {
-      setFormData(prev => ({ ...prev, date: initialDate }));
+      setFormData({
+        date: initialDate,
+        doctorId: '',
+        doctorName: '',
+        specialty: 'CIRURGIA GERAL',
+        unit: '',
+        type: 'DIURNO',
+        period: '12h',
+        value: 0,
+        paid: false
+      });
     }
   }, [initialDate, editingShift, doctors]);
 
