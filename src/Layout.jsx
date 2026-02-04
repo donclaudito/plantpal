@@ -19,7 +19,7 @@ export default function Layout({ children, currentPageName }) {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-6">
               <Link to={createPageUrl('Home')} className="text-xl font-bold text-blue-600">
-                Meu Plantão
+                REFUA CATAN
               </Link>
               {currentPageName !== 'Home' && (
                 <Link to={createPageUrl('Home')}>
