@@ -102,7 +102,10 @@ export default function Relatorios() {
     const filteredShifts = shifts.filter(s => {
       if (!s.date) return false;
       const [sYear, sMonth] = s.date.split('-').map(Number);
-      return sYear === year && sMonth === month;
+      const monthMatch = sYear === year && sMonth === month;
+      const hospitalMatch = selectedHospital === 'all' || s.hospital === selectedHospital;
+      const doctorMatch = selectedDoctor === 'all' || s.doctor_name === selectedDoctor;
+      return monthMatch && hospitalMatch && doctorMatch;
     });
 
     // Relatório por Hospital
