@@ -315,7 +315,7 @@ function ValorForm({ doctors, hospitals, initialData, onSave, onCancel }) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="global">Todos os hospitais</SelectItem>
-              {hospitals.map(h => <SelectItem key={h.id} value={h.id}>{h.full_name}</SelectItem>)}
+              {hospitals.map(h => <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
