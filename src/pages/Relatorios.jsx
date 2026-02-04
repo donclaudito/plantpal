@@ -107,6 +107,9 @@ export default function Relatorios() {
     const byHospital = {};
     filteredShifts.forEach(shift => {
       const hospital = shift.hospital;
+      const hospitalData = hospitals.find(h => h.name === hospital);
+      const hospitalId = hospitalData?.id;
+      
       if (!byHospital[hospital]) {
         byHospital[hospital] = {
           name: hospital,
@@ -120,8 +123,8 @@ export default function Relatorios() {
       byHospital[hospital].doctors.add(shift.doctor_name);
       byHospital[hospital].numPlantoes += 1;
 
-      const baseValue = calculateBaseValue(shift.doctor_id, null, shift.period || '12h');
-      const discount = calculateAllDiscounts(shift.doctor_id, null, baseValue);
+      const baseValue = calculateBaseValue(shift.doctor_id, hospitalId, shift.period || '12h');
+      const discount = calculateAllDiscounts(shift.doctor_id, hospitalId, baseValue);
 
       byHospital[hospital].valorBruto += baseValue;
       byHospital[hospital].valorDescontos += discount;
