@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileText, Download, Calendar, Building, User, DollarSign } from 'lucide-react';
+import { FileText, Upload, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import jsPDF from 'jspdf';
 
 export default function Deposits() {
@@ -16,6 +17,11 @@ export default function Deposits() {
   const [filterHospital, setFilterHospital] = useState('all');
   const [filterCompetencia, setFilterCompetencia] = useState(`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`);
   const [filterDeposito, setFilterDeposito] = useState('all');
+  const [selectedDeposit, setSelectedDeposit] = useState(null);
+  const [holeritePdfUrl, setHoleritePdfUrl] = useState(null);
+  const [showAdminPrompt, setShowAdminPrompt] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [uploadingPix, setUploadingPix] = useState(null);
 
   const { data: user } = useQuery({
     queryKey: ['user'],
@@ -67,7 +73,7 @@ export default function Deposits() {
     enabled: !!user,
   });
 
-  const { data: deposits = [] } = useQuery({
+  const { data: savedDeposits = [] } = useQuery({
     queryKey: ['deposits', user?.email],
     queryFn: async () => {
       const all = await base44.entities.Deposit.list('-created_date');
@@ -193,26 +199,70 @@ export default function Deposits() {
       }
     });
 
-    return Object.values(grouped);
-  }, [shifts, hospitals, configValores, configDescontos]);
+    const calculated = Object.values(grouped);
+    
+    return calculated.map(calc => {
+      const saved = savedDeposits.find(
+        s => s.doctor_id === calc.doctorId && 
+             s.hospital_id === calc.hospitalId && 
+             s.mes_competencia === calc.mesCompetencia
+      );
+      
+      return saved ? { ...calc, ...saved, isSaved: true } : { ...calc, isSaved: false };
+    });
+  }, [shifts, hospitals, configValores, configDescontos, savedDeposits]);
 
   const filteredDeposits = useMemo(() => {
     return depositsData.filter(d => {
-      const matchDoctor = filterDoctor === 'all' || d.doctorId === filterDoctor;
-      const matchHospital = filterHospital === 'all' || d.hospitalId === filterHospital;
-      const matchCompetencia = filterCompetencia === 'all' || d.mesCompetencia === filterCompetencia;
-      const matchDeposito = filterDeposito === 'all' || d.mesDeposito === filterDeposito;
+      const matchDoctor = filterDoctor === 'all' || d.doctorId === filterDoctor || d.doctor_id === filterDoctor;
+      const matchHospital = filterHospital === 'all' || d.hospitalId === filterHospital || d.hospital_id === filterHospital;
+      const matchCompetencia = filterCompetencia === 'all' || d.mesCompetencia === filterCompetencia || d.mes_competencia === filterCompetencia;
+      const matchDeposito = filterDeposito === 'all' || d.mesDeposito === filterDeposito || d.mes_deposito === filterDeposito;
       
       return matchDoctor && matchHospital && matchCompetencia && matchDeposito;
     });
   }, [depositsData, filterDoctor, filterHospital, filterCompetencia, filterDeposito]);
 
-  const createDepositMutation = useMutation({
-    mutationFn: (depositData) => base44.entities.Deposit.create(depositData),
+  const createOrUpdateDepositMutation = useMutation({
+    mutationFn: (depositData) => {
+      if (depositData.id) {
+        return base44.entities.Deposit.update(depositData.id, depositData);
+      }
+      return base44.entities.Deposit.create(depositData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deposits'] });
     },
   });
+
+  const handlePixUpload = async (deposit, file) => {
+    setUploadingPix(deposit);
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    
+    const depositData = {
+      doctor_id: deposit.doctorId || deposit.doctor_id,
+      doctor_name: deposit.doctorName || deposit.doctor_name,
+      hospital_id: deposit.hospitalId || deposit.hospital_id,
+      hospital_name: deposit.hospitalName || deposit.hospital_name,
+      mes_competencia: deposit.mesCompetencia || deposit.mes_competencia,
+      mes_deposito: deposit.mesDeposito || deposit.mes_deposito,
+      num_plantoes: deposit.numPlantoes || deposit.num_plantoes,
+      valor_bruto: deposit.valorBruto || deposit.valor_bruto,
+      valor_descontos: deposit.valorDescontos || deposit.valor_descontos,
+      valor_liquido: deposit.valorLiquido || deposit.valor_liquido,
+      descontos_detalhados: deposit.descontosDetalhados || deposit.descontos_detalhados,
+      comprovante_pix: file_url,
+      status: 'Pago',
+      data_pagamento: new Date().toISOString().split('T')[0],
+    };
+
+    if (deposit.id) {
+      depositData.id = deposit.id;
+    }
+
+    createOrUpdateDepositMutation.mutate(depositData);
+    setUploadingPix(null);
+  };
 
   const generateHolerite = (deposit) => {
     const doc = new jsPDF();
@@ -221,20 +271,20 @@ export default function Deposits() {
     doc.text('HOLERITE DE PAGAMENTO', 105, 20, { align: 'center' });
 
     doc.setFontSize(12);
-    doc.text(`Mês de Competência: ${deposit.mesCompetencia}`, 20, 40);
-    doc.text(`Mês de Depósito: ${deposit.mesDeposito}`, 20, 50);
+    doc.text(`Mês de Competência: ${formatMonth(deposit.mesCompetencia || deposit.mes_competencia)}`, 20, 40);
+    doc.text(`Mês de Depósito: ${formatMonth(deposit.mesDeposito || deposit.mes_deposito)}`, 20, 50);
 
     doc.setFontSize(14);
     doc.text('DADOS DO MÉDICO', 20, 70);
     doc.setFontSize(11);
-    doc.text(`Nome: ${deposit.doctorName}`, 20, 80);
-    doc.text(`Hospital: ${deposit.hospitalName}`, 20, 90);
+    doc.text(`Nome: ${deposit.doctorName || deposit.doctor_name}`, 20, 80);
+    doc.text(`Hospital: ${deposit.hospitalName || deposit.hospital_name}`, 20, 90);
 
     doc.setFontSize(14);
     doc.text('RESUMO FINANCEIRO', 20, 110);
     doc.setFontSize(11);
-    doc.text(`Número de Plantões: ${deposit.numPlantoes}`, 20, 120);
-    doc.text(`Valor Bruto: R$ ${deposit.valorBruto.toFixed(2)}`, 20, 130);
+    doc.text(`Número de Plantões: ${deposit.numPlantoes || deposit.num_plantoes}`, 20, 120);
+    doc.text(`Valor Bruto: R$ ${(deposit.valorBruto || deposit.valor_bruto).toFixed(2)}`, 20, 130);
 
     let yPos = 150;
     doc.setFontSize(14);
@@ -242,8 +292,9 @@ export default function Deposits() {
     yPos += 10;
     doc.setFontSize(11);
 
-    if (deposit.descontosDetalhados && deposit.descontosDetalhados.length > 0) {
-      deposit.descontosDetalhados.forEach(desc => {
+    const descontos = deposit.descontosDetalhados || deposit.descontos_detalhados || [];
+    if (descontos.length > 0) {
+      descontos.forEach(desc => {
         const descText = desc.tipo === 'percentual' 
           ? `${desc.descricao} (${desc.valor_config}%): R$ ${desc.valor_calculado.toFixed(2)}`
           : `${desc.descricao}: R$ ${desc.valor_calculado.toFixed(2)}`;
@@ -253,30 +304,38 @@ export default function Deposits() {
     }
 
     yPos += 10;
-    doc.text(`Total de Descontos: R$ ${deposit.valorDescontos.toFixed(2)}`, 20, yPos);
+    doc.text(`Total de Descontos: R$ ${(deposit.valorDescontos || deposit.valor_descontos).toFixed(2)}`, 20, yPos);
 
     yPos += 20;
     doc.setFontSize(16);
-    doc.text(`VALOR LÍQUIDO A PAGAR: R$ ${deposit.valorLiquido.toFixed(2)}`, 20, yPos);
+    doc.text(`VALOR LÍQUIDO A PAGAR: R$ ${(deposit.valorLiquido || deposit.valor_liquido).toFixed(2)}`, 20, yPos);
 
-    doc.save(`holerite_${deposit.doctorName}_${deposit.mesCompetencia}.pdf`);
+    const pdfOutput = doc.output('datauristring');
+    setHoleritePdfUrl(pdfOutput);
+    setSelectedDeposit(deposit);
   };
 
-  const saveDeposit = (deposit) => {
-    createDepositMutation.mutate({
-      doctor_id: deposit.doctorId,
-      doctor_name: deposit.doctorName,
-      hospital_id: deposit.hospitalId,
-      hospital_name: deposit.hospitalName,
-      mes_competencia: deposit.mesCompetencia,
-      mes_deposito: deposit.mesDeposito,
-      num_plantoes: deposit.numPlantoes,
-      valor_bruto: deposit.valorBruto,
-      valor_descontos: deposit.valorDescontos,
-      valor_liquido: deposit.valorLiquido,
-      descontos_detalhados: deposit.descontosDetalhados,
-      status: 'Pendente'
-    });
+  const sendWhatsApp = () => {
+    if (!selectedDeposit) return;
+    
+    const doctor = doctors.find(d => d.id === (selectedDeposit.doctorId || selectedDeposit.doctor_id));
+    const phoneNumber = doctor?.phone?.replace(/\D/g, '') || '';
+    
+    const message = `Prezado(a) Dr(a) ${selectedDeposit.doctorName || selectedDeposit.doctor_name},
+
+Segue seu holerite de pagamento referente ao mês de competência ${formatMonth(selectedDeposit.mesCompetencia || selectedDeposit.mes_competencia)} no hospital ${selectedDeposit.hospitalName || selectedDeposit.hospital_name}.
+
+Valor Bruto: R$ ${(selectedDeposit.valorBruto || selectedDeposit.valor_bruto).toFixed(2)}
+Descontos: R$ ${(selectedDeposit.valorDescontos || selectedDeposit.valor_descontos).toFixed(2)}
+Valor Líquido: R$ ${(selectedDeposit.valorLiquido || selectedDeposit.valor_liquido).toFixed(2)}`;
+
+    const whatsappUrl = phoneNumber 
+      ? `https://api.whatsapp.com/send?phone=55${phoneNumber}&text=${encodeURIComponent(message)}`
+      : `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+    
+    window.open(whatsappUrl, '_blank');
+    setShowAdminPrompt(false);
+    setAdminPassword('');
   };
 
   const availableCompetencias = useMemo(() => {
@@ -293,7 +352,7 @@ export default function Deposits() {
   const availableDepositos = useMemo(() => {
     const depositos = new Set();
     depositsData.forEach(d => {
-      depositos.add(d.mesDeposito);
+      depositos.add(d.mesDeposito || d.mes_deposito);
     });
     return Array.from(depositos).sort().reverse();
   }, [depositsData]);
@@ -304,6 +363,7 @@ export default function Deposits() {
   ];
 
   const formatMonth = (monthStr) => {
+    if (!monthStr) return '';
     const [year, month] = monthStr.split('-');
     return `${monthNames[parseInt(month) - 1]} ${year}`;
   };
@@ -400,25 +460,33 @@ export default function Deposits() {
                 <th className="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase">Competência</th>
                 <th className="px-6 py-4 text-left text-xs font-black text-slate-600 uppercase">Depósito</th>
                 <th className="px-6 py-4 text-right text-xs font-black text-slate-600 uppercase">Nº Plantões</th>
-                <th className="px-6 py-4 text-right text-xs font-black text-slate-600 uppercase">Valor Bruto</th>
-                <th className="px-6 py-4 text-right text-xs font-black text-slate-600 uppercase">Descontos</th>
                 <th className="px-6 py-4 text-right text-xs font-black text-slate-600 uppercase">Valor Líquido</th>
+                <th className="px-6 py-4 text-center text-xs font-black text-slate-600 uppercase">Status</th>
                 <th className="px-6 py-4 text-center text-xs font-black text-slate-600 uppercase">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               {filteredDeposits.map((deposit, idx) => (
                 <tr key={idx} className="hover:bg-slate-50">
-                  <td className="px-6 py-4 text-sm font-bold text-slate-900">{deposit.doctorName}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{deposit.hospitalName}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{formatMonth(deposit.mesCompetencia)}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{formatMonth(deposit.mesDeposito)}</td>
-                  <td className="px-6 py-4 text-sm text-right font-bold text-slate-900">{deposit.numPlantoes}</td>
-                  <td className="px-6 py-4 text-sm text-right font-bold text-green-600">R$ {deposit.valorBruto.toFixed(2)}</td>
-                  <td className="px-6 py-4 text-sm text-right font-bold text-red-600">R$ {deposit.valorDescontos.toFixed(2)}</td>
-                  <td className="px-6 py-4 text-sm text-right font-bold text-blue-600">R$ {deposit.valorLiquido.toFixed(2)}</td>
+                  <td className="px-6 py-4 text-sm font-bold text-slate-900">{deposit.doctorName || deposit.doctor_name}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600">{deposit.hospitalName || deposit.hospital_name}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600">{formatMonth(deposit.mesCompetencia || deposit.mes_competencia)}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600">{formatMonth(deposit.mesDeposito || deposit.mes_deposito)}</td>
+                  <td className="px-6 py-4 text-sm text-right font-bold text-slate-900">{deposit.numPlantoes || deposit.num_plantoes}</td>
+                  <td className="px-6 py-4 text-sm text-right font-bold text-blue-600">R$ {(deposit.valorLiquido || deposit.valor_liquido).toFixed(2)}</td>
                   <td className="px-6 py-4 text-center">
-                    <div className="flex gap-2 justify-center">
+                    {deposit.status === 'Pago' ? (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">
+                        <CheckCircle size={14} /> Pago
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 text-xs font-bold">
+                        <XCircle size={14} /> Pendente
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <div className="flex gap-2 justify-center flex-wrap">
                       <Button
                         size="sm"
                         onClick={() => generateHolerite(deposit)}
@@ -427,13 +495,48 @@ export default function Deposits() {
                         <FileText size={14} />
                         Holerite
                       </Button>
+                      {deposit.status !== 'Pago' && (
+                        <label>
+                          <input
+                            type="file"
+                            accept="image/*,.pdf"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files[0];
+                              if (file) handlePixUpload(deposit, file);
+                            }}
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-2"
+                            disabled={uploadingPix === deposit}
+                            asChild
+                          >
+                            <span>
+                              <Upload size={14} />
+                              {uploadingPix === deposit ? 'Enviando...' : 'PIX'}
+                            </span>
+                          </Button>
+                        </label>
+                      )}
+                      {deposit.comprovante_pix && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(deposit.comprovante_pix, '_blank')}
+                          className="gap-2"
+                        >
+                          Ver Comprovante
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
               ))}
               {filteredDeposits.length === 0 && (
                 <tr>
-                  <td colSpan="9" className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan="8" className="px-6 py-12 text-center text-slate-400">
                     Nenhum depósito encontrado para os filtros selecionados
                   </td>
                 </tr>
@@ -442,6 +545,58 @@ export default function Deposits() {
           </table>
         </div>
       </div>
+
+      {holeritePdfUrl && selectedDeposit && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-md p-6">
+          <h2 className="text-xl font-black text-slate-900 mb-4">
+            Holerite de {selectedDeposit.doctorName || selectedDeposit.doctor_name} - {formatMonth(selectedDeposit.mesCompetencia || selectedDeposit.mes_competencia)}
+          </h2>
+          
+          <div className="flex flex-col md:flex-row gap-4 mb-4">
+            {!showAdminPrompt ? (
+              <Button
+                onClick={() => setShowAdminPrompt(true)}
+                className="gap-2 bg-green-500 hover:bg-green-600"
+              >
+                <MessageSquare size={16} /> Enviar por WhatsApp
+              </Button>
+            ) : (
+              <div className="flex gap-2 items-center flex-wrap">
+                <Input
+                  type="password"
+                  placeholder="Senha Admin"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  className="w-48"
+                />
+                <Button
+                  onClick={() => {
+                    if (adminPassword === 'claudito') {
+                      sendWhatsApp();
+                    } else {
+                      alert('Senha incorreta!');
+                    }
+                  }}
+                  className="bg-blue-500 hover:bg-blue-600"
+                >
+                  Confirmar
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowAdminPrompt(false);
+                    setAdminPassword('');
+                  }}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <iframe src={holeritePdfUrl} width="100%" height="600px" className="border rounded-md"></iframe>
+        </div>
+      )}
     </div>
   );
 }
