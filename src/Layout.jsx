@@ -36,10 +36,13 @@ export default function Layout({ children, currentPageName }) {
               )}
 
             </div>
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-2">
-              <LogOut className="w-4 h-4" />
-              Sair
-            </Button>
+            <div className="flex items-center gap-4">
+              {user && <span className="text-sm text-gray-600">{user.email}</span>}
+              <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-2">
+                <LogOut className="w-4 h-4" />
+                Sair
+              </Button>
+            </div>
           </div>
         </div>
       </header>
