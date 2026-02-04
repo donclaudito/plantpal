@@ -63,7 +63,7 @@ export default function CalendarView({
                               ? 'bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700'
                               : 'bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700'
                           } ${isSelected ? 'ring-2 ring-blue-600 dark:ring-blue-400' : ''}`}
-                          onClick={() => onToggleSelect(shift.id)}
+                          onClick={() => onViewShiftDetails(shift)}
                         >
                           <div className="font-black text-slate-800 dark:text-slate-200 truncate text-[10px] uppercase tracking-wide">
                             {shift.doctorName}
