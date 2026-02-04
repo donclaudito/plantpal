@@ -15,6 +15,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
     specialty: 'CIRURGIA GERAL',
     unit: '',
     type: 'DIURNO',
+    period: '12h',
     value: 0,
     paid: false
   });
@@ -29,6 +30,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
         specialty: editingShift.shift_type || 'CIRURGIA GERAL',
         unit: editingShift.hospital,
         type: editingShift.shift_type || 'DIURNO',
+        period: editingShift.period || '12h',
         value: editingShift.value,
         paid: editingShift.status === 'Pago'
       });
@@ -58,6 +60,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
       doctor_name: formData.doctorName,
       hospital: formData.unit,
       shift_type: formData.type,
+      period: formData.period,
       value: 0,
       status: formData.paid ? 'Pago' : 'Realizado'
     };
@@ -69,6 +72,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
       specialty: 'CIRURGIA GERAL',
       unit: '',
       type: 'DIURNO',
+      period: '12h',
       value: 0,
       paid: false
     });
@@ -165,6 +169,21 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
                 {shiftTypes.map(t => (
                   <option key={t} value={t}>{t}</option>
                 ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
+                Período
+              </label>
+              <select
+                value={formData.period || '12h'}
+                onChange={(e) => setFormData({ ...formData, period: e.target.value })}
+                className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-700 border-2 border-transparent focus:border-blue-600 dark:focus:border-blue-400 rounded-xl font-bold text-slate-900 dark:text-white transition-colors"
+              >
+                <option value="12h">12h</option>
+                <option value="6h">6h</option>
+                <option value="retaguarda">Retaguarda</option>
               </select>
             </div>
           </div>
