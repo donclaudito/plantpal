@@ -108,6 +108,25 @@ export default function Relatorios() {
       return monthMatch && hospitalMatch && doctorMatch;
     });
 
+    // Totais gerais
+    let totalBruto = 0;
+    let totalDescontos = 0;
+    filteredShifts.forEach(shift => {
+      const hospitalData = hospitals.find(h => h.name === shift.hospital);
+      const hospitalId = hospitalData?.id;
+      const baseValue = calculateBaseValue(shift.doctor_id, hospitalId, shift.period || '12h');
+      const discount = calculateAllDiscounts(shift.doctor_id, hospitalId, baseValue);
+      totalBruto += baseValue;
+      totalDescontos += discount;
+    });
+    const totalLiquido = totalBruto - totalDescontos;
+    const totals = {
+      bruto: totalBruto,
+      descontos: totalDescontos,
+      liquido: totalLiquido,
+      numShifts: filteredShifts.length,
+    };
+
     // Relatório por Hospital
     const byHospital = {};
     filteredShifts.forEach(shift => {
