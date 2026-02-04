@@ -51,6 +51,7 @@ import Home from './pages/Home';
 import Doctors from './pages/Doctors';
 import Shifts from './pages/Shifts';
 import Calendar from './pages/Calendar';
+import Hospitals from './pages/Hospitals';
 import __Layout from './Layout.jsx';
 
 
@@ -59,6 +60,7 @@ export const PAGES = {
     "Doctors": Doctors,
     "Shifts": Shifts,
     "Calendar": Calendar,
+    "Hospitals": Hospitals,
 }
 
 export const pagesConfig = {
