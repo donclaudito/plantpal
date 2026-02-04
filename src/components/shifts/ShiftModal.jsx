@@ -15,7 +15,6 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
     specialty: 'CIRURGIA GERAL',
     unit: '',
     type: 'DIURNO',
-    hours: 12,
     value: 0,
     paid: false
   });
@@ -30,7 +29,6 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
         specialty: editingShift.shift_type || 'CIRURGIA GERAL',
         unit: editingShift.hospital,
         type: editingShift.shift_type || 'DIURNO',
-        hours: 12,
         value: editingShift.value,
         paid: editingShift.status === 'Pago'
       });
@@ -71,7 +69,6 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
       specialty: 'CIRURGIA GERAL',
       unit: '',
       type: 'DIURNO',
-      hours: 12,
       value: 0,
       paid: false
     });
@@ -169,21 +166,6 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
-                Horas
-              </label>
-              <input
-                type="number"
-                value={formData.hours}
-                onChange={(e) => setFormData({ ...formData, hours: parseFloat(e.target.value) })}
-                required
-                min="1"
-                step="0.5"
-                className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-700 border-2 border-transparent focus:border-blue-600 dark:focus:border-blue-400 rounded-xl font-bold text-slate-900 dark:text-white transition-colors"
-              />
             </div>
 
             <div className="md:col-span-2">
