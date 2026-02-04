@@ -167,7 +167,11 @@ export default function Doctors() {
 
   const handleDeleteSelected = async () => {
     for (const id of selectedDoctors) {
-      await deleteMutation.mutateAsync(id);
+      try {
+        await deleteMutation.mutateAsync(id);
+      } catch (error) {
+        console.error(`Erro ao deletar médico ${id}:`, error);
+      }
     }
     setSelectedDoctors([]);
   };
