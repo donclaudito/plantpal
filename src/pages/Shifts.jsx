@@ -439,7 +439,7 @@ export default function Shifts() {
 
       {showImport && (
         <div className="mb-8">
-          <ImportShifts showToast={showToast} />
+          <ImportShiftsCSV showToast={showToast} />
           <button
             onClick={() => setShowImport(false)}
             className="mt-4 w-full py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-2xl font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
