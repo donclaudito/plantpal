@@ -58,7 +58,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
       doctor_name: formData.doctorName,
       hospital: formData.unit,
       shift_type: formData.type,
-      value: formData.value,
+      value: 0,
       status: formData.paid ? 'Pago' : 'Realizado'
     };
     onSave(saveData);
@@ -166,21 +166,6 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
-                Valor (R$)
-              </label>
-              <input
-                type="number"
-                value={formData.value}
-                onChange={(e) => setFormData({ ...formData, value: parseFloat(e.target.value) })}
-                required
-                min="0"
-                step="0.01"
-                className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-700 border-2 border-transparent focus:border-blue-600 dark:focus:border-blue-400 rounded-xl font-bold text-slate-900 dark:text-white transition-colors"
-              />
             </div>
           </div>
 
