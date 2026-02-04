@@ -5,7 +5,7 @@ const specialties = [
   "CIRURGIA GERAL", "CLÍNICA MÉDICA", "PEDIATRIA", "GINECOLOGIA", "ORTOPEDIA", "ANESTESIA", "GASTROENTEROLOGIA", "CIRURGIA DIGESTIVA", "OUTRA"
 ];
 
-const shiftTypes = ["DIURNO", "NOTURNO", "24H"];
+const shiftTypes = ["DIURNO MANHÃ", "DIURNO TARDE", "DIURNO", "NOTURNO", "24H"];
 
 export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals, initialDate, editingShift }) {
   const [formData, setFormData] = useState({
