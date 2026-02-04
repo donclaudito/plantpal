@@ -25,6 +25,19 @@ const getDoctorColor = (doctorName) => {
   return colors[Math.abs(hash) % colors.length];
 };
 
+const getShiftHours = (shiftType) => {
+  switch (shiftType) {
+    case '24h':
+      return '24h';
+    case 'Noturno':
+      return '12h';
+    case 'Diurno':
+      return '12h';
+    default:
+      return '';
+  }
+};
+
 export default function CalendarView({ 
   calendarDays, 
   currentMonth, 
@@ -139,7 +152,9 @@ export default function CalendarView({
                             {shift.hospital}
                           </div>
                           <div className="flex items-center justify-between mt-1">
-                            <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400">{shift.shift_type}</span>
+                            <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400">
+                              {shift.shift_type} • {getShiftHours(shift.shift_type)}
+                            </span>
                             {shift.status === 'Pago' && (
                               <Check size={10} className="text-green-600 dark:text-green-400" />
                             )}
