@@ -120,7 +120,11 @@ export default function CalendarView({
                   </div>
                   
                   <div className="space-y-1.5">
-                    {dayData.shifts.map(shift => {
+                    {dayData.shifts.sort((a, b) => {
+                      const aDiurno = a.shift_type && a.shift_type.toUpperCase().includes('DIURN');
+                      const bDiurno = b.shift_type && b.shift_type.toUpperCase().includes('DIURN');
+                      return bDiurno - aDiurno;
+                    }).map(shift => {
                       const isSelected = selectedShifts.includes(shift.id);
                       const isDragging = draggedShift?.id === shift.id;
                       const isPaid = shift.status === 'Pago';
