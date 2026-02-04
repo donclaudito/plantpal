@@ -29,13 +29,7 @@ export default function Layout({ children, currentPageName }) {
                   </Button>
                 </Link>
               )}
-              {currentPageName !== 'Relatorios' && (
-                <Link to={createPageUrl('Relatorios')}>
-                  <Button variant="ghost" size="sm" className="gap-2">
-                    Relatórios
-                  </Button>
-                </Link>
-              )}
+
             </div>
             <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-2">
               <LogOut className="w-4 h-4" />
