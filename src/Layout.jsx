@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { Home, LogOut } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
@@ -7,11 +7,18 @@ import { Button } from '@/components/ui/button';
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
-  }, []);
+    base44.auth.me().then(user => {
+      setUser(user);
+      // Se utilizador com role 'user' tentar aceder a página diferente de 'Shifts', redirecionar
+      if (user && user.role === 'user' && currentPageName !== 'Shifts') {
+        navigate(createPageUrl('Shifts'), { replace: true });
+      }
+    }).catch(() => {});
+  }, [currentPageName, navigate]);
 
   const handleLogout = () => {
     base44.auth.logout();
