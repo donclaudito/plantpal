@@ -7,6 +7,8 @@ import { Download } from 'lucide-react';
 
 export default function Relatorios() {
   const [selectedMonth, setSelectedMonth] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`);
+  const [selectedHospital, setSelectedHospital] = useState('all');
+  const [selectedDoctor, setSelectedDoctor] = useState('all');
 
   const { data: user } = useQuery({
     queryKey: ['user'],
