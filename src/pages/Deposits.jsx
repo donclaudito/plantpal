@@ -367,8 +367,13 @@ Qualquer dúvida, estamos à disposição! 🙂`;
     const competencias = new Set();
     shifts.forEach(shift => {
       if (shift.date) {
-        const [year, month] = shift.date.split('-').map(Number);
-        competencias.add(`${year}-${String(month).padStart(2, '0')}`);
+        const dateParts = shift.date.split('-');
+        if (dateParts.length >= 2) {
+          const [year, month] = dateParts.map(Number);
+          if (!isNaN(year) && !isNaN(month)) {
+            competencias.add(`${year}-${String(month).padStart(2, '0')}`);
+          }
+        }
       }
     });
     return Array.from(competencias).sort().reverse();
@@ -377,9 +382,12 @@ Qualquer dúvida, estamos à disposição! 🙂`;
   const availableDepositos = useMemo(() => {
     const depositos = new Set();
     depositsData.forEach(d => {
-      depositos.add(d.mesDeposito || d.mes_deposito);
+      const mesDeposito = d.mesDeposito || d.mes_deposito;
+      if (mesDeposito) {
+        depositos.add(mesDeposito);
+      }
     });
-    return Array.from(depositos).sort().reverse();
+    return Array.from(depositos).filter(d => d && typeof d === 'string' && d.includes('-')).sort().reverse();
   }, [depositsData]);
 
   const monthNames = [
@@ -389,8 +397,12 @@ Qualquer dúvida, estamos à disposição! 🙂`;
 
   const formatMonth = (monthStr) => {
     if (!monthStr) return '';
-    const [year, month] = monthStr.split('-');
-    return `${monthNames[parseInt(month) - 1]} ${year}`;
+    const parts = monthStr.split('-');
+    if (parts.length < 2) return '';
+    const month = parseInt(parts[1]);
+    const year = parts[0];
+    if (isNaN(month) || !year) return '';
+    return `${monthNames[month - 1]} ${year}`;
   };
 
   if (!user) {
