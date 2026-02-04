@@ -9,7 +9,7 @@ export default function Home() {
     { name: 'Plantões', path: 'Shifts', icon: Calendar, description: 'Gerenciar plantões' },
     { name: 'Finanças', path: 'Finance', icon: DollarSign, description: 'Controle financeiro' },
     { name: 'Depósitos', path: 'Deposits', icon: FileText, description: 'Histórico de depósitos' },
-    { name: 'Relatórios', path: 'Reports', icon: BarChart, description: 'Análises e relatórios' },
+    { name: 'Relatórios', path: 'Relatorios', icon: BarChart, description: 'Análises e relatórios' },
     { name: 'Médicos', path: 'Doctors', icon: Users, description: 'Cadastro de médicos' },
     { name: 'Hospitais', path: 'Hospitals', icon: Building, description: 'Cadastro de hospitais' },
     { name: 'Configurações', path: 'Settings', icon: Settings, description: 'Ajustes do sistema' },
