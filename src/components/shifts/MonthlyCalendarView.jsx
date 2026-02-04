@@ -32,12 +32,15 @@ export default function MonthlyCalendarView({
     return matchDoctor && matchHospital;
   });
 
-  // Obter plantões de um dia específico
+  // Obter plantões de um dia específico, agrupados por médico
   const getShiftsForDay = (day) => {
-    return filteredShifts.filter(shift => {
+    const dayShifts = filteredShifts.filter(shift => {
       const shiftDate = new Date(shift.date);
       return isSameDay(shiftDate, day);
     });
+    
+    // Ordenar por nome do médico
+    return dayShifts.sort((a, b) => a.doctor_name.localeCompare(b.doctor_name));
   };
 
   const handlePreviousMonth = () => {
