@@ -102,22 +102,34 @@ export default function Doctors() {
     const file = e.target.files[0];
     if (!file) return;
 
-    const text = await file.text();
-    const lines = text.split('\n').filter(line => line.trim());
-    const headers = lines[0].split(',').map(h => h.trim());
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      const headers = lines[0].split(',').map(h => h.trim());
 
-    const doctors = lines.slice(1).map(line => {
-      const values = line.split(',').map(v => v.trim());
-      const doctor = {};
-      headers.forEach((header, index) => {
-        doctor[header] = values[index] || '';
-      });
-      return doctor;
-    });
+      const doctors = lines.slice(1).map(line => {
+        const values = line.split(',').map(v => v.trim());
+        const doctor = {};
+        headers.forEach((header, index) => {
+          if (values[index]) {
+            doctor[header] = values[index];
+          }
+        });
+        return doctor;
+      }).filter(doctor => doctor.full_name && doctor.specialty);
 
-    await base44.entities.Doctor.bulkCreate(doctors);
-    queryClient.invalidateQueries(['doctors']);
-    setImportFile(null);
+      if (doctors.length === 0) {
+        alert('Nenhum médico válido encontrado no arquivo. Certifique-se de que o CSV possui as colunas "full_name" e "specialty".');
+        return;
+      }
+
+      await base44.entities.Doctor.bulkCreate(doctors);
+      queryClient.invalidateQueries(['doctors']);
+      alert(`${doctors.length} médico(s) importado(s) com sucesso!`);
+      setImportFile(null);
+    } catch (error) {
+      alert('Erro ao importar arquivo: ' + error.message);
+    }
   };
 
   const handleExport = () => {
