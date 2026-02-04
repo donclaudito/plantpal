@@ -356,10 +356,16 @@ export default function Shifts() {
               </button>
             )}
             <button
+              onClick={() => setShowImport(!showImport)}
+              className="flex items-center gap-2 bg-indigo-600 dark:bg-indigo-500 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors shadow-md"
+            >
+              <Plus size={16} /> {showImport ? 'Fechar' : 'Importar'}
+            </button>
+            <button
               onClick={exportToCSV}
               className="flex items-center gap-2 bg-green-600 dark:bg-green-500 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-green-700 dark:hover:bg-green-600 transition-colors shadow-md"
             >
-              <Download size={16} /> CSV
+              <Download size={16} /> Exportar CSV
             </button>
           
           <div className="flex gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 w-fit">
