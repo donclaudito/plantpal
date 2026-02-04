@@ -390,6 +390,19 @@ Qualquer dúvida, estamos à disposição! 🙂`;
     return Array.from(depositos).filter(d => d && typeof d === 'string' && d.includes('-')).sort().reverse();
   }, [depositsData]);
 
+  const uniqueDoctors = useMemo(() => {
+    const doctorsSet = new Set();
+    depositsData.forEach(d => {
+      if (d.doctorId || d.doctor_id) {
+        doctorsSet.add(JSON.stringify({
+          id: d.doctorId || d.doctor_id,
+          name: d.doctorName || d.doctor_name
+        }));
+      }
+    });
+    return Array.from(doctorsSet).map(d => JSON.parse(d)).sort((a, b) => a.name.localeCompare(b.name));
+  }, [depositsData]);
+
   const monthNames = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
@@ -433,8 +446,8 @@ Qualquer dúvida, estamos à disposição! 🙂`;
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                {doctors.map(d => (
-                  <SelectItem key={d.id} value={d.id}>{d.full_name}</SelectItem>
+                {uniqueDoctors.map(d => (
+                  <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
