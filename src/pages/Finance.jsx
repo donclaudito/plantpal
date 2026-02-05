@@ -9,7 +9,7 @@ export default function Finance() {
   const [filterDoctor, setFilterDoctor] = useState('all');
   const [filterHospital, setFilterHospital] = useState('all');
   const [filterPeriod, setFilterPeriod] = useState('all');
-  const [filterMonth, setFilterMonth] = useState(new Date().getMonth());
+  const [filterMonth, setFilterMonth] = useState('all');
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
 
   const { data: user } = useQuery({
@@ -132,7 +132,11 @@ export default function Finance() {
       if (!s.date) return false;
 
       const [year, month] = s.date.split('-').map(Number);
-      const matchMonth = month === filterMonth + 1 && year === filterYear;
+      
+      let matchMonth = true;
+      if (filterMonth !== 'all') {
+        matchMonth = month === parseInt(filterMonth) + 1 && year === filterYear;
+      }
 
       const matchDoctor = filterDoctor === 'all' || s.doctor_id === filterDoctor;
 
@@ -291,11 +295,12 @@ export default function Finance() {
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
             <label className="block text-xs font-black text-slate-600 dark:text-slate-400 uppercase mb-2">Mês</label>
-            <Select value={filterMonth.toString()} onValueChange={(v) => setFilterMonth(parseInt(v))}>
+            <Select value={filterMonth.toString()} onValueChange={setFilterMonth}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
                 {monthNames.map((name, idx) => (
                   <SelectItem key={idx} value={idx.toString()}>{name}</SelectItem>
                 ))}
