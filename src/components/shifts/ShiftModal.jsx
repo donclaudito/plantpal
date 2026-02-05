@@ -100,6 +100,9 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
         case 'coordenador':
           baseValue = config.valor_coordenador || 0;
           break;
+        case 'professor':
+          baseValue = config.valor_professor || 0;
+          break;
         default:
           baseValue = 0;
       }

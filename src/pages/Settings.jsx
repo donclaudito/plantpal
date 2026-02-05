@@ -221,7 +221,7 @@ export default function Settings() {
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                           <div>
                             <p className="text-sm text-gray-500">6 horas</p>
                             <p className="font-bold">R$ {config.valor_6h?.toFixed(2) || '0.00'}</p>
@@ -237,6 +237,10 @@ export default function Settings() {
                           <div>
                             <p className="text-sm text-gray-500">Coordenador</p>
                             <p className="font-bold">R$ {config.valor_coordenador?.toFixed(2) || '0.00'}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Professor</p>
+                            <p className="font-bold">R$ {config.valor_professor?.toFixed(2) || '0.00'}</p>
                           </div>
                         </div>
                       </AccordionContent>
@@ -378,6 +382,7 @@ function ValorForm({ doctors, hospitals, initialData, onSave, onCancel }) {
     valor_12h: 0,
     valor_retaguarda: 0,
     valor_coordenador: 0,
+    valor_professor: 0,
   });
 
   const handleSubmit = (e) => {
@@ -413,7 +418,7 @@ function ValorForm({ doctors, hospitals, initialData, onSave, onCancel }) {
           </Select>
         </div>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div>
           <Label>Valor 6h</Label>
           <Input type="number" step="0.01" value={formData.valor_6h} onChange={(e) => setFormData({ ...formData, valor_6h: parseFloat(e.target.value) || 0 })} />
@@ -429,6 +434,10 @@ function ValorForm({ doctors, hospitals, initialData, onSave, onCancel }) {
         <div>
           <Label>Valor Coordenador</Label>
           <Input type="number" step="0.01" value={formData.valor_coordenador} onChange={(e) => setFormData({ ...formData, valor_coordenador: parseFloat(e.target.value) || 0 })} />
+        </div>
+        <div>
+          <Label>Valor Professor</Label>
+          <Input type="number" step="0.01" value={formData.valor_professor} onChange={(e) => setFormData({ ...formData, valor_professor: parseFloat(e.target.value) || 0 })} />
         </div>
       </div>
       <div className="flex gap-2">
