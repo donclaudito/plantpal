@@ -367,13 +367,8 @@ Qualquer dúvida, estamos à disposição! 🙂`;
     const competencias = new Set();
     shifts.forEach(shift => {
       if (shift.date) {
-        const dateParts = shift.date.split('-');
-        if (dateParts.length >= 2) {
-          const [year, month] = dateParts.map(Number);
-          if (!isNaN(year) && !isNaN(month)) {
-            competencias.add(`${year}-${String(month).padStart(2, '0')}`);
-          }
-        }
+        const [year, month] = shift.date.split('-').map(Number);
+        competencias.add(`${year}-${String(month).padStart(2, '0')}`);
       }
     });
     return Array.from(competencias).sort().reverse();
@@ -382,25 +377,9 @@ Qualquer dúvida, estamos à disposição! 🙂`;
   const availableDepositos = useMemo(() => {
     const depositos = new Set();
     depositsData.forEach(d => {
-      const mesDeposito = d.mesDeposito || d.mes_deposito;
-      if (mesDeposito) {
-        depositos.add(mesDeposito);
-      }
+      depositos.add(d.mesDeposito || d.mes_deposito);
     });
-    return Array.from(depositos).filter(d => d && typeof d === 'string' && d.includes('-')).sort().reverse();
-  }, [depositsData]);
-
-  const uniqueDoctors = useMemo(() => {
-    const doctorsSet = new Set();
-    depositsData.forEach(d => {
-      if (d.doctorId || d.doctor_id) {
-        doctorsSet.add(JSON.stringify({
-          id: d.doctorId || d.doctor_id,
-          name: d.doctorName || d.doctor_name
-        }));
-      }
-    });
-    return Array.from(doctorsSet).map(d => JSON.parse(d)).sort((a, b) => a.name.localeCompare(b.name));
+    return Array.from(depositos).sort().reverse();
   }, [depositsData]);
 
   const monthNames = [
@@ -410,12 +389,8 @@ Qualquer dúvida, estamos à disposição! 🙂`;
 
   const formatMonth = (monthStr) => {
     if (!monthStr) return '';
-    const parts = monthStr.split('-');
-    if (parts.length < 2) return '';
-    const month = parseInt(parts[1]);
-    const year = parts[0];
-    if (isNaN(month) || !year) return '';
-    return `${monthNames[month - 1]} ${year}`;
+    const [year, month] = monthStr.split('-');
+    return `${monthNames[parseInt(month) - 1]} ${year}`;
   };
 
   if (!user) {
@@ -446,8 +421,8 @@ Qualquer dúvida, estamos à disposição! 🙂`;
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                {uniqueDoctors.map(d => (
-                  <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                {doctors.map(d => (
+                  <SelectItem key={d.id} value={d.id}>{d.full_name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
