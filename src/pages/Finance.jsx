@@ -27,20 +27,14 @@ export default function Finance() {
   });
 
   const { data: doctors = [] } = useQuery({
-    queryKey: ['doctors', user?.email],
-    queryFn: async () => {
-      const all = await base44.entities.Doctor.list('full_name');
-      return all.filter(d => d.created_by === user?.email);
-    },
+    queryKey: ['doctors'],
+    queryFn: () => base44.entities.Doctor.list('full_name'),
     enabled: !!user,
   });
 
   const { data: hospitals = [] } = useQuery({
-    queryKey: ['hospitals', user?.email],
-    queryFn: async () => {
-      const all = await base44.entities.Hospital.list('name');
-      return all.filter(h => h.created_by === user?.email);
-    },
+    queryKey: ['hospitals'],
+    queryFn: () => base44.entities.Hospital.list('name'),
     enabled: !!user,
   });
 
