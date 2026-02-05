@@ -71,6 +71,7 @@ export default function Finance() {
       case 'mais tarde': return config.valor_12h || 0;
       case 'retaguarda': return config.valor_retaguarda || 0;
       case 'coordenador': return config.valor_coordenador || 0;
+      case 'professor': return config.valor_professor || 0;
       default: return 0;
     }
   };
