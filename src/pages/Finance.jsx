@@ -86,10 +86,6 @@ export default function Finance() {
     const global = configDescontos.filter(d => !d.doctor_id && !d.hospital_id);
     applicableDiscounts.push(...global);
 
-    if (applicableDiscounts.length === 0) {
-      return { totalValue: 0, details: [] };
-    }
-
     let totalDiscount = 0;
     const details = [];
 
@@ -106,6 +102,16 @@ export default function Finance() {
         valor_config: desconto.valor_desconto,
         valor_calculado: value
       });
+    });
+
+    // Adicionar o imposto de 15% sobre o valor bruto
+    const impostoValue = baseValue * 0.15;
+    totalDiscount += impostoValue;
+    details.push({
+      descricao: 'Imposto (15%)',
+      tipo: 'percentual',
+      valor_config: 15,
+      valor_calculado: impostoValue
     });
 
     return {
