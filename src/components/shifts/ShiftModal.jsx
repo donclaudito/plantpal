@@ -274,8 +274,13 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
                 onChange={handlePeriodChange}
                 className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-700 border-2 border-transparent focus:border-blue-600 dark:focus:border-blue-400 rounded-xl font-bold text-slate-900 dark:text-white transition-colors"
               >
-                <option value="12h">12h</option>
+                <option value="1h">1h</option>
+                <option value="2h">2h</option>
+                <option value="3h">3h</option>
+                <option value="4h">4h</option>
+                <option value="5h">5h</option>
                 <option value="6h">6h</option>
+                <option value="12h">12h</option>
                 <option value="retaguarda">Retaguarda</option>
                 <option value="coordenador">Coordenador</option>
               </select>
