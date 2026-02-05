@@ -48,10 +48,6 @@ export default function Finance() {
   });
 
   const calculateBaseValue = (shift) => {
-    if (shift.value !== undefined && shift.value !== null && shift.value !== 0) {
-      return shift.value;
-    }
-
     const doctorId = shift.doctor_id;
     const hospitalId = hospitals.find(h => h.name === shift.hospital)?.id;
     const period = shift.period;
