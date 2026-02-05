@@ -12,9 +12,11 @@ import Toast from '@/components/common/Toast';
 export default function Settings() {
   const [message, setMessage] = useState(null);
   const [editingValor, setEditingValor] = useState(null);
-  const [editingDesconto, setEditingDesconto] = useState(null);
+  const [editingImposto, setEditingImposto] = useState(null);
+  const [editingDespesa, setEditingDespesa] = useState(null);
   const [showValorForm, setShowValorForm] = useState(false);
-  const [showDescontoForm, setShowDescontoForm] = useState(false);
+  const [showImpostoForm, setShowImpostoForm] = useState(false);
+  const [showDespesaForm, setShowDespesaForm] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -86,30 +88,57 @@ export default function Settings() {
     },
   });
 
-  const createDescontoMutation = useMutation({
+  const createImpostoMutation = useMutation({
     mutationFn: (data) => base44.entities.ConfiguracaoDesconto.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['configDescontos'] });
-      setShowDescontoForm(false);
-      setEditingDesconto(null);
-      showToast('Desconto salvo!');
+      setShowImpostoForm(false);
+      setEditingImposto(null);
+      showToast('Imposto salvo!');
     },
   });
 
-  const updateDescontoMutation = useMutation({
+  const updateImpostoMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.ConfiguracaoDesconto.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['configDescontos'] });
-      setEditingDesconto(null);
-      showToast('Desconto atualizado!');
+      setEditingImposto(null);
+      showToast('Imposto atualizado!');
     },
   });
 
-  const deleteDescontoMutation = useMutation({
+  const deleteImpostoMutation = useMutation({
     mutationFn: (id) => base44.entities.ConfiguracaoDesconto.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['configDescontos'] });
-      showToast('Desconto removido!');
+      showToast('Imposto removido!');
+    },
+  });
+
+  const createDespesaMutation = useMutation({
+    mutationFn: (data) => base44.entities.ConfiguracaoDesconto.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['configDescontos'] });
+      setShowDespesaForm(false);
+      setEditingDespesa(null);
+      showToast('Despesa salva!');
+    },
+  });
+
+  const updateDespesaMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.ConfiguracaoDesconto.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['configDescontos'] });
+      setEditingDespesa(null);
+      showToast('Despesa atualizada!');
+    },
+  });
+
+  const deleteDespesaMutation = useMutation({
+    mutationFn: (id) => base44.entities.ConfiguracaoDesconto.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['configDescontos'] });
+      showToast('Despesa removida!');
     },
   });
 
@@ -217,51 +246,94 @@ export default function Settings() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Descontos</CardTitle>
-              <Button onClick={() => setShowDescontoForm(true)}>
+              <CardTitle>Impostos (%)</CardTitle>
+              <Button onClick={() => setShowImpostoForm(true)}>
                 <Plus className="w-4 h-4 mr-2" />
-                Novo Desconto
+                Novo Imposto
               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            {showDescontoForm && (
-              <DescontoForm
-                doctors={doctors}
-                hospitals={hospitals}
-                onSave={(data) => createDescontoMutation.mutate(data)}
-                onCancel={() => setShowDescontoForm(false)}
+            {showImpostoForm && (
+              <ImpostoForm
+                onSave={(data) => createImpostoMutation.mutate(data)}
+                onCancel={() => setShowImpostoForm(false)}
               />
             )}
 
             <div className="space-y-4 mt-4">
-              {configDescontos.map((config) => (
+              {configDescontos.filter(c => c.tipo_desconto === 'percentual' && !c.doctor_id && !c.hospital_id).map((config) => (
                 <div key={config.id} className="p-4 border rounded-lg bg-white">
-                  {editingDesconto?.id === config.id ? (
-                    <DescontoForm
-                      doctors={doctors}
-                      hospitals={hospitals}
+                  {editingImposto?.id === config.id ? (
+                    <ImpostoForm
                       initialData={config}
-                      onSave={(data) => updateDescontoMutation.mutate({ id: config.id, data })}
-                      onCancel={() => setEditingDesconto(null)}
+                      onSave={(data) => updateImpostoMutation.mutate({ id: config.id, data })}
+                      onCancel={() => setEditingImposto(null)}
                     />
                   ) : (
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-bold text-lg">
-                          {config.doctor_id ? getDoctorName(config.doctor_id) : 'Todos os médicos'} • 
-                          {config.hospital_id ? getHospitalName(config.hospital_id) : 'Todos os hospitais'}
-                        </p>
-                        <p className="text-sm text-gray-600 mt-1">{config.descricao}</p>
-                        <p className="text-lg font-bold text-red-600 mt-2">
-                          {config.tipo_desconto === 'percentual' ? `${config.valor_desconto}%` : `R$ ${config.valor_desconto.toFixed(2)}`}
+                        <p className="font-bold text-lg">{config.descricao}</p>
+                        <p className="text-2xl font-bold text-red-600 mt-2">
+                          {config.valor_desconto.toFixed(2)}%
                         </p>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => setEditingDesconto(config)}>
+                        <Button variant="outline" size="sm" onClick={() => setEditingImposto(config)}>
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="destructive" size="sm" onClick={() => deleteDescontoMutation.mutate(config.id)}>
+                        <Button variant="destructive" size="sm" onClick={() => deleteImpostoMutation.mutate(config.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Despesas Globais (R$)</CardTitle>
+              <Button onClick={() => setShowDespesaForm(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Nova Despesa
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {showDespesaForm && (
+              <DespesaForm
+                onSave={(data) => createDespesaMutation.mutate(data)}
+                onCancel={() => setShowDespesaForm(false)}
+              />
+            )}
+
+            <div className="space-y-4 mt-4">
+              {configDescontos.filter(c => c.tipo_desconto === 'valor_fixo' && !c.doctor_id && !c.hospital_id).map((config) => (
+                <div key={config.id} className="p-4 border rounded-lg bg-white">
+                  {editingDespesa?.id === config.id ? (
+                    <DespesaForm
+                      initialData={config}
+                      onSave={(data) => updateDespesaMutation.mutate({ id: config.id, data })}
+                      onCancel={() => setEditingDespesa(null)}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-lg">{config.descricao}</p>
+                        <p className="text-2xl font-bold text-red-600 mt-2">
+                          R$ {config.valor_desconto.toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setEditingDespesa(config)}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => deleteDespesaMutation.mutate(config.id)}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
@@ -352,7 +424,7 @@ function ValorForm({ doctors, hospitals, initialData, onSave, onCancel }) {
   );
 }
 
-function DescontoForm({ doctors, hospitals, initialData, onSave, onCancel }) {
+function ImpostoForm({ initialData, onSave, onCancel }) {
   const [formData, setFormData] = useState(initialData || {
     doctor_id: '',
     hospital_id: '',
@@ -370,50 +442,52 @@ function DescontoForm({ doctors, hospitals, initialData, onSave, onCancel }) {
     <form onSubmit={handleSubmit} className="space-y-4 p-4 bg-slate-50 rounded-lg">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label>Médico (opcional)</Label>
-          <Select value={formData.doctor_id || 'global'} onValueChange={(v) => setFormData({ ...formData, doctor_id: v === 'global' ? '' : v })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="global">Todos os médicos</SelectItem>
-              {doctors.map(d => <SelectItem key={d.id} value={d.id}>{d.full_name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <Label>Descrição do Imposto</Label>
+          <Input value={formData.descricao} onChange={(e) => setFormData({ ...formData, descricao: e.target.value })} placeholder="Ex: Imposto de Renda" />
         </div>
         <div>
-          <Label>Hospital (opcional)</Label>
-          <Select value={formData.hospital_id || 'global'} onValueChange={(v) => setFormData({ ...formData, hospital_id: v === 'global' ? '' : v })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="global">Todos os hospitais</SelectItem>
-              {hospitals.map(h => <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <Label>Tipo de Desconto</Label>
-          <Select value={formData.tipo_desconto} onValueChange={(v) => setFormData({ ...formData, tipo_desconto: v })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="percentual">Percentual (%)</SelectItem>
-              <SelectItem value="valor_fixo">Valor Fixo (R$)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Valor do Desconto</Label>
+          <Label>Percentual (%)</Label>
           <Input type="number" step="0.01" value={formData.valor_desconto} onChange={(e) => setFormData({ ...formData, valor_desconto: parseFloat(e.target.value) || 0 })} />
         </div>
+      </div>
+      <div className="flex gap-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          <X className="w-4 h-4 mr-2" />
+          Cancelar
+        </Button>
+        <Button type="submit">
+          <Save className="w-4 h-4 mr-2" />
+          Salvar
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function DespesaForm({ initialData, onSave, onCancel }) {
+  const [formData, setFormData] = useState(initialData || {
+    doctor_id: '',
+    hospital_id: '',
+    tipo_desconto: 'valor_fixo',
+    valor_desconto: 0,
+    descricao: '',
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSave(formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 p-4 bg-slate-50 rounded-lg">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label>Descrição</Label>
-          <Input value={formData.descricao} onChange={(e) => setFormData({ ...formData, descricao: e.target.value })} placeholder="Ex: Desconto INSS" />
+          <Label>Descrição da Despesa</Label>
+          <Input value={formData.descricao} onChange={(e) => setFormData({ ...formData, descricao: e.target.value })} placeholder="Ex: Taxa administrativa" />
+        </div>
+        <div>
+          <Label>Valor (R$)</Label>
+          <Input type="number" step="0.01" value={formData.valor_desconto} onChange={(e) => setFormData({ ...formData, valor_desconto: parseFloat(e.target.value) || 0 })} />
         </div>
       </div>
       <div className="flex gap-2">
