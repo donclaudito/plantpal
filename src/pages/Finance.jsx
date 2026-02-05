@@ -154,7 +154,7 @@ export default function Finance() {
           grossValue: 0,
           discountValue: 0,
           netValue: 0,
-          discountDetails: [],
+          discountDetailsMap: new Map(),
         };
       }
 
@@ -166,12 +166,28 @@ export default function Finance() {
       grouped[key].grossValue += baseValue;
       grouped[key].discountValue += discountResult.totalValue;
       grouped[key].netValue += netValue;
+      
       if (discountResult.details.length > 0) {
-        grouped[key].discountDetails = discountResult.details;
+        discountResult.details.forEach(detail => {
+          const detailKey = detail.descricao;
+          if (!grouped[key].discountDetailsMap.has(detailKey)) {
+            grouped[key].discountDetailsMap.set(detailKey, {
+              descricao: detail.descricao,
+              tipo: detail.tipo,
+              valor_config: detail.valor_config,
+              valor_calculado: 0
+            });
+          }
+          const existing = grouped[key].discountDetailsMap.get(detailKey);
+          existing.valor_calculado += detail.valor_calculado;
+        });
       }
     });
 
-    return Object.values(grouped);
+    return Object.values(grouped).map(item => ({
+      ...item,
+      discountDetails: Array.from(item.discountDetailsMap.values())
+    }));
   }, [filteredShifts, hospitals, configValores, configDescontos]);
 
   const totals = useMemo(() => {
