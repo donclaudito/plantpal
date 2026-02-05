@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import Toast from '@/components/common/Toast';
 
 export default function Settings() {
@@ -188,27 +189,31 @@ export default function Settings() {
               />
             )}
 
-            <div className="space-y-4 mt-4">
-              {configValores.map((config) => (
-                <div key={config.id} className="p-4 border rounded-lg bg-white">
+            <Accordion type="single" collapsible className="space-y-2 mt-4">
+              {configValores.map((config, index) => (
+                <AccordionItem key={config.id} value={`item-${index}`} className="border rounded-lg bg-white">
                   {editingValor?.id === config.id ? (
-                    <ValorForm
-                      doctors={doctors}
-                      hospitals={hospitals}
-                      initialData={config}
-                      onSave={(data) => updateValorMutation.mutate({ id: config.id, data })}
-                      onCancel={() => setEditingValor(null)}
-                    />
+                    <div className="p-4">
+                      <ValorForm
+                        doctors={doctors}
+                        hospitals={hospitals}
+                        initialData={config}
+                        onSave={(data) => updateValorMutation.mutate({ id: config.id, data })}
+                        onCancel={() => setEditingValor(null)}
+                      />
+                    </div>
                   ) : (
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
+                    <>
+                      <AccordionTrigger className="px-4 hover:no-underline">
+                        <div className="flex items-center justify-between w-full pr-4">
                           <p className="font-bold text-lg">
                             {config.doctor_id ? getDoctorName(config.doctor_id) : 'Todos os médicos'} • 
                             {config.hospital_id ? getHospitalName(config.hospital_id) : 'Todos os hospitais'}
                           </p>
                         </div>
-                        <div className="flex gap-2">
+                      </AccordionTrigger>
+                      <AccordionContent className="px-4 pb-4">
+                        <div className="flex items-center justify-end gap-2 mb-3">
                           <Button variant="outline" size="sm" onClick={() => setEditingValor(config)}>
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -216,30 +221,30 @@ export default function Settings() {
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
-                      </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div>
-                          <p className="text-sm text-gray-500">6 horas</p>
-                          <p className="font-bold">R$ {config.valor_6h?.toFixed(2) || '0.00'}</p>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div>
+                            <p className="text-sm text-gray-500">6 horas</p>
+                            <p className="font-bold">R$ {config.valor_6h?.toFixed(2) || '0.00'}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">12 horas</p>
+                            <p className="font-bold">R$ {config.valor_12h?.toFixed(2) || '0.00'}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Retaguarda</p>
+                            <p className="font-bold">R$ {config.valor_retaguarda?.toFixed(2) || '0.00'}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Coordenador</p>
+                            <p className="font-bold">R$ {config.valor_coordenador?.toFixed(2) || '0.00'}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm text-gray-500">12 horas</p>
-                          <p className="font-bold">R$ {config.valor_12h?.toFixed(2) || '0.00'}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">Retaguarda</p>
-                          <p className="font-bold">R$ {config.valor_retaguarda?.toFixed(2) || '0.00'}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">Coordenador</p>
-                          <p className="font-bold">R$ {config.valor_coordenador?.toFixed(2) || '0.00'}</p>
-                        </div>
-                      </div>
-                    </div>
+                      </AccordionContent>
+                    </>
                   )}
-                </div>
+                </AccordionItem>
               ))}
-            </div>
+            </Accordion>
           </CardContent>
         </Card>
 
