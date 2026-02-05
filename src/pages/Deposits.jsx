@@ -88,28 +88,26 @@ export default function Deposits() {
     }
   };
 
-  const calculateAllDiscounts = (doctorId, hospitalId, baseValue) => {
+  const calculatePercentageDiscounts = (doctorId, hospitalId, baseValue) => {
     const applicableDiscounts = [];
 
-    const specific = configDescontos.filter(d => d.doctor_id === doctorId && d.hospital_id === hospitalId);
+    const specific = configDescontos.filter(d => d.doctor_id === doctorId && d.hospital_id === hospitalId && d.tipo_desconto === 'percentual');
     applicableDiscounts.push(...specific);
 
-    const byDoctor = configDescontos.filter(d => d.doctor_id === doctorId && !d.hospital_id);
+    const byDoctor = configDescontos.filter(d => d.doctor_id === doctorId && !d.hospital_id && d.tipo_desconto === 'percentual');
     applicableDiscounts.push(...byDoctor);
 
-    const byHospital = configDescontos.filter(d => !d.doctor_id && d.hospital_id === hospitalId);
+    const byHospital = configDescontos.filter(d => !d.doctor_id && d.hospital_id === hospitalId && d.tipo_desconto === 'percentual');
     applicableDiscounts.push(...byHospital);
 
-    const global = configDescontos.filter(d => !d.doctor_id && !d.hospital_id);
+    const global = configDescontos.filter(d => !d.doctor_id && !d.hospital_id && d.tipo_desconto === 'percentual');
     applicableDiscounts.push(...global);
 
     let totalDiscount = 0;
     const details = [];
 
     applicableDiscounts.forEach(desconto => {
-      const value = desconto.tipo_desconto === 'percentual' 
-        ? baseValue * desconto.valor_desconto / 100 
-        : desconto.valor_desconto;
+      const value = baseValue * desconto.valor_desconto / 100;
 
       totalDiscount += value;
 
@@ -127,8 +125,44 @@ export default function Deposits() {
     };
   };
 
+  const calculateFixedDiscounts = (doctorId, hospitalId) => {
+    const applicableDiscounts = [];
+
+    const specific = configDescontos.filter(d => d.doctor_id === doctorId && d.hospital_id === hospitalId && d.tipo_desconto === 'valor_fixo');
+    applicableDiscounts.push(...specific);
+
+    const byDoctor = configDescontos.filter(d => d.doctor_id === doctorId && !d.hospital_id && d.tipo_desconto === 'valor_fixo');
+    applicableDiscounts.push(...byDoctor);
+
+    const byHospital = configDescontos.filter(d => !d.doctor_id && d.hospital_id === hospitalId && d.tipo_desconto === 'valor_fixo');
+    applicableDiscounts.push(...byHospital);
+
+    const global = configDescontos.filter(d => !d.doctor_id && !d.hospital_id && d.tipo_desconto === 'valor_fixo');
+    applicableDiscounts.push(...global);
+
+    let totalDiscount = 0;
+    const details = [];
+
+    applicableDiscounts.forEach(desconto => {
+      totalDiscount += desconto.valor_desconto;
+
+      details.push({
+        descricao: desconto.descricao,
+        tipo: desconto.tipo_desconto,
+        valor_config: desconto.valor_desconto,
+        valor_calculado: desconto.valor_desconto
+      });
+    });
+
+    return {
+      totalValue: totalDiscount,
+      details
+    };
+  };
+
   const depositsData = useMemo(() => {
     const grouped = {};
+    const fixedDiscountsByDoctorHospital = new Map();
 
     shifts.forEach(shift => {
       if (!shift.date) return;
@@ -147,6 +181,7 @@ export default function Deposits() {
       const period = shift.period || '12h';
 
       const key = `${doctorId}-${hospitalId}-${mesCompetencia}`;
+      const fixedKey = `${doctorId}-${hospitalId}`;
 
       if (!grouped[key]) {
         grouped[key] = {
@@ -160,24 +195,59 @@ export default function Deposits() {
           valorBruto: 0,
           valorDescontos: 0,
           valorLiquido: 0,
-          descontosDetalhados: []
+          descontosDetailsMap: new Map()
         };
       }
 
       const baseValue = calculateBaseValue(doctorId, hospitalId, period);
-      const discountResult = calculateAllDiscounts(doctorId, hospitalId, baseValue);
-      const netValue = baseValue - discountResult.totalValue;
+      const percentageDiscounts = calculatePercentageDiscounts(doctorId, hospitalId, baseValue);
 
       grouped[key].numPlantoes += 1;
       grouped[key].valorBruto += baseValue;
-      grouped[key].valorDescontos += discountResult.totalValue;
-      grouped[key].valorLiquido += netValue;
-      if (discountResult.details.length > 0 && grouped[key].descontosDetalhados.length === 0) {
-        grouped[key].descontosDetalhados = discountResult.details;
+      grouped[key].valorDescontos += percentageDiscounts.totalValue;
+      grouped[key].valorLiquido += baseValue - percentageDiscounts.totalValue;
+
+      if (percentageDiscounts.details.length > 0) {
+        percentageDiscounts.details.forEach(detail => {
+          const detailKey = detail.descricao;
+          if (!grouped[key].descontosDetailsMap.has(detailKey)) {
+            grouped[key].descontosDetailsMap.set(detailKey, {
+              descricao: detail.descricao,
+              tipo: detail.tipo,
+              valor_config: detail.valor_config,
+              valor_calculado: 0
+            });
+          }
+          const existing = grouped[key].descontosDetailsMap.get(detailKey);
+          existing.valor_calculado += detail.valor_calculado;
+        });
+      }
+
+      if (!fixedDiscountsByDoctorHospital.has(fixedKey)) {
+        const fixedDiscounts = calculateFixedDiscounts(doctorId, hospitalId);
+        fixedDiscountsByDoctorHospital.set(fixedKey, fixedDiscounts);
       }
     });
 
-    const calculated = Object.values(grouped);
+    const groupedArray = Object.values(grouped);
+    groupedArray.forEach(item => {
+      const fixedKey = `${item.doctorId}-${item.hospitalId}`;
+      const fixedDiscounts = fixedDiscountsByDoctorHospital.get(fixedKey);
+      
+      if (fixedDiscounts) {
+        item.valorDescontos += fixedDiscounts.totalValue;
+        item.valorLiquido -= fixedDiscounts.totalValue;
+        
+        fixedDiscounts.details.forEach(detail => {
+          item.descontosDetailsMap.set(detail.descricao, detail);
+        });
+      }
+
+      item.descontosDetalhados = Array.from(item.descontosDetailsMap.values());
+      delete item.descontosDetailsMap;
+    });
+
+    const calculated = groupedArray;
     
     return calculated.map(calc => {
       const saved = savedDeposits.find(
