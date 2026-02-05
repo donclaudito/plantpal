@@ -30,55 +30,37 @@ export default function Deposits() {
 
   const { data: shifts = [] } = useQuery({
     queryKey: ['shifts', user?.email],
-    queryFn: async () => {
-      const allShifts = await base44.entities.Shift.list('-date');
-      return allShifts.filter(s => s.created_by === user?.email);
-    },
+    queryFn: () => base44.entities.Shift.list('-date'),
     enabled: !!user,
   });
 
   const { data: doctors = [] } = useQuery({
     queryKey: ['doctors', user?.email],
-    queryFn: async () => {
-      const all = await base44.entities.Doctor.list('full_name');
-      return all.filter(d => d.created_by === user?.email);
-    },
+    queryFn: () => base44.entities.Doctor.list('full_name'),
     enabled: !!user,
   });
 
   const { data: hospitals = [] } = useQuery({
     queryKey: ['hospitals', user?.email],
-    queryFn: async () => {
-      const all = await base44.entities.Hospital.list('name');
-      return all.filter(h => h.created_by === user?.email);
-    },
+    queryFn: () => base44.entities.Hospital.list('name'),
     enabled: !!user,
   });
 
   const { data: configValores = [] } = useQuery({
     queryKey: ['configValores', user?.email],
-    queryFn: async () => {
-      const all = await base44.entities.ConfiguracaoPlantao.list();
-      return all.filter(c => c.created_by === user?.email);
-    },
+    queryFn: () => base44.entities.ConfiguracaoPlantao.list(),
     enabled: !!user,
   });
 
   const { data: configDescontos = [] } = useQuery({
     queryKey: ['configDescontos', user?.email],
-    queryFn: async () => {
-      const all = await base44.entities.ConfiguracaoDesconto.list();
-      return all.filter(c => c.created_by === user?.email);
-    },
+    queryFn: () => base44.entities.ConfiguracaoDesconto.list(),
     enabled: !!user,
   });
 
   const { data: savedDeposits = [] } = useQuery({
     queryKey: ['deposits', user?.email],
-    queryFn: async () => {
-      const all = await base44.entities.Deposit.list('-created_date');
-      return all.filter(d => d.created_by === user?.email);
-    },
+    queryFn: () => base44.entities.Deposit.list('-created_date'),
     enabled: !!user,
   });
 
