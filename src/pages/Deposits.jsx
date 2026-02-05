@@ -67,6 +67,15 @@ export default function Deposits() {
     enabled: !!user,
   });
 
+  const { data: procedimentos = [] } = useQuery({
+    queryKey: ['procedimentos', user?.email],
+    queryFn: async () => {
+      const all = await base44.entities.Procedimento.list('-date');
+      return all.filter(p => p.created_by === user?.email);
+    },
+    enabled: !!user,
+  });
+
   const { data: savedDeposits = [] } = useQuery({
     queryKey: ['deposits', user?.email],
     queryFn: async () => {
@@ -176,7 +185,8 @@ export default function Deposits() {
           valor_bruto: 0,
           valor_descontos: 0,
           valor_liquido: 0,
-          descontos_detalhados: []
+          descontos_detalhados: [],
+          detalhes_fonte: []
         };
       }
 
@@ -193,18 +203,72 @@ export default function Deposits() {
       }
     });
 
+    procedimentos.forEach(proc => {
+      if (!proc.date) return;
+
+      const [year, month] = proc.date.split('-').map(Number);
+      const mesCompetencia = `${year}-${String(month).padStart(2, '0')}`;
+      const depositMonth = month === 12 ? 1 : month + 1;
+      const depositYear = month === 12 ? year + 1 : year;
+      const mesDeposito = `${depositYear}-${String(depositMonth).padStart(2, '0')}`;
+
+      const doctorId = proc.doctor_id;
+      const doctorName = proc.doctor_name;
+      const hospitalId = proc.hospital_id || 'sem_hospital';
+      const hospitalName = proc.hospital_name || 'Sem Hospital';
+
+      const key = `${doctorId}-${hospitalId}-${mesCompetencia}`;
+
+      if (!grouped[key]) {
+        grouped[key] = {
+          doctor_id: doctorId,
+          doctor_name: doctorName,
+          hospital_id: hospitalId,
+          hospital_name: hospitalName,
+          mes_competencia: mesCompetencia,
+          mes_deposito: mesDeposito,
+          num_plantoes: 0,
+          valor_bruto: 0,
+          valor_descontos: 0,
+          valor_liquido: 0,
+          descontos_detalhados: [],
+          detalhes_fonte: []
+        };
+      }
+
+      const procValue = proc.value || 0;
+      grouped[key].valor_bruto += procValue;
+      grouped[key].valor_liquido += procValue;
+
+      if (!grouped[key].detalhes_fonte) {
+        grouped[key].detalhes_fonte = [];
+      }
+      
+      const existingProc = grouped[key].detalhes_fonte.find(d => d.tipo === proc.type);
+      if (existingProc) {
+        existingProc.quantidade += 1;
+        existingProc.valor += procValue;
+      } else {
+        grouped[key].detalhes_fonte.push({
+          tipo: proc.type,
+          quantidade: 1,
+          valor: procValue
+        });
+      }
+    });
+
     const calculated = Object.values(grouped);
     
     return calculated.map(calc => {
       const saved = savedDeposits.find(
-        s => s.doctor_id === calc.doctorId && 
-             s.hospital_id === calc.hospitalId && 
-             s.mes_competencia === calc.mesCompetencia
+        s => s.doctor_id === calc.doctor_id && 
+             s.hospital_id === calc.hospital_id && 
+             s.mes_competencia === calc.mes_competencia
       );
       
       return saved ? { ...calc, ...saved, isSaved: true } : { ...calc, isSaved: false };
     });
-  }, [shifts, hospitals, configValores, configDescontos, savedDeposits]);
+  }, [shifts, procedimentos, hospitals, configValores, configDescontos, savedDeposits]);
 
   const filteredDeposits = useMemo(() => {
     return depositsData.filter(d => {
@@ -277,10 +341,24 @@ export default function Deposits() {
     doc.setFontSize(14);
     doc.text('RESUMO FINANCEIRO', 20, 110);
     doc.setFontSize(11);
-    doc.text(`Número de Plantões: ${deposit.num_plantoes}`, 20, 120);
-    doc.text(`Valor Bruto: R$ ${(deposit.valor_bruto || 0).toFixed(2)}`, 20, 130);
+    
+    let yPos = 120;
+    if (deposit.num_plantoes > 0) {
+      doc.text(`Plantões: ${deposit.num_plantoes}`, 20, yPos);
+      yPos += 10;
+    }
+    
+    if (deposit.detalhes_fonte && deposit.detalhes_fonte.length > 0) {
+      deposit.detalhes_fonte.forEach(fonte => {
+        doc.text(`${fonte.tipo}: ${fonte.quantidade} (R$ ${fonte.valor.toFixed(2)})`, 20, yPos);
+        yPos += 10;
+      });
+    }
+    
+    doc.text(`Valor Bruto Total: R$ ${(deposit.valor_bruto || 0).toFixed(2)}`, 20, yPos);
+    yPos += 10;
 
-    let yPos = 150;
+    yPos += 10;
     doc.setFontSize(14);
     doc.text('DESCONTOS', 20, yPos);
     yPos += 10;
@@ -335,6 +413,16 @@ export default function Deposits() {
         ? `\n📅 Data do Pagamento: ${new Date(selectedDeposit.data_pagamento).toLocaleDateString('pt-BR')}`
         : '';
       
+      let detalhesText = '';
+      if (selectedDeposit.num_plantoes > 0) {
+        detalhesText += `  • Plantões: ${selectedDeposit.num_plantoes}\n`;
+      }
+      if (selectedDeposit.detalhes_fonte && selectedDeposit.detalhes_fonte.length > 0) {
+        selectedDeposit.detalhes_fonte.forEach(fonte => {
+          detalhesText += `  • ${fonte.tipo}: ${fonte.quantidade} (R$ ${fonte.valor.toFixed(2)})\n`;
+        });
+      }
+      
       const message = `🏥 *HOLERITE DE PAGAMENTO*
 
 👤 *Médico(a):* ${selectedDeposit.doctor_name}
@@ -345,8 +433,7 @@ export default function Deposits() {
 ━━━━━━━━━━━━━━━━━━━━━━
 
 💼 *RESUMO FINANCEIRO:*
-  • Número de Plantões: ${selectedDeposit.num_plantoes}
-  • Valor Bruto: R$ ${(selectedDeposit.valor_bruto || 0).toFixed(2)}${descontosText}
+${detalhesText}  • Valor Bruto Total: R$ ${(selectedDeposit.valor_bruto || 0).toFixed(2)}${descontosText}
 
 ━━━━━━━━━━━━━━━━━━━━━━
 
