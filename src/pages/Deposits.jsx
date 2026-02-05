@@ -38,14 +38,20 @@ export default function Deposits() {
   });
 
   const { data: doctors = [] } = useQuery({
-    queryKey: ['doctors'],
-    queryFn: () => base44.entities.Doctor.list('full_name'),
+    queryKey: ['doctors', user?.email],
+    queryFn: async () => {
+      const all = await base44.entities.Doctor.list('full_name');
+      return all.filter(d => d.created_by === user?.email);
+    },
     enabled: !!user,
   });
 
   const { data: hospitals = [] } = useQuery({
-    queryKey: ['hospitals'],
-    queryFn: () => base44.entities.Hospital.list('name'),
+    queryKey: ['hospitals', user?.email],
+    queryFn: async () => {
+      const all = await base44.entities.Hospital.list('name');
+      return all.filter(h => h.created_by === user?.email);
+    },
     enabled: !!user,
   });
 
@@ -63,15 +69,6 @@ export default function Deposits() {
     queryFn: async () => {
       const all = await base44.entities.ConfiguracaoDesconto.list();
       return all.filter(c => c.created_by === user?.email);
-    },
-    enabled: !!user,
-  });
-
-  const { data: procedimentos = [] } = useQuery({
-    queryKey: ['procedimentos', user?.email],
-    queryFn: async () => {
-      const all = await base44.entities.Procedimento.list('-date');
-      return all.filter(p => p.created_by === user?.email);
     },
     enabled: !!user,
   });
@@ -175,18 +172,17 @@ export default function Deposits() {
 
       if (!grouped[key]) {
         grouped[key] = {
-          doctor_id: doctorId,
-          doctor_name: doctorName,
-          hospital_id: hospitalId,
-          hospital_name: hospitalName,
-          mes_competencia: mesCompetencia,
-          mes_deposito: mesDeposito,
-          num_plantoes: 0,
-          valor_bruto: 0,
-          valor_descontos: 0,
-          valor_liquido: 0,
-          descontos_detalhados: [],
-          detalhes_fonte: []
+          doctorId,
+          doctorName,
+          hospitalId,
+          hospitalName,
+          mesCompetencia,
+          mesDeposito,
+          numPlantoes: 0,
+          valorBruto: 0,
+          valorDescontos: 0,
+          valorLiquido: 0,
+          descontosDetalhados: []
         };
       }
 
@@ -194,66 +190,12 @@ export default function Deposits() {
       const discountResult = calculateAllDiscounts(doctorId, hospitalId, baseValue);
       const netValue = baseValue - discountResult.totalValue;
 
-      grouped[key].num_plantoes += 1;
-      grouped[key].valor_bruto += baseValue;
-      grouped[key].valor_descontos += discountResult.totalValue;
-      grouped[key].valor_liquido += netValue;
-      if (discountResult.details.length > 0 && grouped[key].descontos_detalhados.length === 0) {
-        grouped[key].descontos_detalhados = discountResult.details;
-      }
-    });
-
-    procedimentos.forEach(proc => {
-      if (!proc.date) return;
-
-      const [year, month] = proc.date.split('-').map(Number);
-      const mesCompetencia = `${year}-${String(month).padStart(2, '0')}`;
-      const depositMonth = month === 12 ? 1 : month + 1;
-      const depositYear = month === 12 ? year + 1 : year;
-      const mesDeposito = `${depositYear}-${String(depositMonth).padStart(2, '0')}`;
-
-      const doctorId = proc.doctor_id;
-      const doctorName = proc.doctor_name;
-      const hospitalId = proc.hospital_id || 'sem_hospital';
-      const hospitalName = proc.hospital_name || 'Sem Hospital';
-
-      const key = `${doctorId}-${hospitalId}-${mesCompetencia}`;
-
-      if (!grouped[key]) {
-        grouped[key] = {
-          doctor_id: doctorId,
-          doctor_name: doctorName,
-          hospital_id: hospitalId,
-          hospital_name: hospitalName,
-          mes_competencia: mesCompetencia,
-          mes_deposito: mesDeposito,
-          num_plantoes: 0,
-          valor_bruto: 0,
-          valor_descontos: 0,
-          valor_liquido: 0,
-          descontos_detalhados: [],
-          detalhes_fonte: []
-        };
-      }
-
-      const procValue = proc.value || 0;
-      grouped[key].valor_bruto += procValue;
-      grouped[key].valor_liquido += procValue;
-
-      if (!grouped[key].detalhes_fonte) {
-        grouped[key].detalhes_fonte = [];
-      }
-      
-      const existingProc = grouped[key].detalhes_fonte.find(d => d.tipo === proc.type);
-      if (existingProc) {
-        existingProc.quantidade += 1;
-        existingProc.valor += procValue;
-      } else {
-        grouped[key].detalhes_fonte.push({
-          tipo: proc.type,
-          quantidade: 1,
-          valor: procValue
-        });
+      grouped[key].numPlantoes += 1;
+      grouped[key].valorBruto += baseValue;
+      grouped[key].valorDescontos += discountResult.totalValue;
+      grouped[key].valorLiquido += netValue;
+      if (discountResult.details.length > 0 && grouped[key].descontosDetalhados.length === 0) {
+        grouped[key].descontosDetalhados = discountResult.details;
       }
     });
 
@@ -261,21 +203,21 @@ export default function Deposits() {
     
     return calculated.map(calc => {
       const saved = savedDeposits.find(
-        s => s.doctor_id === calc.doctor_id && 
-             s.hospital_id === calc.hospital_id && 
-             s.mes_competencia === calc.mes_competencia
+        s => s.doctor_id === calc.doctorId && 
+             s.hospital_id === calc.hospitalId && 
+             s.mes_competencia === calc.mesCompetencia
       );
       
       return saved ? { ...calc, ...saved, isSaved: true } : { ...calc, isSaved: false };
     });
-  }, [shifts, procedimentos, hospitals, configValores, configDescontos, savedDeposits]);
+  }, [shifts, hospitals, configValores, configDescontos, savedDeposits]);
 
   const filteredDeposits = useMemo(() => {
     return depositsData.filter(d => {
-      const matchDoctor = filterDoctor === 'all' || d.doctor_id === filterDoctor;
-      const matchHospital = filterHospital === 'all' || d.hospital_id === filterHospital;
-      const matchCompetencia = filterCompetencia === 'all' || d.mes_competencia === filterCompetencia;
-      const matchDeposito = filterDeposito === 'all' || d.mes_deposito === filterDeposito;
+      const matchDoctor = filterDoctor === 'all' || d.doctorId === filterDoctor || d.doctor_id === filterDoctor;
+      const matchHospital = filterHospital === 'all' || d.hospitalId === filterHospital || d.hospital_id === filterHospital;
+      const matchCompetencia = filterCompetencia === 'all' || d.mesCompetencia === filterCompetencia || d.mes_competencia === filterCompetencia;
+      const matchDeposito = filterDeposito === 'all' || d.mesDeposito === filterDeposito || d.mes_deposito === filterDeposito;
       
       return matchDoctor && matchHospital && matchCompetencia && matchDeposito;
     });
@@ -298,17 +240,17 @@ export default function Deposits() {
     const { file_url } = await base44.integrations.Core.UploadFile({ file });
     
     const depositData = {
-      doctor_id: deposit.doctor_id,
-      doctor_name: deposit.doctor_name,
-      hospital_id: deposit.hospital_id,
-      hospital_name: deposit.hospital_name,
-      mes_competencia: deposit.mes_competencia,
-      mes_deposito: deposit.mes_deposito,
-      num_plantoes: deposit.num_plantoes,
-      valor_bruto: deposit.valor_bruto,
-      valor_descontos: deposit.valor_descontos,
-      valor_liquido: deposit.valor_liquido,
-      descontos_detalhados: deposit.descontos_detalhados,
+      doctor_id: deposit.doctorId || deposit.doctor_id,
+      doctor_name: deposit.doctorName || deposit.doctor_name,
+      hospital_id: deposit.hospitalId || deposit.hospital_id,
+      hospital_name: deposit.hospitalName || deposit.hospital_name,
+      mes_competencia: deposit.mesCompetencia || deposit.mes_competencia,
+      mes_deposito: deposit.mesDeposito || deposit.mes_deposito,
+      num_plantoes: deposit.numPlantoes || deposit.num_plantoes,
+      valor_bruto: deposit.valorBruto || deposit.valor_bruto,
+      valor_descontos: deposit.valorDescontos || deposit.valor_descontos,
+      valor_liquido: deposit.valorLiquido || deposit.valor_liquido,
+      descontos_detalhados: deposit.descontosDetalhados || deposit.descontos_detalhados,
       comprovante_pix: file_url,
       status: 'Pago',
       data_pagamento: new Date().toISOString().split('T')[0],
@@ -329,42 +271,28 @@ export default function Deposits() {
     doc.text('HOLERITE DE PAGAMENTO', 105, 20, { align: 'center' });
 
     doc.setFontSize(12);
-    doc.text(`Mês de Competência: ${formatMonth(deposit.mes_competencia)}`, 20, 40);
-    doc.text(`Mês de Depósito: ${formatMonth(deposit.mes_deposito)}`, 20, 50);
+    doc.text(`Mês de Competência: ${formatMonth(deposit.mesCompetencia || deposit.mes_competencia)}`, 20, 40);
+    doc.text(`Mês de Depósito: ${formatMonth(deposit.mesDeposito || deposit.mes_deposito)}`, 20, 50);
 
     doc.setFontSize(14);
     doc.text('DADOS DO MÉDICO', 20, 70);
     doc.setFontSize(11);
-    doc.text(`Nome: ${deposit.doctor_name}`, 20, 80);
-    doc.text(`Hospital: ${deposit.hospital_name}`, 20, 90);
+    doc.text(`Nome: ${deposit.doctorName || deposit.doctor_name}`, 20, 80);
+    doc.text(`Hospital: ${deposit.hospitalName || deposit.hospital_name}`, 20, 90);
 
     doc.setFontSize(14);
     doc.text('RESUMO FINANCEIRO', 20, 110);
     doc.setFontSize(11);
-    
-    let yPos = 120;
-    if (deposit.num_plantoes > 0) {
-      doc.text(`Plantões: ${deposit.num_plantoes}`, 20, yPos);
-      yPos += 10;
-    }
-    
-    if (deposit.detalhes_fonte && deposit.detalhes_fonte.length > 0) {
-      deposit.detalhes_fonte.forEach(fonte => {
-        doc.text(`${fonte.tipo}: ${fonte.quantidade} (R$ ${fonte.valor.toFixed(2)})`, 20, yPos);
-        yPos += 10;
-      });
-    }
-    
-    doc.text(`Valor Bruto Total: R$ ${(deposit.valor_bruto || 0).toFixed(2)}`, 20, yPos);
-    yPos += 10;
+    doc.text(`Número de Plantões: ${deposit.numPlantoes || deposit.num_plantoes}`, 20, 120);
+    doc.text(`Valor Bruto: R$ ${((deposit.valorBruto || deposit.valor_bruto) || 0).toFixed(2)}`, 20, 130);
 
-    yPos += 10;
+    let yPos = 150;
     doc.setFontSize(14);
     doc.text('DESCONTOS', 20, yPos);
     yPos += 10;
     doc.setFontSize(11);
 
-    const descontos = deposit.descontos_detalhados || [];
+    const descontos = deposit.descontosDetalhados || deposit.descontos_detalhados || [];
     if (descontos.length > 0) {
       descontos.forEach(desc => {
         const descText = desc.tipo === 'percentual' 
@@ -376,83 +304,63 @@ export default function Deposits() {
     }
 
     yPos += 10;
-    doc.text(`Total de Descontos: R$ ${(deposit.valor_descontos || 0).toFixed(2)}`, 20, yPos);
+    doc.text(`Total de Descontos: R$ ${((deposit.valorDescontos || deposit.valor_descontos) || 0).toFixed(2)}`, 20, yPos);
 
     yPos += 20;
     doc.setFontSize(16);
-    doc.text(`VALOR LÍQUIDO A PAGAR: R$ ${(deposit.valor_liquido || 0).toFixed(2)}`, 20, yPos);
+    doc.text(`VALOR LÍQUIDO A PAGAR: R$ ${((deposit.valorLiquido || deposit.valor_liquido) || 0).toFixed(2)}`, 20, yPos);
 
     const pdfOutput = doc.output('datauristring');
     setHoleritePdfUrl(pdfOutput);
     setSelectedDeposit(deposit);
   };
 
-  const sendWhatsApp = async () => {
+  const sendWhatsApp = () => {
     if (!selectedDeposit) return;
     
-    try {
-      const { data } = await base44.functions.invoke('validateAdminPassword', { password: adminPassword });
-      
-      if (!data.valid) {
-        alert('Senha incorreta!');
-        return;
-      }
+    const descontos = selectedDeposit.descontosDetalhados || selectedDeposit.descontos_detalhados || [];
+    let descontosText = '';
+    if (descontos.length > 0) {
+      descontosText = '\n\n📋 *DESCONTOS APLICADOS:*\n' + descontos.map(desc => {
+        const descText = desc.tipo === 'percentual' 
+          ? `  • ${desc.descricao} (${desc.valor_config}%): R$ ${desc.valor_calculado.toFixed(2)}`
+          : `  • ${desc.descricao}: R$ ${desc.valor_calculado.toFixed(2)}`;
+        return descText;
+      }).join('\n');
+    }
+    
+    const dataPagamento = selectedDeposit.data_pagamento 
+      ? `\n📅 Data do Pagamento: ${new Date(selectedDeposit.data_pagamento).toLocaleDateString('pt-BR')}`
+      : '';
+    
+    const message = `🏥 *HOLERITE DE PAGAMENTO*
 
-      const descontos = selectedDeposit.descontos_detalhados || [];
-      let descontosText = '';
-      if (descontos.length > 0) {
-        descontosText = '\n\n📋 *DESCONTOS APLICADOS:*\n' + descontos.map(desc => {
-          const descText = desc.tipo === 'percentual' 
-            ? `  • ${desc.descricao} (${desc.valor_config}%): R$ ${desc.valor_calculado.toFixed(2)}`
-            : `  • ${desc.descricao}: R$ ${desc.valor_calculado.toFixed(2)}`;
-          return descText;
-        }).join('\n');
-      }
-      
-      const dataPagamento = selectedDeposit.data_pagamento 
-        ? `\n📅 Data do Pagamento: ${new Date(selectedDeposit.data_pagamento).toLocaleDateString('pt-BR')}`
-        : '';
-      
-      let detalhesText = '';
-      if (selectedDeposit.num_plantoes > 0) {
-        detalhesText += `  • Plantões: ${selectedDeposit.num_plantoes}\n`;
-      }
-      if (selectedDeposit.detalhes_fonte && selectedDeposit.detalhes_fonte.length > 0) {
-        selectedDeposit.detalhes_fonte.forEach(fonte => {
-          detalhesText += `  • ${fonte.tipo}: ${fonte.quantidade} (R$ ${fonte.valor.toFixed(2)})\n`;
-        });
-      }
-      
-      const message = `🏥 *HOLERITE DE PAGAMENTO*
-
-👤 *Médico(a):* ${selectedDeposit.doctor_name}
-🏥 *Hospital:* ${selectedDeposit.hospital_name}
-📆 *Mês de Competência:* ${formatMonth(selectedDeposit.mes_competencia)}
-📆 *Mês de Depósito:* ${formatMonth(selectedDeposit.mes_deposito)}
+👤 *Médico(a):* ${selectedDeposit.doctorName || selectedDeposit.doctor_name}
+🏥 *Hospital:* ${selectedDeposit.hospitalName || selectedDeposit.hospital_name}
+📆 *Mês de Competência:* ${formatMonth(selectedDeposit.mesCompetencia || selectedDeposit.mes_competencia)}
+📆 *Mês de Depósito:* ${formatMonth(selectedDeposit.mesDeposito || selectedDeposit.mes_deposito)}
 
 ━━━━━━━━━━━━━━━━━━━━━━
 
 💼 *RESUMO FINANCEIRO:*
-${detalhesText}  • Valor Bruto Total: R$ ${(selectedDeposit.valor_bruto || 0).toFixed(2)}${descontosText}
+  • Número de Plantões: ${selectedDeposit.numPlantoes || selectedDeposit.num_plantoes}
+  • Valor Bruto: R$ ${((selectedDeposit.valorBruto || selectedDeposit.valor_bruto) || 0).toFixed(2)}${descontosText}
 
 ━━━━━━━━━━━━━━━━━━━━━━
 
-📊 *Total de Descontos:* R$ ${(selectedDeposit.valor_descontos || 0).toFixed(2)}
+📊 *Total de Descontos:* R$ ${((selectedDeposit.valorDescontos || selectedDeposit.valor_descontos) || 0).toFixed(2)}
 
-💰 *VALOR LÍQUIDO A PAGAR:* R$ ${(selectedDeposit.valor_liquido || 0).toFixed(2)}${dataPagamento}
+💰 *VALOR LÍQUIDO A PAGAR:* R$ ${((selectedDeposit.valorLiquido || selectedDeposit.valor_liquido) || 0).toFixed(2)}${dataPagamento}
 
 ━━━━━━━━━━━━━━━━━━━━━━
 
 Qualquer dúvida, estamos à disposição! 🙂`;
 
-      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-      
-      window.open(whatsappUrl, '_blank');
-      setShowAdminPrompt(false);
-      setAdminPassword('');
-    } catch (error) {
-      alert('Erro ao validar senha: ' + error.message);
-    }
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    
+    window.open(whatsappUrl, '_blank');
+    setShowAdminPrompt(false);
+    setAdminPassword('');
   };
 
   const availableCompetencias = useMemo(() => {
@@ -474,14 +382,26 @@ Qualquer dúvida, estamos à disposição! 🙂`;
   const availableDepositos = useMemo(() => {
     const depositos = new Set();
     depositsData.forEach(d => {
-      if (d.mes_deposito) {
-        depositos.add(d.mes_deposito);
+      const mesDeposito = d.mesDeposito || d.mes_deposito;
+      if (mesDeposito) {
+        depositos.add(mesDeposito);
       }
     });
     return Array.from(depositos).filter(d => d && typeof d === 'string' && d.includes('-')).sort().reverse();
   }, [depositsData]);
 
-
+  const uniqueDoctors = useMemo(() => {
+    const doctorsSet = new Set();
+    depositsData.forEach(d => {
+      if (d.doctorId || d.doctor_id) {
+        doctorsSet.add(JSON.stringify({
+          id: d.doctorId || d.doctor_id,
+          name: d.doctorName || d.doctor_name
+        }));
+      }
+    });
+    return Array.from(doctorsSet).map(d => JSON.parse(d)).sort((a, b) => a.name.localeCompare(b.name));
+  }, [depositsData]);
 
   const monthNames = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -526,8 +446,8 @@ Qualquer dúvida, estamos à disposição! 🙂`;
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                {doctors.map(d => (
-                  <SelectItem key={d.id} value={d.id}>{d.full_name}</SelectItem>
+                {uniqueDoctors.map(d => (
+                  <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -596,14 +516,14 @@ Qualquer dúvida, estamos à disposição! 🙂`;
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {filteredDeposits.map((deposit) => (
-                <tr key={deposit.id || `${deposit.doctor_id}-${deposit.hospital_id}-${deposit.mes_competencia}`} className="hover:bg-slate-50">
-                  <td className="px-6 py-4 text-sm font-bold text-slate-900">{deposit.doctor_name}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{deposit.hospital_name}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{formatMonth(deposit.mes_competencia)}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{formatMonth(deposit.mes_deposito)}</td>
-                  <td className="px-6 py-4 text-sm text-right font-bold text-slate-900">{deposit.num_plantoes}</td>
-                  <td className="px-6 py-4 text-sm text-right font-bold text-blue-600">R$ {(deposit.valor_liquido || 0).toFixed(2)}</td>
+              {filteredDeposits.map((deposit, idx) => (
+                <tr key={idx} className="hover:bg-slate-50">
+                  <td className="px-6 py-4 text-sm font-bold text-slate-900">{deposit.doctorName || deposit.doctor_name}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600">{deposit.hospitalName || deposit.hospital_name}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600">{formatMonth(deposit.mesCompetencia || deposit.mes_competencia)}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600">{formatMonth(deposit.mesDeposito || deposit.mes_deposito)}</td>
+                  <td className="px-6 py-4 text-sm text-right font-bold text-slate-900">{deposit.numPlantoes || deposit.num_plantoes}</td>
+                  <td className="px-6 py-4 text-sm text-right font-bold text-blue-600">R$ {((deposit.valorLiquido || deposit.valor_liquido) || 0).toFixed(2)}</td>
                   <td className="px-6 py-4 text-center">
                     {deposit.status === 'Pago' ? (
                       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">
@@ -679,7 +599,7 @@ Qualquer dúvida, estamos à disposição! 🙂`;
       {holeritePdfUrl && selectedDeposit && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-md p-6">
           <h2 className="text-xl font-black text-slate-900 mb-4">
-            Holerite de {selectedDeposit.doctor_name} - {formatMonth(selectedDeposit.mes_competencia)}
+            Holerite de {selectedDeposit.doctorName || selectedDeposit.doctor_name} - {formatMonth(selectedDeposit.mesCompetencia || selectedDeposit.mes_competencia)}
           </h2>
           
           <div className="flex flex-col md:flex-row gap-4 mb-4">
@@ -700,7 +620,13 @@ Qualquer dúvida, estamos à disposição! 🙂`;
                   className="w-48"
                 />
                 <Button
-                  onClick={sendWhatsApp}
+                  onClick={() => {
+                    if (adminPassword === 'claudito') {
+                      sendWhatsApp();
+                    } else {
+                      alert('Senha incorreta!');
+                    }
+                  }}
                   className="bg-blue-500 hover:bg-blue-600"
                 >
                   Confirmar

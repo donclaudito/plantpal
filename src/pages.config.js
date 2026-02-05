@@ -55,7 +55,6 @@ import Hospitals from './pages/Hospitals';
 import Relatorios from './pages/Relatorios';
 import Settings from './pages/Settings';
 import Shifts from './pages/Shifts';
-import Procedimentos from './pages/Procedimentos';
 import __Layout from './Layout.jsx';
 
 
@@ -68,7 +67,6 @@ export const PAGES = {
     "Relatorios": Relatorios,
     "Settings": Settings,
     "Shifts": Shifts,
-    "Procedimentos": Procedimentos,
 }
 
 export const pagesConfig = {
