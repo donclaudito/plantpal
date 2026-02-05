@@ -40,33 +40,35 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
   });
 
   useEffect(() => {
-    if (editingShift) {
-      const doctor = doctors.find(d => d.full_name === editingShift.doctor_name);
-      setFormData({
-        date: editingShift.date,
-        doctorId: editingShift.doctor_id || (doctor?.id || ''),
-        doctorName: editingShift.doctor_name,
-        specialty: editingShift.shift_type || 'CIRURGIA GERAL',
-        unit: editingShift.hospital,
-        type: editingShift.shift_type || 'DIURNO',
-        period: editingShift.period || '12h',
-        value: editingShift.value,
-        paid: editingShift.status === 'Pago'
-      });
-    } else if (initialDate) {
-      setFormData({
-        date: initialDate,
-        doctorId: '',
-        doctorName: '',
-        specialty: 'CIRURGIA GERAL',
-        unit: '',
-        type: 'DIURNO',
-        period: '12h',
-        value: 0,
-        paid: false
-      });
+    if (isOpen) { // Adicionado: Só inicializa/reseta quando o modal abre
+      if (editingShift) {
+        const doctor = doctors.find(d => d.full_name === editingShift.doctor_name);
+        setFormData({
+          date: editingShift.date,
+          doctorId: editingShift.doctor_id || (doctor?.id || ''),
+          doctorName: editingShift.doctor_name,
+          specialty: editingShift.shift_type || 'CIRURGIA GERAL',
+          unit: editingShift.hospital,
+          type: editingShift.shift_type || 'DIURNO',
+          period: editingShift.period || '12h',
+          value: editingShift.value,
+          paid: editingShift.status === 'Pago'
+        });
+      } else { // Caso seja um novo plantão ou o modal foi fechado e reaberto
+        setFormData({
+          date: initialDate || '',
+          doctorId: '',
+          doctorName: '',
+          specialty: 'CIRURGIA GERAL',
+          unit: '',
+          type: 'DIURNO',
+          period: '12h',
+          value: 0,
+          paid: false
+        });
+      }
     }
-  }, [initialDate, editingShift, doctors]);
+  }, [isOpen, initialDate, editingShift, doctors]); // Adicionado 'isOpen' aqui
 
   const calculateValue = (doctorId, hospitalName, period) => {
     const hospital = hospitals.find(h => h.name === hospitalName);
@@ -166,17 +168,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
       status: formData.paid ? 'Pago' : 'Realizado'
     };
     onSave(saveData);
-    setFormData({
-      date: '',
-      doctorId: '',
-      doctorName: '',
-      specialty: 'CIRURGIA GERAL',
-      unit: '',
-      type: 'DIURNO',
-      period: '12h',
-      value: 0,
-      paid: false
-    });
+    // Removido o bloco setFormData que resetava o formulário aqui
     onClose();
   };
 
@@ -289,8 +281,6 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
               </select>
             </div>
           </div>
-
-
 
           <div className="flex gap-3 pt-4">
             <button
