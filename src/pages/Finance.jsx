@@ -18,31 +18,31 @@ export default function Finance() {
   });
 
   const { data: shifts = [] } = useQuery({
-    queryKey: ['shifts', user?.email],
+    queryKey: ['shifts'],
     queryFn: () => base44.entities.Shift.list('-date'),
     enabled: !!user,
   });
 
   const { data: doctors = [] } = useQuery({
-    queryKey: ['doctors', user?.email],
+    queryKey: ['doctors'],
     queryFn: () => base44.entities.Doctor.list('full_name'),
     enabled: !!user,
   });
 
   const { data: hospitals = [] } = useQuery({
-    queryKey: ['hospitals', user?.email],
+    queryKey: ['hospitals'],
     queryFn: () => base44.entities.Hospital.list('name'),
     enabled: !!user,
   });
 
   const { data: configValores = [] } = useQuery({
-    queryKey: ['configValores', user?.email],
+    queryKey: ['configValores'],
     queryFn: () => base44.entities.ConfiguracaoPlantao.list(),
     enabled: !!user,
   });
 
   const { data: configDescontos = [] } = useQuery({
-    queryKey: ['configDescontos', user?.email],
+    queryKey: ['configDescontos'],
     queryFn: () => base44.entities.ConfiguracaoDesconto.list(),
     enabled: !!user,
   });
