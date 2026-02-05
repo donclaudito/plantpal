@@ -79,10 +79,6 @@ export default function Relatorios() {
       totalDiscount += value;
     });
 
-    // Adicionar o imposto de 15% sobre o valor bruto
-    const impostoValue = baseValue * 0.15;
-    totalDiscount += impostoValue;
-
     return totalDiscount;
   };
 

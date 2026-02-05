@@ -121,16 +121,6 @@ export default function Deposits() {
       });
     });
 
-    // Adicionar o imposto de 15% sobre o valor bruto
-    const impostoValue = baseValue * 0.15;
-    totalDiscount += impostoValue;
-    details.push({
-      descricao: 'Imposto (15%)',
-      tipo: 'percentual',
-      valor_config: 15,
-      valor_calculado: impostoValue
-    });
-
     return {
       totalValue: totalDiscount,
       details
