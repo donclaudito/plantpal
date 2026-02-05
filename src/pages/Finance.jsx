@@ -19,46 +19,31 @@ export default function Finance() {
 
   const { data: shifts = [] } = useQuery({
     queryKey: ['shifts', user?.email],
-    queryFn: async () => {
-      const allShifts = await base44.entities.Shift.list('-date');
-      return allShifts.filter(s => s.created_by === user?.email);
-    },
+    queryFn: () => base44.entities.Shift.list('-date'),
     enabled: !!user,
   });
 
   const { data: doctors = [] } = useQuery({
     queryKey: ['doctors', user?.email],
-    queryFn: async () => {
-      const all = await base44.entities.Doctor.list('full_name');
-      return all.filter(d => d.created_by === user?.email);
-    },
+    queryFn: () => base44.entities.Doctor.list('full_name'),
     enabled: !!user,
   });
 
   const { data: hospitals = [] } = useQuery({
     queryKey: ['hospitals', user?.email],
-    queryFn: async () => {
-      const all = await base44.entities.Hospital.list('name');
-      return all.filter(h => h.created_by === user?.email);
-    },
+    queryFn: () => base44.entities.Hospital.list('name'),
     enabled: !!user,
   });
 
   const { data: configValores = [] } = useQuery({
     queryKey: ['configValores', user?.email],
-    queryFn: async () => {
-      const all = await base44.entities.ConfiguracaoPlantao.list();
-      return all.filter(c => c.created_by === user?.email);
-    },
+    queryFn: () => base44.entities.ConfiguracaoPlantao.list(),
     enabled: !!user,
   });
 
   const { data: configDescontos = [] } = useQuery({
     queryKey: ['configDescontos', user?.email],
-    queryFn: async () => {
-      const all = await base44.entities.ConfiguracaoDesconto.list();
-      return all.filter(c => c.created_by === user?.email);
-    },
+    queryFn: () => base44.entities.ConfiguracaoDesconto.list(),
     enabled: !!user,
   });
 
@@ -79,7 +64,7 @@ export default function Finance() {
     switch (period) {
       case '6h': return config.valor_6h || 0;
       case '12h':
-      case 'mais tarde': return config.valor_12h || 0; // 'mais tarde' falls back to '12h' value
+      case 'mais tarde': return config.valor_12h || 0;
       case 'retaguarda': return config.valor_retaguarda || 0;
       case 'coordenador': return config.valor_coordenador || 0;
       default: return 0;
@@ -89,19 +74,15 @@ export default function Finance() {
   const calculateAllDiscounts = (doctorId, hospitalId, baseValue) => {
     const applicableDiscounts = [];
 
-    // Buscar descontos específicos (médico + hospital)
     const specific = configDescontos.filter(d => d.doctor_id === doctorId && d.hospital_id === hospitalId);
     applicableDiscounts.push(...specific);
 
-    // Buscar descontos por médico (sem hospital específico)
     const byDoctor = configDescontos.filter(d => d.doctor_id === doctorId && !d.hospital_id);
     applicableDiscounts.push(...byDoctor);
 
-    // Buscar descontos por hospital (sem médico específico)
     const byHospital = configDescontos.filter(d => !d.doctor_id && d.hospital_id === hospitalId);
     applicableDiscounts.push(...byHospital);
 
-    // Buscar descontos globais (sem médico nem hospital)
     const global = configDescontos.filter(d => !d.doctor_id && !d.hospital_id);
     applicableDiscounts.push(...global);
 
@@ -173,19 +154,19 @@ export default function Finance() {
           grossValue: 0,
           discountValue: 0,
           netValue: 0,
-          discountDetails: [], // Inicializar como array vazio
+          discountDetails: [],
         };
       }
 
       const baseValue = calculateBaseValue(doctorId, hospitalId, period);
-      const discountResult = calculateAllDiscounts(doctorId, hospitalId, baseValue); // Usar calculateAllDiscounts
-      const netValue = baseValue - discountResult.totalValue; // Usar totalValue
+      const discountResult = calculateAllDiscounts(doctorId, hospitalId, baseValue);
+      const netValue = baseValue - discountResult.totalValue;
 
       grouped[key].quantity += 1;
       grouped[key].grossValue += baseValue;
-      grouped[key].discountValue += discountResult.totalValue; // Usar totalValue
+      grouped[key].discountValue += discountResult.totalValue;
       grouped[key].netValue += netValue;
-      if (discountResult.details.length > 0) { // Verificar se há detalhes
+      if (discountResult.details.length > 0) {
         grouped[key].discountDetails = discountResult.details;
       }
     });
