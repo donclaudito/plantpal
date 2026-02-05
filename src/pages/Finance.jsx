@@ -75,28 +75,26 @@ export default function Finance() {
     }
   };
 
-  const calculateAllDiscounts = (doctorId, hospitalId, baseValue) => {
+  const calculatePercentageDiscounts = (doctorId, hospitalId, baseValue) => {
     const applicableDiscounts = [];
 
-    const specific = configDescontos.filter(d => d.doctor_id === doctorId && d.hospital_id === hospitalId);
+    const specific = configDescontos.filter(d => d.doctor_id === doctorId && d.hospital_id === hospitalId && d.tipo_desconto === 'percentual');
     applicableDiscounts.push(...specific);
 
-    const byDoctor = configDescontos.filter(d => d.doctor_id === doctorId && !d.hospital_id);
+    const byDoctor = configDescontos.filter(d => d.doctor_id === doctorId && !d.hospital_id && d.tipo_desconto === 'percentual');
     applicableDiscounts.push(...byDoctor);
 
-    const byHospital = configDescontos.filter(d => !d.doctor_id && d.hospital_id === hospitalId);
+    const byHospital = configDescontos.filter(d => !d.doctor_id && d.hospital_id === hospitalId && d.tipo_desconto === 'percentual');
     applicableDiscounts.push(...byHospital);
 
-    const global = configDescontos.filter(d => !d.doctor_id && !d.hospital_id);
+    const global = configDescontos.filter(d => !d.doctor_id && !d.hospital_id && d.tipo_desconto === 'percentual');
     applicableDiscounts.push(...global);
 
     let totalDiscount = 0;
     const details = [];
 
     applicableDiscounts.forEach(desconto => {
-      const value = desconto.tipo_desconto === 'percentual' 
-        ? baseValue * desconto.valor_desconto / 100 
-        : desconto.valor_desconto;
+      const value = baseValue * desconto.valor_desconto / 100;
 
       totalDiscount += value;
 
@@ -105,6 +103,41 @@ export default function Finance() {
         tipo: desconto.tipo_desconto,
         valor_config: desconto.valor_desconto,
         valor_calculado: value
+      });
+    });
+
+    return {
+      totalValue: totalDiscount,
+      details
+    };
+  };
+
+  const calculateFixedDiscounts = (doctorId, hospitalId) => {
+    const applicableDiscounts = [];
+
+    const specific = configDescontos.filter(d => d.doctor_id === doctorId && d.hospital_id === hospitalId && d.tipo_desconto === 'valor_fixo');
+    applicableDiscounts.push(...specific);
+
+    const byDoctor = configDescontos.filter(d => d.doctor_id === doctorId && !d.hospital_id && d.tipo_desconto === 'valor_fixo');
+    applicableDiscounts.push(...byDoctor);
+
+    const byHospital = configDescontos.filter(d => !d.doctor_id && d.hospital_id === hospitalId && d.tipo_desconto === 'valor_fixo');
+    applicableDiscounts.push(...byHospital);
+
+    const global = configDescontos.filter(d => !d.doctor_id && !d.hospital_id && d.tipo_desconto === 'valor_fixo');
+    applicableDiscounts.push(...global);
+
+    let totalDiscount = 0;
+    const details = [];
+
+    applicableDiscounts.forEach(desconto => {
+      totalDiscount += desconto.valor_desconto;
+
+      details.push({
+        descricao: desconto.descricao,
+        tipo: desconto.tipo_desconto,
+        valor_config: desconto.valor_desconto,
+        valor_calculado: desconto.valor_desconto
       });
     });
 
@@ -134,6 +167,7 @@ export default function Finance() {
 
   const financialSummary = useMemo(() => {
     const grouped = {};
+    const fixedDiscountsByDoctorHospital = new Map();
 
     filteredShifts.forEach(shift => {
       const doctorId = shift.doctor_id;
@@ -144,9 +178,12 @@ export default function Finance() {
       const period = shift.period || '12h';
 
       const key = `${doctorId}-${hospitalId}-${period}`;
+      const fixedKey = `${doctorId}-${hospitalId}`;
 
       if (!grouped[key]) {
         grouped[key] = {
+          doctorId,
+          hospitalId,
           doctorName,
           hospitalName,
           period,
@@ -159,16 +196,15 @@ export default function Finance() {
       }
 
       const baseValue = calculateBaseValue(shift);
-      const discountResult = calculateAllDiscounts(doctorId, hospitalId, baseValue);
-      const netValue = baseValue - discountResult.totalValue;
+      const percentageDiscounts = calculatePercentageDiscounts(doctorId, hospitalId, baseValue);
 
       grouped[key].quantity += 1;
       grouped[key].grossValue += baseValue;
-      grouped[key].discountValue += discountResult.totalValue;
-      grouped[key].netValue += netValue;
+      grouped[key].discountValue += percentageDiscounts.totalValue;
+      grouped[key].netValue += baseValue - percentageDiscounts.totalValue;
       
-      if (discountResult.details.length > 0) {
-        discountResult.details.forEach(detail => {
+      if (percentageDiscounts.details.length > 0) {
+        percentageDiscounts.details.forEach(detail => {
           const detailKey = detail.descricao;
           if (!grouped[key].discountDetailsMap.has(detailKey)) {
             grouped[key].discountDetailsMap.set(detailKey, {
@@ -182,9 +218,37 @@ export default function Finance() {
           existing.valor_calculado += detail.valor_calculado;
         });
       }
+
+      if (!fixedDiscountsByDoctorHospital.has(fixedKey)) {
+        const fixedDiscounts = calculateFixedDiscounts(doctorId, hospitalId);
+        fixedDiscountsByDoctorHospital.set(fixedKey, fixedDiscounts);
+      }
     });
 
-    return Object.values(grouped).map(item => ({
+    const groupedArray = Object.values(grouped);
+    groupedArray.forEach(item => {
+      const fixedKey = `${item.doctorId}-${item.hospitalId}`;
+      const fixedDiscounts = fixedDiscountsByDoctorHospital.get(fixedKey);
+      
+      if (fixedDiscounts) {
+        const doctorHospitalGroups = groupedArray.filter(g => 
+          g.doctorId === item.doctorId && g.hospitalId === item.hospitalId
+        );
+        
+        const isFirstGroup = doctorHospitalGroups[0] === item;
+        
+        if (isFirstGroup) {
+          item.discountValue += fixedDiscounts.totalValue;
+          item.netValue -= fixedDiscounts.totalValue;
+          
+          fixedDiscounts.details.forEach(detail => {
+            item.discountDetailsMap.set(detail.descricao, detail);
+          });
+        }
+      }
+    });
+
+    return groupedArray.map(item => ({
       ...item,
       discountDetails: Array.from(item.discountDetailsMap.values())
     }));
