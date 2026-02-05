@@ -47,7 +47,15 @@ export default function Finance() {
     enabled: !!user,
   });
 
-  const calculateBaseValue = (doctorId, hospitalId, period) => {
+  const calculateBaseValue = (shift) => {
+    if (shift.value !== undefined && shift.value !== null && shift.value !== 0) {
+      return shift.value;
+    }
+
+    const doctorId = shift.doctor_id;
+    const hospitalId = hospitals.find(h => h.name === shift.hospital)?.id;
+    const period = shift.period;
+
     let config = configValores.find(c => c.doctor_id === doctorId && c.hospital_id === hospitalId);
     if (!config) {
       config = configValores.find(c => c.doctor_id === doctorId && !c.hospital_id);
@@ -154,7 +162,7 @@ export default function Finance() {
         };
       }
 
-      const baseValue = calculateBaseValue(doctorId, hospitalId, period);
+      const baseValue = calculateBaseValue(shift);
       const discountResult = calculateAllDiscounts(doctorId, hospitalId, baseValue);
       const netValue = baseValue - discountResult.totalValue;
 
@@ -168,7 +176,7 @@ export default function Finance() {
     });
 
     return Object.values(grouped);
-  }, [filteredShifts, hospitals, configDescontos]);
+  }, [filteredShifts, hospitals, configValores, configDescontos]);
 
   const totals = useMemo(() => {
     return financialSummary.reduce((acc, item) => ({
