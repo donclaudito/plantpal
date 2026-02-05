@@ -261,16 +261,20 @@ export default function Settings() {
           <CardContent>
             {showImpostoForm && (
               <ImpostoForm
+                doctors={doctors}
+                hospitals={hospitals}
                 onSave={(data) => createImpostoMutation.mutate(data)}
                 onCancel={() => setShowImpostoForm(false)}
               />
             )}
 
             <div className="space-y-4 mt-4">
-              {configDescontos.filter(c => c.tipo_desconto === 'percentual' && !c.doctor_id && !c.hospital_id).map((config) => (
+              {configDescontos.filter(c => c.tipo_desconto === 'percentual').map((config) => (
                 <div key={config.id} className="p-4 border rounded-lg bg-white">
                   {editingImposto?.id === config.id ? (
                     <ImpostoForm
+                      doctors={doctors}
+                      hospitals={hospitals}
                       initialData={config}
                       onSave={(data) => updateImpostoMutation.mutate({ id: config.id, data })}
                       onCancel={() => setEditingImposto(null)}
@@ -278,7 +282,11 @@ export default function Settings() {
                   ) : (
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-bold text-lg">{config.descricao}</p>
+                        <p className="font-bold text-lg">
+                          {config.doctor_id ? getDoctorName(config.doctor_id) : 'Todos os médicos'} • 
+                          {config.hospital_id ? getHospitalName(config.hospital_id) : 'Todos os hospitais'}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1">{config.descricao}</p>
                         <p className="text-2xl font-bold text-red-600 mt-2">
                           {config.valor_desconto.toFixed(2)}%
                         </p>
@@ -312,16 +320,20 @@ export default function Settings() {
           <CardContent>
             {showDespesaForm && (
               <DespesaForm
+                doctors={doctors}
+                hospitals={hospitals}
                 onSave={(data) => createDespesaMutation.mutate(data)}
                 onCancel={() => setShowDespesaForm(false)}
               />
             )}
 
             <div className="space-y-4 mt-4">
-              {configDescontos.filter(c => c.tipo_desconto === 'valor_fixo' && !c.doctor_id && !c.hospital_id).map((config) => (
+              {configDescontos.filter(c => c.tipo_desconto === 'valor_fixo').map((config) => (
                 <div key={config.id} className="p-4 border rounded-lg bg-white">
                   {editingDespesa?.id === config.id ? (
                     <DespesaForm
+                      doctors={doctors}
+                      hospitals={hospitals}
                       initialData={config}
                       onSave={(data) => updateDespesaMutation.mutate({ id: config.id, data })}
                       onCancel={() => setEditingDespesa(null)}
@@ -329,7 +341,11 @@ export default function Settings() {
                   ) : (
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-bold text-lg">{config.descricao}</p>
+                        <p className="font-bold text-lg">
+                          {config.doctor_id ? getDoctorName(config.doctor_id) : 'Todos os médicos'} • 
+                          {config.hospital_id ? getHospitalName(config.hospital_id) : 'Todos os hospitais'}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1">{config.descricao}</p>
                         <p className="text-2xl font-bold text-red-600 mt-2">
                           R$ {config.valor_desconto.toFixed(2)}
                         </p>
@@ -429,7 +445,7 @@ function ValorForm({ doctors, hospitals, initialData, onSave, onCancel }) {
   );
 }
 
-function ImpostoForm({ initialData, onSave, onCancel }) {
+function ImpostoForm({ doctors, hospitals, initialData, onSave, onCancel }) {
   const [formData, setFormData] = useState(initialData || {
     doctor_id: '',
     hospital_id: '',
@@ -445,6 +461,32 @@ function ImpostoForm({ initialData, onSave, onCancel }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 p-4 bg-slate-50 rounded-lg">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label>Médico (opcional)</Label>
+          <Select value={formData.doctor_id || 'global'} onValueChange={(v) => setFormData({ ...formData, doctor_id: v === 'global' ? '' : v })}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="global">Todos os médicos</SelectItem>
+              {doctors.map(d => <SelectItem key={d.id} value={d.id}>{d.full_name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Hospital (opcional)</Label>
+          <Select value={formData.hospital_id || 'global'} onValueChange={(v) => setFormData({ ...formData, hospital_id: v === 'global' ? '' : v })}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="global">Todos os hospitais</SelectItem>
+              {hospitals.map(h => <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label>Descrição do Imposto</Label>
@@ -469,7 +511,7 @@ function ImpostoForm({ initialData, onSave, onCancel }) {
   );
 }
 
-function DespesaForm({ initialData, onSave, onCancel }) {
+function DespesaForm({ doctors, hospitals, initialData, onSave, onCancel }) {
   const [formData, setFormData] = useState(initialData || {
     doctor_id: '',
     hospital_id: '',
@@ -485,6 +527,32 @@ function DespesaForm({ initialData, onSave, onCancel }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 p-4 bg-slate-50 rounded-lg">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label>Médico (opcional)</Label>
+          <Select value={formData.doctor_id || 'global'} onValueChange={(v) => setFormData({ ...formData, doctor_id: v === 'global' ? '' : v })}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="global">Todos os médicos</SelectItem>
+              {doctors.map(d => <SelectItem key={d.id} value={d.id}>{d.full_name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Hospital (opcional)</Label>
+          <Select value={formData.hospital_id || 'global'} onValueChange={(v) => setFormData({ ...formData, hospital_id: v === 'global' ? '' : v })}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="global">Todos os hospitais</SelectItem>
+              {hospitals.map(h => <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label>Descrição da Despesa</Label>
