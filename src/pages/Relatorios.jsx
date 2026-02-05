@@ -63,20 +63,50 @@ export default function Relatorios() {
     }
   };
 
-  const calculateAllDiscounts = (doctorId, hospitalId, baseValue) => {
-    const applicableDiscounts = configDescontos.filter(d => 
-      (d.doctor_id === doctorId && d.hospital_id === hospitalId) ||
-      (d.doctor_id === doctorId && !d.hospital_id) ||
-      (!d.doctor_id && d.hospital_id === hospitalId) ||
-      (!d.doctor_id && !d.hospital_id)
-    );
+  const calculatePercentageDiscounts = (doctorId, hospitalId, baseValue) => {
+    const applicableDiscounts = [];
+
+    const specific = configDescontos.filter(d => d.doctor_id === doctorId && d.hospital_id === hospitalId && d.tipo_desconto === 'percentual');
+    applicableDiscounts.push(...specific);
+
+    const byDoctor = configDescontos.filter(d => d.doctor_id === doctorId && !d.hospital_id && d.tipo_desconto === 'percentual');
+    applicableDiscounts.push(...byDoctor);
+
+    const byHospital = configDescontos.filter(d => !d.doctor_id && d.hospital_id === hospitalId && d.tipo_desconto === 'percentual');
+    applicableDiscounts.push(...byHospital);
+
+    const global = configDescontos.filter(d => !d.doctor_id && !d.hospital_id && d.tipo_desconto === 'percentual');
+    applicableDiscounts.push(...global);
 
     let totalDiscount = 0;
+
     applicableDiscounts.forEach(desconto => {
-      const value = desconto.tipo_desconto === 'percentual' 
-        ? baseValue * desconto.valor_desconto / 100 
-        : desconto.valor_desconto;
+      const value = baseValue * desconto.valor_desconto / 100;
       totalDiscount += value;
+    });
+
+    return totalDiscount;
+  };
+
+  const calculateFixedDiscounts = (doctorId, hospitalId) => {
+    const applicableDiscounts = [];
+
+    const specific = configDescontos.filter(d => d.doctor_id === doctorId && d.hospital_id === hospitalId && d.tipo_desconto === 'valor_fixo');
+    applicableDiscounts.push(...specific);
+
+    const byDoctor = configDescontos.filter(d => d.doctor_id === doctorId && !d.hospital_id && d.tipo_desconto === 'valor_fixo');
+    applicableDiscounts.push(...byDoctor);
+
+    const byHospital = configDescontos.filter(d => !d.doctor_id && d.hospital_id === hospitalId && d.tipo_desconto === 'valor_fixo');
+    applicableDiscounts.push(...byHospital);
+
+    const global = configDescontos.filter(d => !d.doctor_id && !d.hospital_id && d.tipo_desconto === 'valor_fixo');
+    applicableDiscounts.push(...global);
+
+    let totalDiscount = 0;
+
+    applicableDiscounts.forEach(desconto => {
+      totalDiscount += desconto.valor_desconto;
     });
 
     return totalDiscount;
@@ -93,17 +123,28 @@ export default function Relatorios() {
       return monthMatch && hospitalMatch && doctorMatch;
     });
 
-    // Totais gerais
+    // Totais gerais - com cálculo correto
+    const fixedDiscountsApplied = new Map();
     let totalBruto = 0;
     let totalDescontos = 0;
+    
     filteredShifts.forEach(shift => {
       const hospitalData = hospitals.find(h => h.name === shift.hospital);
       const hospitalId = hospitalData?.id;
       const baseValue = calculateBaseValue(shift.doctor_id, hospitalId, shift.period || '12h');
-      const discount = calculateAllDiscounts(shift.doctor_id, hospitalId, baseValue);
+      const percentageDiscount = calculatePercentageDiscounts(shift.doctor_id, hospitalId, baseValue);
+      
       totalBruto += baseValue;
-      totalDescontos += discount;
+      totalDescontos += percentageDiscount;
+      
+      const fixedKey = `${shift.doctor_id}-${hospitalId}`;
+      if (!fixedDiscountsApplied.has(fixedKey)) {
+        const fixedDiscount = calculateFixedDiscounts(shift.doctor_id, hospitalId);
+        fixedDiscountsApplied.set(fixedKey, true);
+        totalDescontos += fixedDiscount;
+      }
     });
+    
     const totalLiquido = totalBruto - totalDescontos;
     const totals = {
       bruto: totalBruto,
@@ -114,6 +155,8 @@ export default function Relatorios() {
 
     // Relatório por Hospital
     const byHospital = {};
+    const fixedByHospital = new Map();
+    
     filteredShifts.forEach(shift => {
       const hospital = shift.hospital;
       const hospitalData = hospitals.find(h => h.name === hospital);
@@ -133,15 +176,25 @@ export default function Relatorios() {
       byHospital[hospital].numPlantoes += 1;
 
       const baseValue = calculateBaseValue(shift.doctor_id, hospitalId, shift.period || '12h');
-      const discount = calculateAllDiscounts(shift.doctor_id, hospitalId, baseValue);
+      const percentageDiscount = calculatePercentageDiscounts(shift.doctor_id, hospitalId, baseValue);
 
       byHospital[hospital].valorBruto += baseValue;
-      byHospital[hospital].valorDescontos += discount;
-      byHospital[hospital].valorLiquido += (baseValue - discount);
+      byHospital[hospital].valorDescontos += percentageDiscount;
+      byHospital[hospital].valorLiquido += (baseValue - percentageDiscount);
+      
+      const fixedKey = `${shift.doctor_id}-${hospitalId}`;
+      if (!fixedByHospital.has(fixedKey)) {
+        const fixedDiscount = calculateFixedDiscounts(shift.doctor_id, hospitalId);
+        fixedByHospital.set(fixedKey, true);
+        byHospital[hospital].valorDescontos += fixedDiscount;
+        byHospital[hospital].valorLiquido -= fixedDiscount;
+      }
     });
 
     // Relatório por Médico
     const byDoctor = {};
+    const fixedByDoctor = new Map();
+    
     filteredShifts.forEach(shift => {
       const doctor = shift.doctor_name;
       const hospitalData = hospitals.find(h => h.name === shift.hospital);
@@ -161,15 +214,25 @@ export default function Relatorios() {
       byDoctor[doctor].numPlantoes += 1;
 
       const baseValue = calculateBaseValue(shift.doctor_id, hospitalId, shift.period || '12h');
-      const discount = calculateAllDiscounts(shift.doctor_id, hospitalId, baseValue);
+      const percentageDiscount = calculatePercentageDiscounts(shift.doctor_id, hospitalId, baseValue);
 
       byDoctor[doctor].valorBruto += baseValue;
-      byDoctor[doctor].valorDescontos += discount;
-      byDoctor[doctor].valorLiquido += (baseValue - discount);
+      byDoctor[doctor].valorDescontos += percentageDiscount;
+      byDoctor[doctor].valorLiquido += (baseValue - percentageDiscount);
+      
+      const fixedKey = `${shift.doctor_id}-${hospitalId}`;
+      if (!fixedByDoctor.has(fixedKey)) {
+        const fixedDiscount = calculateFixedDiscounts(shift.doctor_id, hospitalId);
+        fixedByDoctor.set(fixedKey, true);
+        byDoctor[doctor].valorDescontos += fixedDiscount;
+        byDoctor[doctor].valorLiquido -= fixedDiscount;
+      }
     });
 
     // Relatório por Médico e Hospital
     const byDoctorHospital = {};
+    const fixedByDoctorHospital = new Map();
+    
     filteredShifts.forEach(shift => {
       const key = `${shift.doctor_name}|${shift.hospital}`;
       const hospitalData = hospitals.find(h => h.name === shift.hospital);
@@ -188,11 +251,19 @@ export default function Relatorios() {
       byDoctorHospital[key].numPlantoes += 1;
 
       const baseValue = calculateBaseValue(shift.doctor_id, hospitalId, shift.period || '12h');
-      const discount = calculateAllDiscounts(shift.doctor_id, hospitalId, baseValue);
+      const percentageDiscount = calculatePercentageDiscounts(shift.doctor_id, hospitalId, baseValue);
 
       byDoctorHospital[key].valorBruto += baseValue;
-      byDoctorHospital[key].valorDescontos += discount;
-      byDoctorHospital[key].valorLiquido += (baseValue - discount);
+      byDoctorHospital[key].valorDescontos += percentageDiscount;
+      byDoctorHospital[key].valorLiquido += (baseValue - percentageDiscount);
+      
+      const fixedKey = `${shift.doctor_id}-${hospitalId}`;
+      if (!fixedByDoctorHospital.has(fixedKey)) {
+        const fixedDiscount = calculateFixedDiscounts(shift.doctor_id, hospitalId);
+        fixedByDoctorHospital.set(fixedKey, true);
+        byDoctorHospital[key].valorDescontos += fixedDiscount;
+        byDoctorHospital[key].valorLiquido -= fixedDiscount;
+      }
     });
 
     return {
