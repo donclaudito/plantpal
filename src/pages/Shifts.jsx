@@ -1,9 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Calendar as CalendarIcon, Filter, List, X, Download } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, Filter, X, Download } from 'lucide-react';
 import CalendarView from '@/components/shifts/CalendarView';
-import ListView from '@/components/shifts/ListView';
 import ShiftModal from '@/components/shifts/ShiftModal';
 import ShiftDetailsModal from '@/components/shifts/ShiftDetailsModal';
 import DeleteConfirmation from '@/components/common/DeleteConfirmation';
@@ -21,7 +20,6 @@ const specialties = [
 export default function Shifts() {
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  const [viewMode, setViewMode] = useState('calendar');
   const [filterSpecialty, setFilterSpecialty] = useState('TODAS');
   const [filterDoctor, setFilterDoctor] = useState('TODOS');
   const [filterWeek, setFilterWeek] = useState('TODAS');
@@ -421,49 +419,22 @@ export default function Shifts() {
               {specialties.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
-          
-          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700">
-            <button 
-              onClick={() => setViewMode('calendar')}
-              className={`p-2 rounded-xl transition-all ${viewMode === 'calendar' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`}
-            >
-              <CalendarIcon size={18} />
-            </button>
-            <button 
-              onClick={() => setViewMode('list')}
-              className={`p-2 rounded-xl transition-all ${viewMode === 'list' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`}
-            >
-              <List size={18} />
-            </button>
-          </div>
         </div>
       </div>
 
-      {viewMode === 'calendar' ? (
-        <CalendarView 
-          calendarDays={calendarDays}
-          currentMonth={currentMonth}
-          currentYear={currentYear}
-          onDayClick={isViewer ? null : handleDayClick}
-          onDeleteShift={isViewer ? null : handleDeleteShift}
-          onUpdateShiftDate={isViewer ? null : handleUpdateShiftDate}
-          selectedShifts={selectedShifts}
-          onToggleSelect={isViewer ? null : toggleSelectShift}
-          onToggleSelectAll={isViewer ? null : toggleSelectAll}
-          onViewShiftDetails={(shift) => setViewDetailsShift(shift)}
-          isViewer={isViewer}
-        />
-      ) : (
-        <ListView 
-          shifts={filteredShifts}
-          onTogglePaid={isViewer ? null : handleTogglePaid}
-          onDeleteShift={isViewer ? null : handleDeleteShift}
-          selectedShifts={selectedShifts}
-          onToggleSelect={isViewer ? null : toggleSelectShift}
-          onToggleSelectAll={isViewer ? null : toggleSelectAll}
-          isViewer={isViewer}
-        />
-      )}
+      <CalendarView 
+        calendarDays={calendarDays}
+        currentMonth={currentMonth}
+        currentYear={currentYear}
+        onDayClick={isViewer ? null : handleDayClick}
+        onDeleteShift={isViewer ? null : handleDeleteShift}
+        onUpdateShiftDate={isViewer ? null : handleUpdateShiftDate}
+        selectedShifts={selectedShifts}
+        onToggleSelect={isViewer ? null : toggleSelectShift}
+        onToggleSelectAll={isViewer ? null : toggleSelectAll}
+        onViewShiftDetails={(shift) => setViewDetailsShift(shift)}
+        isViewer={isViewer}
+      />
 
 
       <ShiftModal 
