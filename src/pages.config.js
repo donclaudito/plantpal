@@ -52,10 +52,10 @@ import Doctors from './pages/Doctors';
 import Finance from './pages/Finance';
 import Home from './pages/Home';
 import Hospitals from './pages/Hospitals';
+import Procedimentos from './pages/Procedimentos';
 import Relatorios from './pages/Relatorios';
 import Settings from './pages/Settings';
 import Shifts from './pages/Shifts';
-import Procedimentos from './pages/Procedimentos';
 import __Layout from './Layout.jsx';
 
 
@@ -65,10 +65,10 @@ export const PAGES = {
     "Finance": Finance,
     "Home": Home,
     "Hospitals": Hospitals,
+    "Procedimentos": Procedimentos,
     "Relatorios": Relatorios,
     "Settings": Settings,
     "Shifts": Shifts,
-    "Procedimentos": Procedimentos,
 }
 
 export const pagesConfig = {

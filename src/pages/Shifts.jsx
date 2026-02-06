@@ -42,16 +42,9 @@ export default function Shifts() {
     queryKey: ['user'],
     queryFn: () => base44.auth.me(),
   });
-// ... keep existing code (imports and other state) ...
 
-  const { data: user, isLoading: isLoadingUser, error: userError } = useQuery({
-    queryKey: ['user'],
-    queryFn: () => base44.auth.me(),
-  });
+  console.log('Current user:', user, 'Is Loading User:', isLoadingUser, 'User Error:', userError);
 
-  console.log('Current user:', user, 'Is Loading User:', isLoadingUser, 'User Error:', userError); // Adicione esta linha
-
-// ... keep existing code (rest of the component) ...
   React.useEffect(() => {
     if (userError && !isLoadingUser) {
       base44.auth.redirectToLogin();
@@ -60,7 +53,11 @@ export default function Shifts() {
 
   const { data: shifts = [] } = useQuery({
     queryKey: ['shifts', user?.email],
-    queryFn: () => base44.entities.Shift.list('-date'),
+    queryFn: async () => {
+      const fetchedShifts = await base44.entities.Shift.list('-date');
+      console.log('Shifts fetched for user:', user?.email, fetchedShifts);
+      return fetchedShifts;
+    },
     enabled: !!user,
     staleTime: 1000 * 60 * 5,
     cacheTime: 1000 * 60 * 10,
