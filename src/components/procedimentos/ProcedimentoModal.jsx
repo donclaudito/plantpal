@@ -55,7 +55,7 @@ export default function ProcedimentoModal({ isOpen, onClose, onSave, doctors, ho
       <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
           <h2 className="text-2xl font-bold text-gray-900">
-            {initialData ? 'Editar' : 'Novo'} {formData.tipo}
+            Novo Procedimento
           </h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
             <X className="text-gray-400" size={24} />
