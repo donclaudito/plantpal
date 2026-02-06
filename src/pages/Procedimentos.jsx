@@ -17,7 +17,8 @@ export default function Procedimentos() {
     tipo: 'all',
     doctor: 'all',
     hospital: 'all',
-    tipo_pagamento: 'all'
+    tipo_pagamento: 'all',
+    mes: 'all'
   });
 
   const queryClient = useQueryClient();
@@ -109,6 +110,11 @@ export default function Procedimentos() {
     if (filters.doctor !== 'all' && p.doctor_id !== filters.doctor) return false;
     if (filters.hospital !== 'all' && p.hospital_id !== filters.hospital) return false;
     if (filters.tipo_pagamento !== 'all' && p.tipo_pagamento !== filters.tipo_pagamento) return false;
+    if (filters.mes !== 'all') {
+      const procData = new Date(p.data);
+      const mesAno = `${procData.getFullYear()}-${String(procData.getMonth() + 1).padStart(2, '0')}`;
+      if (mesAno !== filters.mes) return false;
+    }
     return true;
   });
 
@@ -156,7 +162,27 @@ export default function Procedimentos() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">Mês</label>
+                <Select value={filters.mes} onValueChange={(v) => setFilters({ ...filters, mes: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {Array.from(new Set(procedimentos.map(p => {
+                      const d = new Date(p.data);
+                      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                    }))).sort().reverse().map(mes => (
+                      <SelectItem key={mes} value={mes}>
+                        {new Date(mes + '-01').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-2 block">Tipo</label>
                 <Select value={filters.tipo} onValueChange={(v) => setFilters({ ...filters, tipo: v })}>
