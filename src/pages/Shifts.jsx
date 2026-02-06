@@ -6,7 +6,6 @@ import CalendarView from '@/components/shifts/CalendarView';
 import ListView from '@/components/shifts/ListView';
 import ShiftModal from '@/components/shifts/ShiftModal';
 import ShiftDetailsModal from '@/components/shifts/ShiftDetailsModal';
-import ImportShiftsCSV from '@/components/shifts/ImportShiftsCSV';
 import DeleteConfirmation from '@/components/common/DeleteConfirmation';
 import Toast from '@/components/common/Toast';
 
@@ -28,7 +27,6 @@ export default function Shifts() {
   const [filterWeek, setFilterWeek] = useState('TODAS');
   const [filterHospital, setFilterHospital] = useState('TODOS');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showImport, setShowImport] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [message, setMessage] = useState(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, id: '', name: '' });
@@ -365,14 +363,6 @@ export default function Shifts() {
             )}
             {!isViewer && (
               <button
-                onClick={() => setShowImport(!showImport)}
-                className="flex items-center gap-2 bg-indigo-600 dark:bg-indigo-500 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors shadow-md"
-              >
-                <Plus size={16} /> {showImport ? 'Fechar' : 'Importar'}
-              </button>
-            )}
-            {!isViewer && (
-              <button
                 onClick={exportToCSV}
                 className="flex items-center gap-2 bg-green-600 dark:bg-green-500 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-green-700 dark:hover:bg-green-600 transition-colors shadow-md"
               >
@@ -448,20 +438,6 @@ export default function Shifts() {
           </div>
         </div>
       </div>
-
-      {showImport && (
-        <div className="mb-8">
-          <ImportShiftsCSV showToast={showToast} />
-          <button
-            onClick={() => setShowImport(false)}
-            className="mt-4 w-full py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-2xl font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-          >
-            Fechar Importação
-          </button>
-        </div>
-      )}
-
-
 
       {viewMode === 'calendar' ? (
         <CalendarView 
