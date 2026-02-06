@@ -48,7 +48,8 @@ export default function CalendarView({
   selectedShifts,
   onToggleSelect,
   onToggleSelectAll,
-  onViewShiftDetails
+  onViewShiftDetails,
+  isViewer = false
 }) {
   const todayStr = new Date().toISOString().split('T')[0];
   const [draggedShift, setDraggedShift] = useState(null);
@@ -99,25 +100,27 @@ export default function CalendarView({
             >
               {!isEmpty && (
                 <>
-                  <div className="flex items-center justify-between mb-2">
-                    <button
-                      onClick={() => onDayClick(dayData.date)}
-                      className={`w-8 h-8 rounded-full font-black text-sm transition-all ${
-                        isToday
-                          ? 'bg-blue-600 dark:bg-blue-500 text-white shadow-lg scale-110'
-                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
-                      }`}
-                    >
-                      {dayData.day}
-                    </button>
-                    
+                 <div className="flex items-center justify-between mb-2">
+                  <button
+                    onClick={() => !isViewer && onDayClick && onDayClick(dayData.date)}
+                    className={`w-8 h-8 rounded-full font-black text-sm transition-all ${
+                      isToday
+                        ? 'bg-blue-600 dark:bg-blue-500 text-white shadow-lg scale-110'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
+                    }`}
+                  >
+                    {dayData.day}
+                  </button>
+
+                  {!isViewer && (
                     <button
                       onClick={() => onDayClick(dayData.date)}
                       className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100"
                     >
                       <Plus size={14} />
                     </button>
-                  </div>
+                  )}
+                </div>
                   
                   <div className="space-y-1.5">
                     {dayData.shifts.sort((a, b) => {
@@ -133,10 +136,10 @@ export default function CalendarView({
                       return (
                         <div
                           key={shift.id}
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, shift)}
-                          onDragEnd={() => setDraggedShift(null)}
-                          className={`group relative p-2 rounded-xl text-xs transition-all cursor-move hover:shadow-lg ${
+                          draggable={!isViewer}
+                          onDragStart={!isViewer ? (e) => handleDragStart(e, shift) : undefined}
+                          onDragEnd={!isViewer ? () => setDraggedShift(null) : undefined}
+                          className={`group relative p-2 rounded-xl text-xs transition-all ${!isViewer ? 'cursor-move' : 'cursor-pointer'} hover:shadow-lg ${
                             isDragging ? 'opacity-50 scale-95' : ''
                           } ${
                             isPaid
@@ -164,15 +167,17 @@ export default function CalendarView({
                             )}
                           </div>
                           
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeleteShift(shift.id, shift.doctor_name);
-                            }}
-                            className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 dark:bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg"
-                          >
-                            <Trash2 size={10} />
-                          </button>
+                          {!isViewer && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteShift(shift.id, shift.doctor_name);
+                              }}
+                              className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 dark:bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg"
+                            >
+                              <Trash2 size={10} />
+                            </button>
+                          )}
                         </div>
                       );
                     })}
