@@ -18,6 +18,14 @@ export default function Layout({ children, currentPageName }) {
     base44.auth.me().then(user => {
       setUser(user);
       
+      // Se utilizador com role 'viewer' tentar aceder a página diferente de 'Shifts', redirecionar
+      if (user && user.role === 'viewer' && currentPageName !== 'Shifts') {
+        setIsUnauthorized(true);
+        setIsLoading(false);
+        setTimeout(() => navigate(createPageUrl('Shifts'), { replace: true }), 2000);
+        return;
+      }
+      
       // Se utilizador com role 'user' tentar aceder a página diferente de 'Shifts', redirecionar
       if (user && user.role === 'user' && currentPageName !== 'Shifts') {
         setIsUnauthorized(true);

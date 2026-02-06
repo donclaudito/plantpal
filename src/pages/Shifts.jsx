@@ -259,6 +259,8 @@ export default function Shifts() {
   const upcomingShifts = filteredShifts.filter(s => s.date > todayStr).sort((a, b) => a.date.localeCompare(b.date));
   const nextShift = upcomingShifts[0];
 
+  const isViewer = user?.role === 'viewer';
+
   const exportToCSV = () => {
     const headers = ['Data', 'Hospital', 'Médico', 'Especialidade', 'Tipo', 'Horas', 'Valor', 'Status'];
     const rows = filteredShifts.map(s => [
@@ -353,7 +355,7 @@ export default function Shifts() {
         </div>
 
         <div className="flex gap-2 items-center flex-wrap">
-            {selectedShifts.length > 0 && (
+            {!isViewer && selectedShifts.length > 0 && (
               <button
                 onClick={handleBulkDelete}
                 className="flex items-center gap-2 bg-red-600 dark:bg-red-500 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-red-700 dark:hover:bg-red-600 transition-colors shadow-md"
@@ -361,18 +363,22 @@ export default function Shifts() {
                 <X size={16} /> Eliminar {selectedShifts.length}
               </button>
             )}
-            <button
-              onClick={() => setShowImport(!showImport)}
-              className="flex items-center gap-2 bg-indigo-600 dark:bg-indigo-500 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors shadow-md"
-            >
-              <Plus size={16} /> {showImport ? 'Fechar' : 'Importar'}
-            </button>
-            <button
-              onClick={exportToCSV}
-              className="flex items-center gap-2 bg-green-600 dark:bg-green-500 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-green-700 dark:hover:bg-green-600 transition-colors shadow-md"
-            >
-              <Download size={16} /> Exportar CSV
-            </button>
+            {!isViewer && (
+              <button
+                onClick={() => setShowImport(!showImport)}
+                className="flex items-center gap-2 bg-indigo-600 dark:bg-indigo-500 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors shadow-md"
+              >
+                <Plus size={16} /> {showImport ? 'Fechar' : 'Importar'}
+              </button>
+            )}
+            {!isViewer && (
+              <button
+                onClick={exportToCSV}
+                className="flex items-center gap-2 bg-green-600 dark:bg-green-500 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-green-700 dark:hover:bg-green-600 transition-colors shadow-md"
+              >
+                <Download size={16} /> Exportar CSV
+              </button>
+            )}
           
           <div className="flex gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 w-fit">
             <div className="p-2 text-slate-400 dark:text-slate-500"><Filter size={16}/></div>
@@ -462,38 +468,44 @@ export default function Shifts() {
           calendarDays={calendarDays}
           currentMonth={currentMonth}
           currentYear={currentYear}
-          onDayClick={handleDayClick}
-          onDeleteShift={handleDeleteShift}
-          onUpdateShiftDate={handleUpdateShiftDate}
+          onDayClick={isViewer ? null : handleDayClick}
+          onDeleteShift={isViewer ? null : handleDeleteShift}
+          onUpdateShiftDate={isViewer ? null : handleUpdateShiftDate}
           selectedShifts={selectedShifts}
-          onToggleSelect={toggleSelectShift}
-          onToggleSelectAll={toggleSelectAll}
+          onToggleSelect={isViewer ? null : toggleSelectShift}
+          onToggleSelectAll={isViewer ? null : toggleSelectAll}
           onViewShiftDetails={(shift) => setViewDetailsShift(shift)}
+          isViewer={isViewer}
         />
       ) : (
         <ListView 
           shifts={filteredShifts}
-          onTogglePaid={handleTogglePaid}
-          onDeleteShift={handleDeleteShift}
+          onTogglePaid={isViewer ? null : handleTogglePaid}
+          onDeleteShift={isViewer ? null : handleDeleteShift}
           selectedShifts={selectedShifts}
-          onToggleSelect={toggleSelectShift}
-          onToggleSelectAll={toggleSelectAll}
+          onToggleSelect={isViewer ? null : toggleSelectShift}
+          onToggleSelectAll={isViewer ? null : toggleSelectAll}
+          isViewer={isViewer}
         />
       )}
       
-      <button 
-        onClick={() => { setSelectedDate(null); setIsModalOpen(true); }}
-        className="md:hidden fixed bottom-20 right-4 w-14 h-14 bg-blue-600 dark:bg-blue-500 text-white rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all flex items-center justify-center z-40"
-      >
-        <Plus size={24} strokeWidth={3} />
-      </button>
+      {!isViewer && (
+        <>
+          <button 
+            onClick={() => { setSelectedDate(null); setIsModalOpen(true); }}
+            className="md:hidden fixed bottom-20 right-4 w-14 h-14 bg-blue-600 dark:bg-blue-500 text-white rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all flex items-center justify-center z-40"
+          >
+            <Plus size={24} strokeWidth={3} />
+          </button>
 
-      <button 
-        onClick={() => { setSelectedDate(null); setIsModalOpen(true); }}
-        className="hidden md:flex w-full bg-slate-900 dark:bg-slate-700 text-white font-black py-5 rounded-[2rem] hover:bg-slate-800 dark:hover:bg-slate-600 transition-all items-center justify-center gap-3 shadow-xl active:scale-95 uppercase tracking-widest text-sm"
-      >
-        <Plus size={20} strokeWidth={3} /> Novo Plantão
-      </button>
+          <button 
+            onClick={() => { setSelectedDate(null); setIsModalOpen(true); }}
+            className="hidden md:flex w-full bg-slate-900 dark:bg-slate-700 text-white font-black py-5 rounded-[2rem] hover:bg-slate-800 dark:hover:bg-slate-600 transition-all items-center justify-center gap-3 shadow-xl active:scale-95 uppercase tracking-widest text-sm"
+          >
+            <Plus size={20} strokeWidth={3} /> Novo Plantão
+          </button>
+        </>
+      )}
 
       <ShiftModal 
         isOpen={isModalOpen}
@@ -531,6 +543,7 @@ export default function Shifts() {
           setIsModalOpen(true);
         }}
         onDelete={handleDeleteShift}
+        isViewer={isViewer}
       />
     </div>
   );

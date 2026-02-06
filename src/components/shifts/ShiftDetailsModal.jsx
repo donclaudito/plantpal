@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, Calendar, Clock, DollarSign, MapPin, User, Stethoscope, Check, Pencil, Trash2 } from 'lucide-react';
 
-export default function ShiftDetailsModal({ shift, isOpen, onClose, onEdit, onDelete }) {
+export default function ShiftDetailsModal({ shift, isOpen, onClose, onEdit, onDelete, isViewer = false }) {
   if (!isOpen || !shift) return null;
 
   return (
