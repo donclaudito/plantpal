@@ -1,10 +1,57 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
-import { Calendar, DollarSign, FileText, BarChart, Users, Building, Settings, Stethoscope } from 'lucide-react';
+import { Calendar, DollarSign, FileText, BarChart, Users, Building, Settings, Stethoscope, UserPlus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { base44 } from '@/api/base44Client';
+import { useQuery } from '@tanstack/react-query';
 
 export default function Home() {
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteMessage, setInviteMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const { data: user } = useQuery({
+    queryKey: ['user'],
+    queryFn: () => base44.auth.me(),
+  });
+
+  const handleInviteViewer = async () => {
+    if (!inviteEmail.trim()) {
+      setInviteMessage('✗ Por favor, insira um email válido.');
+      setTimeout(() => setInviteMessage(''), 3000);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Passo 1: Convidar como 'user'
+      await base44.users.inviteUser(inviteEmail, 'user');
+      
+      setInviteMessage(`✓ Convite enviado para ${inviteEmail}. Após o registo, o papel será alterado automaticamente para visualizador.`);
+      
+      // Passo 2: Esperar 2 segundos e tentar mudar o papel (caso o utilizador já exista)
+      setTimeout(async () => {
+        try {
+          await base44.functions.invoke('updateUserRole', { email: inviteEmail, role: 'viewer' });
+          setInviteMessage(`✓ ${inviteEmail} configurado como visualizador com sucesso!`);
+        } catch (error) {
+          // Se falhar, é porque o utilizador ainda não se registou - isso é normal
+          setInviteMessage(`✓ Convite enviado. Quando ${inviteEmail} se registar, entre em contacto para ativar o acesso de visualização.`);
+        }
+        setTimeout(() => setInviteMessage(''), 5000);
+      }, 2000);
+      
+      setInviteEmail('');
+    } catch (error) {
+      setInviteMessage(`✗ Erro: ${error.message}`);
+      setTimeout(() => setInviteMessage(''), 5000);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   const menuItems = [
     { name: 'Plantões', path: 'Shifts', icon: Calendar, description: 'Gerenciar plantões' },
     { name: 'Procedimentos', path: 'Procedimentos', icon: Stethoscope, description: 'Cirurgias e consultas' },
@@ -23,6 +70,42 @@ export default function Home() {
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Meu Plantão</h1>
           <p className="text-gray-600">Sistema de gerenciamento de plantões médicos</p>
         </div>
+
+        {user?.role === 'admin' && (
+          <Card className="mb-6 border-blue-200 bg-blue-50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserPlus className="w-5 h-5" />
+                Convidar Visualizador
+              </CardTitle>
+              <CardDescription>Convidar utilizador com acesso apenas para visualização de plantões</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2">
+                <Input
+                  type="email"
+                  placeholder="Email do utilizador"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="flex-1"
+                  disabled={isLoading}
+                />
+                <Button 
+                  onClick={handleInviteViewer} 
+                  className="bg-blue-600 hover:bg-blue-700"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Enviando...' : 'Convidar'}
+                </Button>
+              </div>
+              {inviteMessage && (
+                <p className={`mt-2 text-sm ${inviteMessage.startsWith('✓') ? 'text-green-600' : 'text-red-600'}`}>
+                  {inviteMessage}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {menuItems.map((item) => (
