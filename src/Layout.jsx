@@ -13,9 +13,16 @@ export default function Layout({ children, currentPageName }) {
   useEffect(() => {
     base44.auth.me().then(user => {
       setUser(user);
+      
       // Se utilizador com role 'user' tentar aceder a página diferente de 'Shifts', redirecionar
       if (user && user.role === 'user' && currentPageName !== 'Shifts') {
         navigate(createPageUrl('Shifts'), { replace: true });
+      }
+      
+      // Restrição para testeclauorenstein@gmail.com - apenas Shifts, Procedimentos, Hospitals, Doctors
+      const allowedPages = ['Shifts', 'Procedimentos', 'Hospitals', 'Doctors', 'Home'];
+      if (user && user.email === 'testeclauorenstein@gmail.com' && !allowedPages.includes(currentPageName)) {
+        navigate(createPageUrl('Home'), { replace: true });
       }
     }).catch(() => {});
   }, [currentPageName, navigate]);
