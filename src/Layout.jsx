@@ -26,14 +26,6 @@ export default function Layout({ children, currentPageName }) {
         return;
       }
       
-      // Se utilizador com role 'user' tentar aceder a página diferente de 'Shifts', redirecionar
-      if (user && user.role === 'user' && currentPageName !== 'Shifts') {
-        setIsUnauthorized(true);
-        setIsLoading(false);
-        setTimeout(() => navigate(createPageUrl('Shifts'), { replace: true }), 2000);
-        return;
-      }
-      
       // Restrição para testeclauorenstein@gmail.com - apenas Shifts, Procedimentos, Hospitals, Doctors
       const allowedPages = ['Shifts', 'Procedimentos', 'Hospitals', 'Doctors', 'Home'];
       if (user && user.email === 'testeclauorenstein@gmail.com' && !allowedPages.includes(currentPageName)) {
