@@ -464,24 +464,7 @@ export default function Shifts() {
           isViewer={isViewer}
         />
       )}
-      
-      {!isViewer && (
-        <>
-          <button 
-            onClick={() => { setSelectedDate(null); setIsModalOpen(true); }}
-            className="md:hidden fixed bottom-20 right-4 w-14 h-14 bg-blue-600 dark:bg-blue-500 text-white rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all flex items-center justify-center z-40"
-          >
-            <Plus size={24} strokeWidth={3} />
-          </button>
 
-          <button 
-            onClick={() => { setSelectedDate(null); setIsModalOpen(true); }}
-            className="hidden md:flex w-full bg-slate-900 dark:bg-slate-700 text-white font-black py-5 rounded-[2rem] hover:bg-slate-800 dark:hover:bg-slate-600 transition-all items-center justify-center gap-3 shadow-xl active:scale-95 uppercase tracking-widest text-sm"
-          >
-            <Plus size={20} strokeWidth={3} /> Novo Plantão
-          </button>
-        </>
-      )}
 
       <ShiftModal 
         isOpen={isModalOpen}
