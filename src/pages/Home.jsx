@@ -64,42 +64,42 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4 sm:p-6">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Meu Plantão</h1>
-          <p className="text-gray-600">Sistema de gerenciamento de plantões médicos</p>
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2">Meu Plantão</h1>
+          <p className="text-sm sm:text-base text-gray-600">Sistema de gerenciamento de plantões médicos</p>
         </div>
 
         {user?.role === 'admin' && (
-          <Card className="mb-6 border-blue-200 bg-blue-50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserPlus className="w-5 h-5" />
+          <Card className="mb-4 sm:mb-6 border-blue-200 bg-blue-50">
+            <CardHeader className="pb-3 sm:pb-6">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <UserPlus className="w-4 h-4 sm:w-5 sm:h-5" />
                 Convidar Visualizador
               </CardTitle>
-              <CardDescription>Convidar utilizador com acesso apenas para visualização de plantões</CardDescription>
+              <CardDescription className="text-xs sm:text-sm">Convidar utilizador com acesso apenas para visualização de plantões</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="flex gap-2">
+            <CardContent className="pt-0">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Input
                   type="email"
                   placeholder="Email do utilizador"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
-                  className="flex-1"
+                  className="flex-1 text-sm"
                   disabled={isLoading}
                 />
                 <Button 
                   onClick={handleInviteViewer} 
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto text-sm"
                   disabled={isLoading}
                 >
                   {isLoading ? 'Enviando...' : 'Convidar'}
                 </Button>
               </div>
               {inviteMessage && (
-                <p className={`mt-2 text-sm ${inviteMessage.startsWith('✓') ? 'text-green-600' : 'text-red-600'}`}>
+                <p className={`mt-2 text-xs sm:text-sm ${inviteMessage.startsWith('✓') ? 'text-green-600' : 'text-red-600'}`}>
                   {inviteMessage}
                 </p>
               )}
@@ -107,18 +107,18 @@ export default function Home() {
           </Card>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
           {menuItems.map((item) => (
             <Link key={item.path} to={createPageUrl(item.path)}>
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
-                <CardHeader>
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full active:scale-95 transition-transform">
+                <CardHeader className="p-4 sm:p-6">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <item.icon className="w-6 h-6 text-blue-600" />
+                    <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                      <item.icon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
                     </div>
-                    <CardTitle>{item.name}</CardTitle>
+                    <CardTitle className="text-base sm:text-lg">{item.name}</CardTitle>
                   </div>
-                  <CardDescription>{item.description}</CardDescription>
+                  <CardDescription className="text-xs sm:text-sm mt-2">{item.description}</CardDescription>
                 </CardHeader>
               </Card>
             </Link>
