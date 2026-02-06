@@ -42,7 +42,16 @@ export default function Shifts() {
     queryKey: ['user'],
     queryFn: () => base44.auth.me(),
   });
+// ... keep existing code (imports and other state) ...
 
+  const { data: user, isLoading: isLoadingUser, error: userError } = useQuery({
+    queryKey: ['user'],
+    queryFn: () => base44.auth.me(),
+  });
+
+  console.log('Current user:', user, 'Is Loading User:', isLoadingUser, 'User Error:', userError); // Adicione esta linha
+
+// ... keep existing code (rest of the component) ...
   React.useEffect(() => {
     if (userError && !isLoadingUser) {
       base44.auth.redirectToLogin();
