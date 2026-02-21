@@ -22,6 +22,8 @@ export default function Deposits() {
   const [showAdminPrompt, setShowAdminPrompt] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
   const [uploadingPix, setUploadingPix] = useState(null);
+  const [comprovanteUrl, setComprovanteUrl] = useState(null);
+  const [comprovanteDeposit, setComprovanteDeposit] = useState(null);
 
   const { data: user } = useQuery({
     queryKey: ['user'],
@@ -597,7 +599,10 @@ Qualquer dúvida, estamos à disposição! 🙂`;
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => window.open(deposit.comprovante_pix, '_blank')}
+                          onClick={() => {
+                            setComprovanteUrl(deposit.comprovante_pix);
+                            setComprovanteDeposit(deposit);
+                          }}
                           className="gap-2"
                         >
                           Ver Comprovante
@@ -668,6 +673,27 @@ Qualquer dúvida, estamos à disposição! 🙂`;
           </div>
 
           <iframe src={holeritePdfUrl} width="100%" height="600px" className="border rounded-md"></iframe>
+        </div>
+      )}
+
+      {comprovanteUrl && comprovanteDeposit && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-md p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-black text-slate-900">
+              Comprovante PIX - {comprovanteDeposit.doctorName || comprovanteDeposit.doctor_name}
+            </h2>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setComprovanteUrl(null);
+                setComprovanteDeposit(null);
+              }}
+            >
+              Fechar
+            </Button>
+          </div>
+          
+          <iframe src={comprovanteUrl} width="100%" height="600px" className="border rounded-md"></iframe>
         </div>
       )}
     </div>
