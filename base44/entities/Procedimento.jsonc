@@ -1,0 +1,279 @@
+{
+  "name": "Procedimento",
+  "type": "object",
+  "properties": {
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "Cirurgia",
+        "Consulta"
+      ],
+      "description": "Tipo de procedimento"
+    },
+    "doctor_id": {
+      "type": "string",
+      "description": "ID do m\u00e9dico"
+    },
+    "doctor_name": {
+      "type": "string",
+      "description": "Nome do m\u00e9dico"
+    },
+    "hospital_id": {
+      "type": "string",
+      "description": "ID do hospital"
+    },
+    "hospital_name": {
+      "type": "string",
+      "description": "Nome do hospital"
+    },
+    "data": {
+      "type": "string",
+      "format": "date",
+      "description": "Data do procedimento"
+    },
+    "tipo_pagamento": {
+      "type": "string",
+      "enum": [
+        "SUS",
+        "Convenio",
+        "Particular"
+      ],
+      "description": "Tipo de pagamento"
+    },
+    "descricao": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do procedimento"
+    },
+    "valor": {
+      "type": "number",
+      "description": "Valor do procedimento"
+    },
+    "observacoes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es adicionais"
+    }
+  },
+  "required": [
+    "tipo",
+    "doctor_name",
+    "hospital_name",
+    "data",
+    "tipo_pagamento",
+    "valor"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "email": "clauorenstein@gmail.com"
+          }
+        },
+        {
+          "user_condition": {
+            "email": "quiclauorenstein@gmail.com"
+          }
+        },
+        {
+          "user_condition": {
+            "email": "testeclauorenstein@gmail.com"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "email": "clauorenstein@gmail.com"
+              }
+            },
+            {
+              "created_by": {
+                "$in": [
+                  "clauorenstein@gmail.com",
+                  "quiclauorenstein@gmail.com",
+                  "testeclauorenstein@gmail.com"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "email": "quiclauorenstein@gmail.com"
+              }
+            },
+            {
+              "created_by": {
+                "$in": [
+                  "clauorenstein@gmail.com",
+                  "quiclauorenstein@gmail.com",
+                  "testeclauorenstein@gmail.com"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "email": "testeclauorenstein@gmail.com"
+              }
+            },
+            {
+              "created_by": {
+                "$in": [
+                  "clauorenstein@gmail.com",
+                  "quiclauorenstein@gmail.com",
+                  "testeclauorenstein@gmail.com"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "email": "clauorenstein@gmail.com"
+              }
+            },
+            {
+              "created_by": {
+                "$in": [
+                  "clauorenstein@gmail.com",
+                  "quiclauorenstein@gmail.com",
+                  "testeclauorenstein@gmail.com"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "email": "quiclauorenstein@gmail.com"
+              }
+            },
+            {
+              "created_by": {
+                "$in": [
+                  "clauorenstein@gmail.com",
+                  "quiclauorenstein@gmail.com",
+                  "testeclauorenstein@gmail.com"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "email": "testeclauorenstein@gmail.com"
+              }
+            },
+            {
+              "created_by": {
+                "$in": [
+                  "clauorenstein@gmail.com",
+                  "quiclauorenstein@gmail.com",
+                  "testeclauorenstein@gmail.com"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "email": "clauorenstein@gmail.com"
+              }
+            },
+            {
+              "created_by": {
+                "$in": [
+                  "clauorenstein@gmail.com",
+                  "quiclauorenstein@gmail.com",
+                  "testeclauorenstein@gmail.com"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "email": "quiclauorenstein@gmail.com"
+              }
+            },
+            {
+              "created_by": {
+                "$in": [
+                  "clauorenstein@gmail.com",
+                  "quiclauorenstein@gmail.com",
+                  "testeclauorenstein@gmail.com"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "email": "testeclauorenstein@gmail.com"
+              }
+            },
+            {
+              "created_by": {
+                "$in": [
+                  "clauorenstein@gmail.com",
+                  "quiclauorenstein@gmail.com",
+                  "testeclauorenstein@gmail.com"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "name": "ConfiguracaoPlantao",
+  "type": "object",
+  "properties": {
+    "doctor_id": {
+      "type": "string",
+      "description": "ID do m\u00e9dico (opcional, se vazio aplica-se globalmente)"
+    },
+    "hospital_id": {
+      "type": "string",
+      "description": "ID do hospital (opcional, se vazio aplica-se globalmente)"
+    },
+    "valor_6h": {
+      "type": "number",
+      "description": "Valor para plant\u00e3o de 6 horas"
+    },
+    "valor_12h": {
+      "type": "number",
+      "description": "Valor para plant\u00e3o de 12 horas"
+    },
+    "valor_retaguarda": {
+      "type": "number",
+      "description": "Valor para plant\u00e3o de retaguarda"
+    },
+    "valor_coordenador": {
+      "type": "number",
+      "description": "Valor para coordenador"
+    },
+    "valor_professor": {
+      "type": "number",
+      "description": "Valor para professor"
+    }
+  },
+  "required": [],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "name": "ConfiguracaoDesconto",
+  "type": "object",
+  "properties": {
+    "doctor_id": {
+      "type": "string",
+      "description": "ID do m\u00e9dico (opcional, se vazio aplica-se globalmente)"
+    },
+    "hospital_id": {
+      "type": "string",
+      "description": "ID do hospital (opcional, se vazio aplica-se globalmente)"
+    },
+    "tipo_desconto": {
+      "type": "string",
+      "enum": [
+        "percentual",
+        "valor_fixo"
+      ],
+      "description": "Tipo de desconto"
+    },
+    "valor_desconto": {
+      "type": "number",
+      "description": "Valor do desconto (percentual ou fixo)"
+    },
+    "descricao": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do desconto"
+    }
+  },
+  "required": [
+    "tipo_desconto",
+    "valor_desconto"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

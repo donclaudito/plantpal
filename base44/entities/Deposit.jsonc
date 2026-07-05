@@ -1,0 +1,147 @@
+{
+  "name": "Deposit",
+  "type": "object",
+  "properties": {
+    "doctor_id": {
+      "type": "string",
+      "description": "ID do m\u00e9dico"
+    },
+    "doctor_name": {
+      "type": "string",
+      "description": "Nome do m\u00e9dico"
+    },
+    "hospital_id": {
+      "type": "string",
+      "description": "ID do hospital"
+    },
+    "hospital_name": {
+      "type": "string",
+      "description": "Nome do hospital"
+    },
+    "mes_competencia": {
+      "type": "string",
+      "description": "M\u00eas de compet\u00eancia (formato: YYYY-MM)"
+    },
+    "mes_deposito": {
+      "type": "string",
+      "description": "M\u00eas de dep\u00f3sito (formato: YYYY-MM)"
+    },
+    "num_plantoes": {
+      "type": "number",
+      "description": "N\u00famero de plant\u00f5es"
+    },
+    "valor_bruto": {
+      "type": "number",
+      "description": "Valor bruto total"
+    },
+    "valor_descontos": {
+      "type": "number",
+      "description": "Valor total dos descontos"
+    },
+    "valor_liquido": {
+      "type": "number",
+      "description": "Valor l\u00edquido a pagar"
+    },
+    "descontos_detalhados": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "descricao": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "valor_config": {
+            "type": "number"
+          },
+          "valor_calculado": {
+            "type": "number"
+          }
+        }
+      },
+      "description": "Detalhes dos descontos aplicados"
+    },
+    "comprovante_pix": {
+      "type": "string",
+      "description": "URL do comprovante PIX"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Pendente",
+        "Pago"
+      ],
+      "default": "Pendente",
+      "description": "Status do dep\u00f3sito"
+    },
+    "data_pagamento": {
+      "type": "string",
+      "format": "date",
+      "description": "Data do pagamento"
+    }
+  },
+  "required": [
+    "doctor_id",
+    "doctor_name",
+    "hospital_id",
+    "hospital_name",
+    "mes_competencia",
+    "mes_deposito",
+    "num_plantoes",
+    "valor_bruto",
+    "valor_descontos",
+    "valor_liquido"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
