@@ -21,6 +21,9 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
     value: 0,
     paid: false
   });
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState('weekly');
+  const [recurrenceCount, setRecurrenceCount] = useState(4);
 
   const { data: user } = useQuery({
     queryKey: ['user'],
@@ -66,6 +69,9 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
           value: 0,
           paid: false
         });
+        setIsRecurring(false);
+        setRecurrenceFrequency('weekly');
+        setRecurrenceCount(4);
       }
     }
   }, [isOpen, initialDate, editingShift, doctors]); // Adicionado 'isOpen' aqui
@@ -158,10 +164,27 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
     setFormData({ ...formData, period, value: newValue });
   };
 
+  const generateRecurringDates = (startDate, frequency, count) => {
+    const dates = [];
+    const start = new Date(startDate + 'T00:00:00');
+    for (let i = 0; i < count; i++) {
+      const d = new Date(start);
+      if (frequency === 'weekly') {
+        d.setDate(d.getDate() + (i * 7));
+      } else if (frequency === 'biweekly') {
+        d.setDate(d.getDate() + (i * 14));
+      } else if (frequency === 'monthly') {
+        d.setMonth(d.getMonth() + i);
+      }
+      dates.push(d.toISOString().split('T')[0]);
+    }
+    return dates;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    const saveData = {
-      date: formData.date,
+    const buildShift = (date) => ({
+      date,
       doctor_id: formData.doctorId,
       doctor_name: formData.doctorName,
       hospital: formData.unit,
@@ -169,8 +192,14 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
       period: formData.period,
       value: formData.value,
       status: formData.paid ? 'Pago' : 'Realizado'
-    };
-    onSave(saveData);
+    });
+
+    if (isRecurring && !editingShift) {
+      const dates = generateRecurringDates(formData.date, recurrenceFrequency, recurrenceCount);
+      onSave(dates.map(d => buildShift(d)));
+    } else {
+      onSave(buildShift(formData.date));
+    }
     // Removido o bloco setFormData que resetava o formulário aqui
     onClose();
   };
@@ -290,6 +319,54 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
               </select>
             </div>
           </div>
+
+          {!editingShift && (
+            <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-600">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isRecurring}
+                  onChange={(e) => setIsRecurring(e.target.checked)}
+                  className="w-5 h-5 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm font-black text-slate-700 dark:text-slate-200 uppercase tracking-wide">
+                  Repetir plantão
+                </span>
+              </label>
+
+              {isRecurring && (
+                <div className="grid grid-cols-2 gap-4 mt-4 animate-in fade-in duration-200">
+                  <div>
+                    <label className="block text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
+                      Frequência
+                    </label>
+                    <select
+                      value={recurrenceFrequency}
+                      onChange={(e) => setRecurrenceFrequency(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-700 border-2 border-transparent focus:border-blue-600 dark:focus:border-blue-400 rounded-xl font-bold text-slate-900 dark:text-white transition-colors"
+                    >
+                      <option value="weekly">Semanalmente</option>
+                      <option value="biweekly">A cada 2 semanas</option>
+                      <option value="monthly">Mensalmente</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
+                      Nº de repetições
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="52"
+                      value={recurrenceCount}
+                      onChange={(e) => setRecurrenceCount(Math.max(1, Math.min(52, parseInt(e.target.value) || 1)))}
+                      className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-700 border-2 border-transparent focus:border-blue-600 dark:focus:border-blue-400 rounded-xl font-bold text-slate-900 dark:text-white transition-colors"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex gap-3 pt-4">
             <button

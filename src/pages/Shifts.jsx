@@ -84,6 +84,15 @@ export default function Shifts() {
     },
   });
 
+  const bulkCreateShiftMutation = useMutation({
+    mutationFn: (dataArray) => base44.entities.Shift.bulkCreate(dataArray),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      setIsModalOpen(false);
+      showToast(`${Array.isArray(result) ? result.length : 'Vários'} plantões criados!`);
+    },
+  });
+
   const updateShiftMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Shift.update(id, data),
     onSuccess: () => {
@@ -446,6 +455,8 @@ export default function Shifts() {
         onSave={(data) => {
           if (editingShift) {
             updateShiftMutation.mutate({ id: editingShift.id, data });
+          } else if (Array.isArray(data)) {
+            bulkCreateShiftMutation.mutate(data);
           } else {
             createShiftMutation.mutate(data);
           }
