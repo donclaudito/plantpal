@@ -6,21 +6,21 @@ const weekDays = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
 const getShiftTypeColor = (shiftType) => {
   const type = (shiftType || '').toUpperCase();
   if (type.includes('MANHÃ') || type.includes('MANHA')) {
-    return { bg: 'bg-amber-100 dark:bg-amber-900/30', border: 'border-amber-300 dark:border-amber-700' };
+    return { bg: 'bg-yellow-200 dark:bg-yellow-600/40', border: 'border-yellow-500 dark:border-yellow-400' };
   }
   if (type.includes('TARDE')) {
-    return { bg: 'bg-orange-100 dark:bg-orange-900/30', border: 'border-orange-300 dark:border-orange-700' };
+    return { bg: 'bg-orange-200 dark:bg-orange-600/40', border: 'border-orange-500 dark:border-orange-400' };
   }
   if (type.includes('DIURN')) {
-    return { bg: 'bg-yellow-100 dark:bg-yellow-900/30', border: 'border-yellow-300 dark:border-yellow-700' };
+    return { bg: 'bg-teal-200 dark:bg-teal-600/40', border: 'border-teal-500 dark:border-teal-400' };
   }
   if (type.includes('NOTURN')) {
-    return { bg: 'bg-indigo-100 dark:bg-indigo-900/30', border: 'border-indigo-300 dark:border-indigo-700' };
+    return { bg: 'bg-violet-200 dark:bg-violet-700/40', border: 'border-violet-500 dark:border-violet-400' };
   }
   if (type.includes('24')) {
-    return { bg: 'bg-red-100 dark:bg-red-900/30', border: 'border-red-300 dark:border-red-700' };
+    return { bg: 'bg-rose-200 dark:bg-rose-700/40', border: 'border-rose-500 dark:border-rose-400' };
   }
-  return { bg: 'bg-slate-100 dark:bg-slate-700/30', border: 'border-slate-300 dark:border-slate-600' };
+  return { bg: 'bg-slate-200 dark:bg-slate-600/40', border: 'border-slate-400 dark:border-slate-500' };
 };
 
 const getShiftHours = (shiftType) => {
