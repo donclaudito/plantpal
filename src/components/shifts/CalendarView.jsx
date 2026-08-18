@@ -3,26 +3,24 @@ import { Trash2, Check, Plus } from 'lucide-react';
 
 const weekDays = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
 
-const getDoctorColor = (doctorName) => {
-  if (!doctorName) return { bg: 'bg-blue-100 dark:bg-blue-900/30', border: 'border-blue-300 dark:border-blue-700' };
-  
-  const colors = [
-    { bg: 'bg-blue-100 dark:bg-blue-900/30', border: 'border-blue-300 dark:border-blue-700' },
-    { bg: 'bg-purple-100 dark:bg-purple-900/30', border: 'border-purple-300 dark:border-purple-700' },
-    { bg: 'bg-pink-100 dark:bg-pink-900/30', border: 'border-pink-300 dark:border-pink-700' },
-    { bg: 'bg-orange-100 dark:bg-orange-900/30', border: 'border-orange-300 dark:border-orange-700' },
-    { bg: 'bg-teal-100 dark:bg-teal-900/30', border: 'border-teal-300 dark:border-teal-700' },
-    { bg: 'bg-indigo-100 dark:bg-indigo-900/30', border: 'border-indigo-300 dark:border-indigo-700' },
-    { bg: 'bg-cyan-100 dark:bg-cyan-900/30', border: 'border-cyan-300 dark:border-cyan-700' },
-    { bg: 'bg-amber-100 dark:bg-amber-900/30', border: 'border-amber-300 dark:border-amber-700' },
-  ];
-  
-  let hash = 0;
-  for (let i = 0; i < doctorName.length; i++) {
-    hash = doctorName.charCodeAt(i) + ((hash << 5) - hash);
+const getShiftTypeColor = (shiftType) => {
+  const type = (shiftType || '').toUpperCase();
+  if (type.includes('MANHÃ') || type.includes('MANHA')) {
+    return { bg: 'bg-amber-100 dark:bg-amber-900/30', border: 'border-amber-300 dark:border-amber-700' };
   }
-  
-  return colors[Math.abs(hash) % colors.length];
+  if (type.includes('TARDE')) {
+    return { bg: 'bg-orange-100 dark:bg-orange-900/30', border: 'border-orange-300 dark:border-orange-700' };
+  }
+  if (type.includes('DIURN')) {
+    return { bg: 'bg-yellow-100 dark:bg-yellow-900/30', border: 'border-yellow-300 dark:border-yellow-700' };
+  }
+  if (type.includes('NOTURN')) {
+    return { bg: 'bg-indigo-100 dark:bg-indigo-900/30', border: 'border-indigo-300 dark:border-indigo-700' };
+  }
+  if (type.includes('24')) {
+    return { bg: 'bg-red-100 dark:bg-red-900/30', border: 'border-red-300 dark:border-red-700' };
+  }
+  return { bg: 'bg-slate-100 dark:bg-slate-700/30', border: 'border-slate-300 dark:border-slate-600' };
 };
 
 const getShiftHours = (shiftType) => {
@@ -131,7 +129,7 @@ export default function CalendarView({
                       const isSelected = selectedShifts.includes(shift.id);
                       const isDragging = draggedShift?.id === shift.id;
                       const isPaid = shift.status === 'Pago';
-                      const doctorColor = getDoctorColor(shift.doctor_name);
+                      const doctorColor = getShiftTypeColor(shift.shift_type);
                       
                       return (
                         <div
