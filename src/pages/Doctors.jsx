@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Download, FileText, Edit, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import EspecialidadeSelect from '@/components/EspecialidadeSelect';
 
 export default function Doctors() {
   const [showForm, setShowForm] = useState(false);
@@ -22,26 +22,12 @@ export default function Doctors() {
   });
   const [importFile, setImportFile] = useState(null);
   const [selectedDoctors, setSelectedDoctors] = useState([]);
-  const [usarEspecialidadeLivre, setUsarEspecialidadeLivre] = useState(false);
 
   const queryClient = useQueryClient();
 
   const { data: doctors = [], isLoading } = useQuery({
     queryKey: ['doctors'],
     queryFn: () => base44.entities.Doctor.list('-created_date')
-  });
-
-  const { data: especialidades = [] } = useQuery({
-    queryKey: ['especialidades'],
-    queryFn: async () => {
-      try {
-        return await base44.entities.Especialidade.list('name');
-      } catch (error) {
-        // Entidade ainda não publicada no Base44: o campo volta a ser texto livre.
-        console.error('Erro ao carregar especialidades:', error);
-        return [];
-      }
-    }
   });
 
   const createMutation = useMutation({
@@ -193,20 +179,6 @@ export default function Doctors() {
     setSelectedDoctors([]);
   };
 
-  // Especialidades configuradas no módulo (apenas as ativas) + o valor atual do
-  // médico, para não perder registos antigos que não estejam na lista.
-  const specialtyOptions = (() => {
-    const nomes = especialidades
-      .filter((e) => e.ativo !== false && e.name)
-      .map((e) => e.name.trim());
-    const atuais = [...new Set([...nomes, formData.specialty, ...doctors.map((d) => d.specialty)])];
-    const limpos = [...new Set(atuais.map((s) => (s || '').trim()).filter(Boolean))];
-    const extras = limpos
-      .filter((s) => !nomes.some((n) => n.toLowerCase() === s.toLowerCase()))
-      .sort((a, b) => a.localeCompare(b));
-    return { configuradas: nomes, extras };
-  })();
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
       <div className="max-w-6xl mx-auto">
@@ -329,51 +301,14 @@ export default function Doctors() {
 
               <div>
                 <Label htmlFor="specialty">Especialidade *</Label>
-                {usarEspecialidadeLivre ? (
-                  <Input
-                    id="specialty"
-                    value={formData.specialty}
-                    onChange={(e) => setFormData({ ...formData, specialty: e.target.value })}
-                    placeholder="Digite a especialidade"
-                    required
-                    autoFocus
-                  />
-                ) : (
-                  <Select
-                    value={formData.specialty || undefined}
-                    onValueChange={(value) => setFormData({ ...formData, specialty: value })}
-                  >
-                    <SelectTrigger id="specialty">
-                      <SelectValue placeholder="Selecione a especialidade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {specialtyOptions.configuradas.map((nome) => (
-                        <SelectItem key={nome} value={nome}>
-                          {nome}
-                        </SelectItem>
-                      ))}
-                      {specialtyOptions.extras.map((nome) => (
-                        <SelectItem key={`extra-${nome}`} value={nome}>
-                          {nome} (fora do cadastro)
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+                <EspecialidadeSelect
+                  value={formData.specialty}
+                  onChange={(valor) => setFormData({ ...formData, specialty: valor })}
+                  className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                />
                 <p className="text-xs text-gray-500 mt-1">
-                  {specialtyOptions.configuradas.length === 0
-                    ? 'Nenhuma especialidade configurada. Cadastre em "Especialidades" ou digite o valor.'
-                    : 'Lista gerida em "Especialidades".'}
+                  Lista gerida em "Especialidades".
                 </p>
-                {!usarEspecialidadeLivre && (
-                  <button
-                    type="button"
-                    onClick={() => setUsarEspecialidadeLivre(true)}
-                    className="text-xs text-blue-600 hover:underline mt-1"
-                  >
-                    Não encontrou? Digitar especialidade
-                  </button>
-                )}
                 <input type="hidden" required value={formData.specialty} readOnly />
               </div>
 
