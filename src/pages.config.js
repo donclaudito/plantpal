@@ -49,6 +49,7 @@
  */
 import Deposits from './pages/Deposits';
 import Doctors from './pages/Doctors';
+import Especialidades from './pages/Especialidades';
 import Finance from './pages/Finance';
 import Home from './pages/Home';
 import Hospitals from './pages/Hospitals';
@@ -62,6 +63,7 @@ import __Layout from './Layout.jsx';
 export const PAGES = {
     "Deposits": Deposits,
     "Doctors": Doctors,
+    "Especialidades": Especialidades,
     "Finance": Finance,
     "Home": Home,
     "Hospitals": Hospitals,

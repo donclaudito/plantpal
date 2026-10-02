@@ -35,7 +35,7 @@ export default function Layout({ children, currentPageName }) {
       }
       
       // Restrição para testeclauorenstein@gmail.com - apenas Shifts, Procedimentos, Hospitals, Doctors
-      const allowedPages = ['Shifts', 'Procedimentos', 'Hospitals', 'Doctors', 'Home'];
+      const allowedPages = ['Shifts', 'Procedimentos', 'Hospitals', 'Doctors', 'Especialidades', 'Home'];
       if (user && user.email === 'testeclauorenstein@gmail.com' && !allowedPages.includes(currentPageName)) {
         setIsUnauthorized(true);
         setIsLoading(false);

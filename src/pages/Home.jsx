@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
-import { Calendar, DollarSign, FileText, BarChart, Users, Building, Settings, Stethoscope, UserPlus } from 'lucide-react';
+import { Calendar, DollarSign, FileText, BarChart, Users, Building, Settings, Stethoscope, UserPlus, Tag } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,6 +59,7 @@ export default function Home() {
     { name: 'Depósitos', path: 'Deposits', icon: FileText, description: 'Histórico de depósitos' },
     { name: 'Relatórios', path: 'Relatorios', icon: BarChart, description: 'Análises e relatórios' },
     { name: 'Médicos', path: 'Doctors', icon: Users, description: 'Cadastro de médicos' },
+    { name: 'Especialidades', path: 'Especialidades', icon: Tag, description: 'Configurar especialidades médicas' },
     { name: 'Hospitais', path: 'Hospitals', icon: Building, description: 'Cadastro de hospitais' },
     { name: 'Configurações', path: 'Settings', icon: Settings, description: 'Ajustes do sistema' },
   ];
