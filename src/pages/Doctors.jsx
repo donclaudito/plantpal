@@ -63,7 +63,6 @@ export default function Doctors() {
       pix_key: ''
     });
     setEditingDoctor(null);
-    setUsarEspecialidadeLivre(false);
     setShowForm(false);
   };
 
@@ -77,7 +76,6 @@ export default function Doctors() {
       pix_cpf: doctor.pix_cpf || '',
       pix_key: doctor.pix_key || ''
     });
-    setUsarEspecialidadeLivre(false);
     setShowForm(true);
   };
 

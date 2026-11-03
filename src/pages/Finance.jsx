@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Download, DollarSign, TrendingUp, TrendingDown, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { encontrarHospital, normalizarNome, opcoesHospitais, opcoesMedicos, resolverDoctorId } from '@/lib/shiftFilters';
 
 export default function Finance() {
   const [filterDoctor, setFilterDoctor] = useState('all');
@@ -47,9 +48,12 @@ export default function Finance() {
     enabled: !!user,
   });
 
+  const doctorOptions = useMemo(() => opcoesMedicos(doctors, shifts), [doctors, shifts]);
+  const hospitalOptions = useMemo(() => opcoesHospitais(hospitals, shifts), [hospitals, shifts]);
+
   const calculateBaseValue = (shift) => {
-    const doctorId = shift.doctor_id;
-    const hospitalId = hospitals.find(h => h.name === shift.hospital)?.id;
+    const doctorId = resolverDoctorId(doctors, shift);
+    const hospitalId = encontrarHospital(hospitals, shift.hospital)?.id;
     const period = shift.period;
 
     let config = configValores.find(c => c.doctor_id === doctorId && c.hospital_id === hospitalId);
@@ -155,10 +159,9 @@ export default function Finance() {
       const [year, month] = s.date.split('-').map(Number);
       const matchMonth = month === filterMonth + 1 && year === filterYear;
 
-      const matchDoctor = filterDoctor === 'all' || s.doctor_id === filterDoctor;
+      const matchDoctor = filterDoctor === 'all' || normalizarNome(s.doctor_name) === filterDoctor;
 
-      const hospital = hospitals.find(h => h.name === s.hospital);
-      const matchHospital = filterHospital === 'all' || hospital?.id === filterHospital;
+      const matchHospital = filterHospital === 'all' || normalizarNome(s.hospital) === filterHospital;
 
       const matchPeriod = filterPeriod === 'all' || s.period === filterPeriod;
 
@@ -171,15 +174,16 @@ export default function Finance() {
     const fixedDiscountsByDoctorHospital = new Map();
 
     filteredShifts.forEach(shift => {
-      const doctorId = shift.doctor_id;
+      const doctorId = resolverDoctorId(doctors, shift);
       const doctorName = shift.doctor_name;
-      const hospital = hospitals.find(h => h.name === shift.hospital);
-      const hospitalId = hospital?.id;
+      const hospitalId = encontrarHospital(hospitals, shift.hospital)?.id;
       const hospitalName = shift.hospital;
       const period = shift.period || '12h';
 
-      const key = `${doctorId}-${hospitalId}-${period}`;
-      const fixedKey = `${doctorId}-${hospitalId}`;
+      const doctorKey = doctorId || normalizarNome(doctorName);
+      const hospitalKey = hospitalId || normalizarNome(hospitalName);
+      const key = `${doctorKey}-${hospitalKey}-${period}`;
+      const fixedKey = `${doctorKey}-${hospitalKey}`;
 
       if (!grouped[key]) {
         grouped[key] = {
@@ -188,6 +192,7 @@ export default function Finance() {
           doctorName,
           hospitalName,
           period,
+          fixedKey,
           quantity: 0,
           grossValue: 0,
           discountValue: 0,
@@ -228,13 +233,10 @@ export default function Finance() {
 
     const groupedArray = Object.values(grouped);
     groupedArray.forEach(item => {
-      const fixedKey = `${item.doctorId}-${item.hospitalId}`;
-      const fixedDiscounts = fixedDiscountsByDoctorHospital.get(fixedKey);
+      const fixedDiscounts = fixedDiscountsByDoctorHospital.get(item.fixedKey);
       
       if (fixedDiscounts) {
-        const doctorHospitalGroups = groupedArray.filter(g => 
-          g.doctorId === item.doctorId && g.hospitalId === item.hospitalId
-        );
+        const doctorHospitalGroups = groupedArray.filter(g => g.fixedKey === item.fixedKey);
         
         const isFirstGroup = doctorHospitalGroups[0] === item;
         
@@ -253,7 +255,7 @@ export default function Finance() {
       ...item,
       discountDetails: Array.from(item.discountDetailsMap.values())
     }));
-  }, [filteredShifts, hospitals, configValores, configDescontos]);
+  }, [filteredShifts, hospitals, doctors, configValores, configDescontos]);
 
   const totals = useMemo(() => {
     return financialSummary.reduce((acc, item) => ({
@@ -393,8 +395,8 @@ export default function Finance() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                {doctors.map(d => (
-                  <SelectItem key={d.id} value={d.id}>{d.full_name}</SelectItem>
+                {doctorOptions.map(d => (
+                  <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -408,8 +410,8 @@ export default function Finance() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                {hospitals.map(h => (
-                  <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>
+                {hospitalOptions.map(h => (
+                  <SelectItem key={h.value} value={h.value}>{h.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
