@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
+import useShiftQuote from '@/lib/useShiftQuote';
 import EspecialidadeSelect from '@/components/EspecialidadeSelect';
 
 const shiftTypes = ["DIURNO MANHÃ", "DIURNO TARDE", "DIURNO", "NOTURNO", "24H", "PARCIAL", "ESPECIAL(DAS10 AS 22)"];
@@ -22,25 +22,19 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
   const [recurrenceFrequency, setRecurrenceFrequency] = useState('weekly');
   const [recurrenceCount, setRecurrenceCount] = useState(4);
 
-  const { data: user } = useQuery({
-    queryKey: ['user'],
-    queryFn: () => base44.auth.me(),
-  });
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const { data: quote, isFetching: isLoadingQuote, error: quoteError } = useShiftQuote(formData.doctorId, formData.unit, formData.period, isOpen);
 
-  const { data: configValores = [] } = useQuery({
-    queryKey: ['configValores', user?.email],
-    queryFn: () => base44.entities.ConfiguracaoPlantao.list(),
-    enabled: !!user,
-  });
-
-  const { data: configDescontos = [] } = useQuery({
-    queryKey: ['configDescontos', user?.email],
-    queryFn: () => base44.entities.ConfiguracaoDesconto.list(),
-    enabled: !!user,
-  });
+  useEffect(() => {
+    if (!isOpen || !quote) return;
+    const unchanged = editingShift && editingShift.doctor_id === formData.doctorId && editingShift.hospital === formData.unit && (editingShift.period || '12h') === formData.period;
+    setFormData(prev => ({ ...prev, value: quote.configured ? quote.value : unchanged ? Number(editingShift.value) || 0 : 0 }));
+  }, [quote, isOpen, editingShift, formData.doctorId, formData.unit, formData.period]);
 
   useEffect(() => {
     if (isOpen) { // Adicionado: Só inicializa/reseta quando o modal abre
+      setSaveError('');
       if (editingShift) {
         const doctor = doctors.find(d => d.full_name === editingShift.doctor_name);
         setFormData({
@@ -73,92 +67,28 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
     }
   }, [isOpen, initialDate, editingShift, doctors]); // Adicionado 'isOpen' aqui
 
-  const calculateValue = (doctorId, hospitalName, period) => {
-    const hospital = hospitals.find(h => h.name === hospitalName);
-    const hospitalId = hospital?.id;
-
-    let config = configValores.find(c => c.doctor_id === doctorId && c.hospital_id === hospitalId);
-    if (!config) {
-      config = configValores.find(c => c.doctor_id === doctorId && !c.hospital_id);
-    }
-    if (!config) {
-      config = configValores.find(c => !c.doctor_id && c.hospital_id === hospitalId);
-    }
-    if (!config) {
-      config = configValores.find(c => !c.doctor_id && !c.hospital_id);
-    }
-
-    let baseValue = 0;
-    if (config) {
-      switch (period) {
-        case '6h':
-          baseValue = config.valor_6h || 0;
-          break;
-        case '12h':
-          baseValue = config.valor_12h || 0;
-          break;
-        case 'retaguarda':
-          baseValue = config.valor_retaguarda || 0;
-          break;
-        case 'coordenador':
-          baseValue = config.valor_coordenador || 0;
-          break;
-        case 'professor':
-          baseValue = config.valor_professor || 0;
-          break;
-        default:
-          baseValue = 0;
-      }
-    }
-
-    let desconto = configDescontos.find(d => d.doctor_id === doctorId && d.hospital_id === hospitalId);
-    if (!desconto) {
-      desconto = configDescontos.find(d => d.doctor_id === doctorId && !d.hospital_id);
-    }
-    if (!desconto) {
-      desconto = configDescontos.find(d => !d.doctor_id && d.hospital_id === hospitalId);
-    }
-    if (!desconto) {
-      desconto = configDescontos.find(d => !d.doctor_id && !d.hospital_id);
-    }
-
-    let finalValue = baseValue;
-    if (desconto) {
-      if (desconto.tipo_desconto === 'percentual') {
-        finalValue = baseValue - (baseValue * desconto.valor_desconto / 100);
-      } else {
-        finalValue = baseValue - desconto.valor_desconto;
-      }
-    }
-
-    return Math.max(0, finalValue);
-  };
-
   const handleDoctorChange = (e) => {
     const doctorId = e.target.value;
     const doctor = doctors.find(d => d.id === doctorId);
     if (doctor) {
-      const newValue = calculateValue(doctorId, formData.unit, formData.period);
       setFormData({
         ...formData,
         doctorId: doctor.id,
         doctorName: doctor.full_name,
         specialty: doctor.specialty || 'CIRURGIA GERAL',
-        value: newValue
+        value: 0
       });
     }
   };
 
   const handleHospitalChange = (e) => {
     const hospitalName = e.target.value;
-    const newValue = calculateValue(formData.doctorId, hospitalName, formData.period);
-    setFormData({ ...formData, unit: hospitalName, value: newValue });
+    setFormData({ ...formData, unit: hospitalName, value: 0 });
   };
 
   const handlePeriodChange = (e) => {
     const period = e.target.value;
-    const newValue = calculateValue(formData.doctorId, formData.unit, period);
-    setFormData({ ...formData, period, value: newValue });
+    setFormData({ ...formData, period, value: 0 });
   };
 
   const generateRecurringDates = (startDate, frequency, count) => {
@@ -178,8 +108,11 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
     return dates;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isLoadingQuote || quoteError || isSaving) return;
+    setIsSaving(true);
+    setSaveError('');
     const buildShift = (date) => ({
       date,
       doctor_id: formData.doctorId,
@@ -191,14 +124,19 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
       status: formData.paid ? 'Pago' : 'Realizado'
     });
 
-    if (isRecurring && !editingShift) {
-      const dates = generateRecurringDates(formData.date, recurrenceFrequency, recurrenceCount);
-      onSave(dates.map(d => buildShift(d)));
-    } else {
-      onSave(buildShift(formData.date));
+    try {
+      if (isRecurring && !editingShift) {
+        const dates = generateRecurringDates(formData.date, recurrenceFrequency, recurrenceCount);
+        await onSave(dates.map(d => buildShift(d)));
+      } else {
+        await onSave(buildShift(formData.date));
+      }
+      onClose();
+    } catch (error) {
+      setSaveError(`Não foi possível salvar o plantão: ${error.message}`);
+    } finally {
+      setIsSaving(false);
     }
-    // Removido o bloco setFormData que resetava o formulário aqui
-    onClose();
   };
 
   if (!isOpen) return null;
@@ -361,6 +299,15 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
             </div>
           )}
 
+          {formData.doctorId && formData.unit && (
+            <div aria-live="polite" className="rounded-xl border border-border bg-muted p-4">
+              <p className="text-sm text-muted-foreground">Valor do plantão</p>
+              <p className="font-bold text-foreground">{isLoadingQuote ? 'Calculando...' : formData.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+              {quote?.configured && !isLoadingQuote && <p className="text-xs text-muted-foreground">Bruto: {quote.baseValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} • Descontos: {quote.discountValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>}
+              {quoteError && <p role="alert" className="text-sm text-destructive">Não foi possível consultar o valor. Tente selecionar o hospital novamente.</p>}
+            </div>
+          )}
+          {saveError && <p role="alert" className="text-sm text-destructive">{saveError}</p>}
           <div className="flex gap-3 pt-4">
             <button
               type="button"
@@ -371,9 +318,10 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
             </button>
             <button
               type="submit"
+              disabled={isSaving || isLoadingQuote || !!quoteError}
               className="flex-1 py-4 bg-blue-600 dark:bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
             >
-              {editingShift ? 'Atualizar' : 'Guardar Plantão'}
+              {isSaving ? 'Salvando...' : editingShift ? 'Atualizar' : 'Guardar Plantão'}
             </button>
           </div>
         </form>

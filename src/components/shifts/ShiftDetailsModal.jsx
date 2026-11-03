@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Calendar, Clock, DollarSign, MapPin, User, Stethoscope, Check, Pencil, Trash2 } from 'lucide-react';
+import ShiftValue from '@/components/shifts/ShiftValue';
 
 export default function ShiftDetailsModal({ shift, isOpen, onClose, onEdit, onDelete, isViewer = false }) {
   if (!isOpen || !shift) return null;
@@ -71,6 +72,8 @@ export default function ShiftDetailsModal({ shift, isOpen, onClose, onEdit, onDe
               <p className="text-lg font-black text-slate-900 dark:text-white">{shift.hospital}</p>
             </div>
           </div>
+
+          <ShiftValue shift={shift} />
 
           <div className="flex gap-3">
             <button

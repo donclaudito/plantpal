@@ -1,10 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Download, DollarSign, TrendingUp, TrendingDown, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { encontrarHospital, normalizarNome, opcoesHospitais, opcoesMedicos, resolverDoctorId } from '@/lib/shiftFilters';
+
 
 export default function Finance() {
   const [filterDoctor, setFilterDoctor] = useState('all');
@@ -18,275 +18,21 @@ export default function Finance() {
     queryFn: () => base44.auth.me(),
   });
 
-  const { data: shifts = [] } = useQuery({
-    queryKey: ['shifts'],
-    queryFn: () => base44.entities.Shift.list('-date'),
-    enabled: !!user,
-  });
-
-  const { data: doctors = [] } = useQuery({
-    queryKey: ['doctors'],
-    queryFn: () => base44.entities.Doctor.list('full_name'),
-    enabled: !!user,
-  });
-
-  const { data: hospitals = [] } = useQuery({
-    queryKey: ['hospitals'],
-    queryFn: () => base44.entities.Hospital.list('name'),
-    enabled: !!user,
-  });
-
-  const { data: configValores = [] } = useQuery({
-    queryKey: ['configValores'],
-    queryFn: () => base44.entities.ConfiguracaoPlantao.list(),
-    enabled: !!user,
-  });
-
-  const { data: configDescontos = [] } = useQuery({
-    queryKey: ['configDescontos'],
-    queryFn: () => base44.entities.ConfiguracaoDesconto.list(),
-    enabled: !!user,
-  });
-
-  const doctorOptions = useMemo(() => opcoesMedicos(doctors, shifts), [doctors, shifts]);
-  const hospitalOptions = useMemo(() => opcoesHospitais(hospitals, shifts), [hospitals, shifts]);
-
-  // Valor do plantão segundo a configuração: usa o valor explícito do período
-  // e, para períodos por hora (1h a 5h, ou 12h sem valor configurado), calcula
-  // proporcionalmente ao valor/hora da configuração.
-  const valorDoPeriodo = (config, period) => {
-    const chave = String(period || '').trim().toLowerCase();
-
-    const valoresFixos = {
-      '6h': config.valor_6h,
-      '12h': config.valor_12h,
-      'mais tarde': config.valor_12h,
-      retaguarda: config.valor_retaguarda,
-      coordenador: config.valor_coordenador,
-      professor: config.valor_professor,
-    };
-
-    if (valoresFixos[chave] > 0) return valoresFixos[chave];
-
-    const horas = parseInt(chave, 10);
-    if (!horas) return 0;
-
-    const valorHora = (config.valor_12h || 0) / 12 || (config.valor_6h || 0) / 6;
-    return valorHora * horas;
-  };
-
-  // Valor do plantão: procura a configuração pela ordem médico+hospital →
-  // médico → hospital → global e escolhe a primeira que tenha preço para o
-  // período (ignorando configurações vazias, que não devem tapar as cheias).
-  // Se nenhuma tiver preço, usa o valor gravado no próprio plantão.
-  const valorPlantao = (shift) => {
-    const doctorId = resolverDoctorId(doctors, shift);
-    const hospitalId = encontrarHospital(hospitals, shift.hospital)?.id;
-
-    const candidatos = [
-      configValores.filter(c => c.doctor_id === doctorId && c.hospital_id === hospitalId),
-      configValores.filter(c => c.doctor_id === doctorId && !c.hospital_id),
-      configValores.filter(c => !c.doctor_id && c.hospital_id === hospitalId),
-      configValores.filter(c => !c.doctor_id && !c.hospital_id),
-    ];
-
-    for (const grupo of candidatos) {
-      const comPreco = grupo.find(c => valorDoPeriodo(c, shift.period) > 0);
-      if (comPreco) {
-        return { baseValue: valorDoPeriodo(comPreco, shift.period), aplicarDesconto: true };
-      }
-    }
-
-    return { baseValue: shift.value || 0, aplicarDesconto: false };
-  };
-
-  const calculatePercentageDiscounts = (doctorId, hospitalId, baseValue) => {
-    const applicableDiscounts = [];
-
-    const specific = configDescontos.filter(d => d.doctor_id === doctorId && d.hospital_id === hospitalId && d.tipo_desconto === 'percentual');
-    applicableDiscounts.push(...specific);
-
-    const byDoctor = configDescontos.filter(d => d.doctor_id === doctorId && !d.hospital_id && d.tipo_desconto === 'percentual');
-    applicableDiscounts.push(...byDoctor);
-
-    const byHospital = configDescontos.filter(d => !d.doctor_id && d.hospital_id === hospitalId && d.tipo_desconto === 'percentual');
-    applicableDiscounts.push(...byHospital);
-
-    const global = configDescontos.filter(d => !d.doctor_id && !d.hospital_id && d.tipo_desconto === 'percentual');
-    applicableDiscounts.push(...global);
-
-    let totalDiscount = 0;
-    const details = [];
-
-    applicableDiscounts.forEach(desconto => {
-      const value = baseValue * desconto.valor_desconto / 100;
-
-      totalDiscount += value;
-
-      details.push({
-        descricao: desconto.descricao,
-        tipo: desconto.tipo_desconto,
-        valor_config: desconto.valor_desconto,
-        valor_calculado: value
+  const { data: report, isPending: isLoadingReport, error: reportError, refetch } = useQuery({
+    queryKey: ['finance', user?.email, filterYear, filterMonth, filterDoctor, filterHospital, filterPeriod],
+    queryFn: async () => {
+      const response = await base44.functions.invoke('getShiftFinance', {
+        year: filterYear, month: filterMonth + 1,
+        doctor: filterDoctor, hospital: filterHospital, period: filterPeriod,
       });
-    });
-
-    return {
-      totalValue: totalDiscount,
-      details
-    };
-  };
-
-  const calculateFixedDiscounts = (doctorId, hospitalId) => {
-    const applicableDiscounts = [];
-
-    const specific = configDescontos.filter(d => d.doctor_id === doctorId && d.hospital_id === hospitalId && d.tipo_desconto === 'valor_fixo');
-    applicableDiscounts.push(...specific);
-
-    const byDoctor = configDescontos.filter(d => d.doctor_id === doctorId && !d.hospital_id && d.tipo_desconto === 'valor_fixo');
-    applicableDiscounts.push(...byDoctor);
-
-    const byHospital = configDescontos.filter(d => !d.doctor_id && d.hospital_id === hospitalId && d.tipo_desconto === 'valor_fixo');
-    applicableDiscounts.push(...byHospital);
-
-    const global = configDescontos.filter(d => !d.doctor_id && !d.hospital_id && d.tipo_desconto === 'valor_fixo');
-    applicableDiscounts.push(...global);
-
-    let totalDiscount = 0;
-    const details = [];
-
-    applicableDiscounts.forEach(desconto => {
-      totalDiscount += desconto.valor_desconto;
-
-      details.push({
-        descricao: desconto.descricao,
-        tipo: desconto.tipo_desconto,
-        valor_config: desconto.valor_desconto,
-        valor_calculado: desconto.valor_desconto
-      });
-    });
-
-    return {
-      totalValue: totalDiscount,
-      details
-    };
-  };
-
-  const filteredShifts = useMemo(() => {
-    return shifts.filter(s => {
-      if (!s.date) return false;
-
-      const [year, month] = s.date.split('-').map(Number);
-      const matchMonth = month === filterMonth + 1 && year === filterYear;
-
-      const matchDoctor = filterDoctor === 'all' || normalizarNome(s.doctor_name) === filterDoctor;
-
-      const matchHospital = filterHospital === 'all' || normalizarNome(s.hospital) === filterHospital;
-
-      const matchPeriod = filterPeriod === 'all' || s.period === filterPeriod;
-
-      return matchMonth && matchDoctor && matchHospital && matchPeriod;
-    });
-  }, [shifts, filterMonth, filterYear, filterDoctor, filterHospital, filterPeriod, hospitals]);
-
-  const financialSummary = useMemo(() => {
-    const grouped = {};
-    const fixedDiscountsByDoctorHospital = new Map();
-
-    filteredShifts.forEach(shift => {
-      const doctorId = resolverDoctorId(doctors, shift);
-      const doctorName = shift.doctor_name;
-      const hospitalId = encontrarHospital(hospitals, shift.hospital)?.id;
-      const hospitalName = shift.hospital;
-      const period = shift.period || '12h';
-
-      const doctorKey = doctorId || normalizarNome(doctorName);
-      const hospitalKey = hospitalId || normalizarNome(hospitalName);
-      const key = `${doctorKey}-${hospitalKey}-${period}`;
-      const fixedKey = `${doctorKey}-${hospitalKey}`;
-
-      if (!grouped[key]) {
-        grouped[key] = {
-          doctorId,
-          hospitalId,
-          doctorName,
-          hospitalName,
-          period,
-          fixedKey,
-          quantity: 0,
-          grossValue: 0,
-          discountValue: 0,
-          netValue: 0,
-          discountDetailsMap: new Map(),
-        };
-      }
-
-      const { baseValue, aplicarDesconto } = valorPlantao(shift);
-      const percentageDiscounts = aplicarDesconto
-        ? calculatePercentageDiscounts(doctorId, hospitalId, baseValue)
-        : { totalValue: 0, details: [] };
-
-      grouped[key].quantity += 1;
-      grouped[key].grossValue += baseValue;
-      grouped[key].discountValue += percentageDiscounts.totalValue;
-      grouped[key].netValue += baseValue - percentageDiscounts.totalValue;
-      
-      if (percentageDiscounts.details.length > 0) {
-        percentageDiscounts.details.forEach(detail => {
-          const detailKey = detail.descricao;
-          if (!grouped[key].discountDetailsMap.has(detailKey)) {
-            grouped[key].discountDetailsMap.set(detailKey, {
-              descricao: detail.descricao,
-              tipo: detail.tipo,
-              valor_config: detail.valor_config,
-              valor_calculado: 0
-            });
-          }
-          const existing = grouped[key].discountDetailsMap.get(detailKey);
-          existing.valor_calculado += detail.valor_calculado;
-        });
-      }
-
-      if (!fixedDiscountsByDoctorHospital.has(fixedKey)) {
-        const fixedDiscounts = calculateFixedDiscounts(doctorId, hospitalId);
-        fixedDiscountsByDoctorHospital.set(fixedKey, fixedDiscounts);
-      }
-    });
-
-    const groupedArray = Object.values(grouped);
-    groupedArray.forEach(item => {
-      const fixedDiscounts = fixedDiscountsByDoctorHospital.get(item.fixedKey);
-      
-      if (fixedDiscounts) {
-        const doctorHospitalGroups = groupedArray.filter(g => g.fixedKey === item.fixedKey);
-        
-        const isFirstGroup = doctorHospitalGroups[0] === item;
-        
-        if (isFirstGroup) {
-          item.discountValue += fixedDiscounts.totalValue;
-          item.netValue -= fixedDiscounts.totalValue;
-          
-          fixedDiscounts.details.forEach(detail => {
-            item.discountDetailsMap.set(detail.descricao, detail);
-          });
-        }
-      }
-    });
-
-    return groupedArray.map(item => ({
-      ...item,
-      discountDetails: Array.from(item.discountDetailsMap.values())
-    }));
-  }, [filteredShifts, hospitals, doctors, configValores, configDescontos]);
-
-  const totals = useMemo(() => {
-    return financialSummary.reduce((acc, item) => ({
-      quantity: acc.quantity + item.quantity,
-      grossValue: acc.grossValue + item.grossValue,
-      discountValue: acc.discountValue + item.discountValue,
-      netValue: acc.netValue + item.netValue,
-    }), { quantity: 0, grossValue: 0, discountValue: 0, netValue: 0 });
-  }, [financialSummary]);
+      return response.data;
+    },
+    enabled: !!user,
+  });
+  const financialSummary = report?.summary || [];
+  const doctorOptions = report?.doctorOptions || [];
+  const hospitalOptions = report?.hospitalOptions || [];
+  const totals = report?.totals || { quantity: 0, grossValue: 0, discountValue: 0, netValue: 0 };
 
   const exportToCSV = () => {
     const headers = ['Médico', 'Hospital', 'Período', 'Quantidade', 'Valor Bruto', 'Descontos', 'Valor Líquido'];
@@ -323,7 +69,11 @@ export default function Finance() {
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
   ];
 
-  if (!user) {
+  if (reportError) {
+    return <div className="p-6 space-y-3"><p role="alert" className="text-destructive">Não foi possível carregar os valores financeiros: {reportError.message}</p><Button onClick={() => refetch()}>Tentar novamente</Button></div>;
+  }
+
+  if (!user || isLoadingReport) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
@@ -447,10 +197,12 @@ export default function Finance() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
+                {['1h', '2h', '3h', '4h', '5h'].map(period => <SelectItem key={period} value={period}>{period}</SelectItem>)}
                 <SelectItem value="12h">12h</SelectItem>
                 <SelectItem value="6h">6h</SelectItem>
                 <SelectItem value="retaguarda">Retaguarda</SelectItem>
                 <SelectItem value="coordenador">Coordenador</SelectItem>
+                <SelectItem value="professor">Professor</SelectItem>
               </SelectContent>
             </Select>
           </div>

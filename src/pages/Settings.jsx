@@ -60,10 +60,23 @@ export default function Settings() {
     enabled: !!user,
   });
 
+  const refreshFinancialValues = () => {
+    ['configValores', 'shifts', 'finance', 'shiftQuote'].forEach(key => queryClient.invalidateQueries({ queryKey: [key] }));
+  };
+
+  const saveValor = async (data, id) => {
+    const config = id
+      ? await base44.entities.ConfiguracaoPlantao.update(id, data)
+      : await base44.entities.ConfiguracaoPlantao.create(data);
+    await base44.functions.invoke('syncShiftRates', { configId: config.id });
+    return config;
+  };
+
   const createValorMutation = useMutation({
-    mutationFn: (data) => base44.entities.ConfiguracaoPlantao.create(data),
+    mutationFn: (data) => saveValor(data),
+    onError: (error) => showToast(`Não foi possível concluir a sincronização: ${error.message}`, 'error'),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['configValores'] });
+      refreshFinancialValues();
       setShowValorForm(false);
       setEditingValor(null);
       showToast('Configuração salva!');
@@ -71,9 +84,10 @@ export default function Settings() {
   });
 
   const updateValorMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.ConfiguracaoPlantao.update(id, data),
+    mutationFn: ({ id, data }) => saveValor(data, id),
+    onError: (error) => showToast(`Não foi possível concluir a sincronização: ${error.message}`, 'error'),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['configValores'] });
+      refreshFinancialValues();
       setEditingValor(null);
       showToast('Configuração atualizada!');
     },
@@ -82,7 +96,7 @@ export default function Settings() {
   const deleteValorMutation = useMutation({
     mutationFn: (id) => base44.entities.ConfiguracaoPlantao.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['configValores'] });
+      refreshFinancialValues();
       showToast('Configuração removida!');
     },
   });
@@ -91,6 +105,8 @@ export default function Settings() {
     mutationFn: (data) => base44.entities.ConfiguracaoDesconto.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['configDescontos'] });
+      queryClient.invalidateQueries({ queryKey: ['finance'] });
+      queryClient.invalidateQueries({ queryKey: ['shiftQuote'] });
       setShowImpostoForm(false);
       setEditingImposto(null);
       showToast('Imposto salvo!');
@@ -101,6 +117,8 @@ export default function Settings() {
     mutationFn: ({ id, data }) => base44.entities.ConfiguracaoDesconto.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['configDescontos'] });
+      queryClient.invalidateQueries({ queryKey: ['finance'] });
+      queryClient.invalidateQueries({ queryKey: ['shiftQuote'] });
       setEditingImposto(null);
       showToast('Imposto atualizado!');
     },
@@ -110,6 +128,8 @@ export default function Settings() {
     mutationFn: (id) => base44.entities.ConfiguracaoDesconto.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['configDescontos'] });
+      queryClient.invalidateQueries({ queryKey: ['finance'] });
+      queryClient.invalidateQueries({ queryKey: ['shiftQuote'] });
       showToast('Imposto removido!');
     },
   });
@@ -118,6 +138,8 @@ export default function Settings() {
     mutationFn: (data) => base44.entities.ConfiguracaoDesconto.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['configDescontos'] });
+      queryClient.invalidateQueries({ queryKey: ['finance'] });
+      queryClient.invalidateQueries({ queryKey: ['shiftQuote'] });
       setShowDespesaForm(false);
       setEditingDespesa(null);
       showToast('Despesa salva!');
@@ -128,6 +150,8 @@ export default function Settings() {
     mutationFn: ({ id, data }) => base44.entities.ConfiguracaoDesconto.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['configDescontos'] });
+      queryClient.invalidateQueries({ queryKey: ['finance'] });
+      queryClient.invalidateQueries({ queryKey: ['shiftQuote'] });
       setEditingDespesa(null);
       showToast('Despesa atualizada!');
     },
@@ -137,6 +161,8 @@ export default function Settings() {
     mutationFn: (id) => base44.entities.ConfiguracaoDesconto.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['configDescontos'] });
+      queryClient.invalidateQueries({ queryKey: ['finance'] });
+      queryClient.invalidateQueries({ queryKey: ['shiftQuote'] });
       showToast('Despesa removida!');
     },
   });
@@ -183,6 +209,7 @@ export default function Settings() {
                 doctors={doctors}
                 hospitals={hospitals}
                 onSave={(data) => createValorMutation.mutate(data)}
+                isSaving={createValorMutation.isPending}
                 onCancel={() => setShowValorForm(false)}
               />
             )}
@@ -197,6 +224,7 @@ export default function Settings() {
                         hospitals={hospitals}
                         initialData={config}
                         onSave={(data) => updateValorMutation.mutate({ id: config.id, data })}
+                        isSaving={updateValorMutation.isPending}
                         onCancel={() => setEditingValor(null)}
                       />
                     </div>
@@ -372,7 +400,7 @@ export default function Settings() {
   );
 }
 
-function ValorForm({ doctors, hospitals, initialData, onSave, onCancel }) {
+function ValorForm({ doctors, hospitals, initialData, onSave, onCancel, isSaving }) {
   const [formData, setFormData] = useState(initialData || {
     doctor_id: '',
     hospital_id: '',
@@ -450,9 +478,9 @@ function ValorForm({ doctors, hospitals, initialData, onSave, onCancel }) {
           <X className="w-4 h-4 mr-2" />
           Cancelar
         </Button>
-        <Button type="submit">
+        <Button type="submit" disabled={isSaving}>
           <Save className="w-4 h-4 mr-2" />
-          Salvar
+          {isSaving ? 'Salvando e sincronizando...' : 'Salvar'}
         </Button>
       </div>
     </form>

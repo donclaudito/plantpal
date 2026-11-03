@@ -79,6 +79,7 @@ export default function Shifts() {
     mutationFn: (data) => base44.entities.Shift.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['finance'] });
       setIsModalOpen(false);
       showToast('Plantão registado!');
     },
@@ -88,6 +89,7 @@ export default function Shifts() {
     mutationFn: (dataArray) => base44.entities.Shift.bulkCreate(dataArray),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['finance'] });
       setIsModalOpen(false);
       showToast(`${Array.isArray(result) ? result.length : 'Vários'} plantões criados!`);
     },
@@ -97,6 +99,7 @@ export default function Shifts() {
     mutationFn: ({ id, data }) => base44.entities.Shift.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['finance'] });
       showToast('Plantão atualizado!');
     },
   });
@@ -105,6 +108,7 @@ export default function Shifts() {
     mutationFn: (id) => base44.entities.Shift.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['finance'] });
       setDeleteConfirmation({ isOpen: false, id: '', name: '' });
       showToast('Plantão removido!');
     },
@@ -119,6 +123,7 @@ export default function Shifts() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['finance'] });
       setSelectedShifts([]);
       if (result.failed > 0) {
         showToast(`${result.successful} plantões removidos (${result.failed} já não existiam)`);
@@ -452,13 +457,13 @@ export default function Shifts() {
           setIsModalOpen(false);
           setEditingShift(null);
         }}
-        onSave={(data) => {
+        onSave={async (data) => {
           if (editingShift) {
-            updateShiftMutation.mutate({ id: editingShift.id, data });
+            await updateShiftMutation.mutateAsync({ id: editingShift.id, data });
           } else if (Array.isArray(data)) {
-            bulkCreateShiftMutation.mutate(data);
+            await bulkCreateShiftMutation.mutateAsync(data);
           } else {
-            createShiftMutation.mutate(data);
+            await createShiftMutation.mutateAsync(data);
           }
           setEditingShift(null);
         }}
