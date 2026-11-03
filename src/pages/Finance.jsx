@@ -75,24 +75,29 @@ export default function Finance() {
     return valorHora * horas;
   };
 
-  const calculateBaseValue = (shift) => {
+  // Valor do plantão: procura a configuração pela ordem médico+hospital →
+  // médico → hospital → global e escolhe a primeira que tenha preço para o
+  // período (ignorando configurações vazias, que não devem tapar as cheias).
+  // Se nenhuma tiver preço, usa o valor gravado no próprio plantão.
+  const valorPlantao = (shift) => {
     const doctorId = resolverDoctorId(doctors, shift);
     const hospitalId = encontrarHospital(hospitals, shift.hospital)?.id;
 
-    let config = configValores.find(c => c.doctor_id === doctorId && c.hospital_id === hospitalId);
-    if (!config) {
-      config = configValores.find(c => c.doctor_id === doctorId && !c.hospital_id);
-    }
-    if (!config) {
-      config = configValores.find(c => !c.doctor_id && c.hospital_id === hospitalId);
-    }
-    if (!config) {
-      config = configValores.find(c => !c.doctor_id && !c.hospital_id);
+    const candidatos = [
+      configValores.filter(c => c.doctor_id === doctorId && c.hospital_id === hospitalId),
+      configValores.filter(c => c.doctor_id === doctorId && !c.hospital_id),
+      configValores.filter(c => !c.doctor_id && c.hospital_id === hospitalId),
+      configValores.filter(c => !c.doctor_id && !c.hospital_id),
+    ];
+
+    for (const grupo of candidatos) {
+      const comPreco = grupo.find(c => valorDoPeriodo(c, shift.period) > 0);
+      if (comPreco) {
+        return { baseValue: valorDoPeriodo(comPreco, shift.period), aplicarDesconto: true };
+      }
     }
 
-    if (!config) return 0;
-
-    return valorDoPeriodo(config, shift.period);
+    return { baseValue: shift.value || 0, aplicarDesconto: false };
   };
 
   const calculatePercentageDiscounts = (doctorId, hospitalId, baseValue) => {
@@ -216,8 +221,10 @@ export default function Finance() {
         };
       }
 
-      const baseValue = calculateBaseValue(shift);
-      const percentageDiscounts = calculatePercentageDiscounts(doctorId, hospitalId, baseValue);
+      const { baseValue, aplicarDesconto } = valorPlantao(shift);
+      const percentageDiscounts = aplicarDesconto
+        ? calculatePercentageDiscounts(doctorId, hospitalId, baseValue)
+        : { totalValue: 0, details: [] };
 
       grouped[key].quantity += 1;
       grouped[key].grossValue += baseValue;
