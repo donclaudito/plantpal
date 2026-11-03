@@ -51,10 +51,33 @@ export default function Finance() {
   const doctorOptions = useMemo(() => opcoesMedicos(doctors, shifts), [doctors, shifts]);
   const hospitalOptions = useMemo(() => opcoesHospitais(hospitals, shifts), [hospitals, shifts]);
 
+  // Valor do plantão segundo a configuração: usa o valor explícito do período
+  // e, para períodos por hora (1h a 5h, ou 12h sem valor configurado), calcula
+  // proporcionalmente ao valor/hora da configuração.
+  const valorDoPeriodo = (config, period) => {
+    const chave = String(period || '').trim().toLowerCase();
+
+    const valoresFixos = {
+      '6h': config.valor_6h,
+      '12h': config.valor_12h,
+      'mais tarde': config.valor_12h,
+      retaguarda: config.valor_retaguarda,
+      coordenador: config.valor_coordenador,
+      professor: config.valor_professor,
+    };
+
+    if (valoresFixos[chave] > 0) return valoresFixos[chave];
+
+    const horas = parseInt(chave, 10);
+    if (!horas) return 0;
+
+    const valorHora = (config.valor_12h || 0) / 12 || (config.valor_6h || 0) / 6;
+    return valorHora * horas;
+  };
+
   const calculateBaseValue = (shift) => {
     const doctorId = resolverDoctorId(doctors, shift);
     const hospitalId = encontrarHospital(hospitals, shift.hospital)?.id;
-    const period = shift.period;
 
     let config = configValores.find(c => c.doctor_id === doctorId && c.hospital_id === hospitalId);
     if (!config) {
@@ -69,15 +92,7 @@ export default function Finance() {
 
     if (!config) return 0;
 
-    switch (period) {
-      case '6h': return config.valor_6h || 0;
-      case '12h':
-      case 'mais tarde': return config.valor_12h || 0;
-      case 'retaguarda': return config.valor_retaguarda || 0;
-      case 'coordenador': return config.valor_coordenador || 0;
-      case 'professor': return config.valor_professor || 0;
-      default: return 0;
-    }
+    return valorDoPeriodo(config, shift.period);
   };
 
   const calculatePercentageDiscounts = (doctorId, hospitalId, baseValue) => {
