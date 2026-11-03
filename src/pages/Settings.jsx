@@ -29,8 +29,7 @@ export default function Settings() {
   const { data: doctors = [] } = useQuery({
     queryKey: ['doctors', user?.email],
     queryFn: async () => {
-      const all = await base44.entities.Doctor.list('full_name');
-      return all.filter(d => d.created_by === user?.email);
+      return base44.entities.Doctor.list('full_name');
     },
     enabled: !!user,
   });
@@ -38,8 +37,7 @@ export default function Settings() {
   const { data: hospitals = [] } = useQuery({
     queryKey: ['hospitals', user?.email],
     queryFn: async () => {
-      const all = await base44.entities.Hospital.list('name');
-      return all.filter(h => h.created_by === user?.email);
+      return base44.entities.Hospital.list('name');
     },
     enabled: !!user,
   });

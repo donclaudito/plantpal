@@ -11,10 +11,15 @@ export const normalizarNome = (valor) =>
     .trim()
     .toUpperCase();
 
+export const normalizarHospital = (valor) => {
+  const nome = normalizarNome(valor);
+  return nome === 'AMBULATORIO CONV' ? 'AMBULATORIO CONVENIO' : nome;
+};
+
 export const encontrarHospital = (hospitals, nomeHospital) => {
-  const alvo = normalizarNome(nomeHospital);
+  const alvo = normalizarHospital(nomeHospital);
   if (!alvo) return null;
-  return hospitals.find((h) => normalizarNome(h.name) === alvo) || null;
+  return hospitals.find((h) => normalizarHospital(h.name) === alvo) || null;
 };
 
 export const resolverDoctorId = (doctors, shift) => {
@@ -46,11 +51,11 @@ export const opcoesMedicos = (doctors, shifts) => {
 export const opcoesHospitais = (hospitals, shifts) => {
   const mapa = new Map();
   hospitals.forEach((h) => {
-    const chave = normalizarNome(h.name);
+    const chave = normalizarHospital(h.name);
     if (chave) mapa.set(chave, h.name);
   });
   shifts.forEach((s) => {
-    const chave = normalizarNome(s.hospital);
+    const chave = normalizarHospital(s.hospital);
     if (chave && !mapa.has(chave)) mapa.set(chave, s.hospital);
   });
   return ordenarOpcoes(mapa);
