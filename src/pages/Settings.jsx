@@ -378,16 +378,23 @@ function ValorForm({ doctors, hospitals, initialData, onSave, onCancel }) {
   const [formData, setFormData] = useState(initialData || {
     doctor_id: '',
     hospital_id: '',
-    valor_6h: 0,
-    valor_12h: 0,
-    valor_retaguarda: 0,
-    valor_coordenador: 0,
-    valor_professor: 0,
+    valor_6h: '',
+    valor_12h: '',
+    valor_retaguarda: '',
+    valor_coordenador: '',
+    valor_professor: '',
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(formData);
+    onSave({
+      ...formData,
+      valor_6h: Number(formData.valor_6h) || 0,
+      valor_12h: Number(formData.valor_12h) || 0,
+      valor_retaguarda: Number(formData.valor_retaguarda) || 0,
+      valor_coordenador: Number(formData.valor_coordenador) || 0,
+      valor_professor: Number(formData.valor_professor) || 0,
+    });
   };
 
   return (
@@ -421,23 +428,23 @@ function ValorForm({ doctors, hospitals, initialData, onSave, onCancel }) {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div>
           <Label>Valor 6h</Label>
-          <Input type="number" step="0.01" value={formData.valor_6h} onChange={(e) => setFormData({ ...formData, valor_6h: parseFloat(e.target.value) || 0 })} />
+          <Input type="number" step="0.01" placeholder="0,00" value={formData.valor_6h || ''} onChange={(e) => setFormData({ ...formData, valor_6h: e.target.value === '' ? '' : Number(e.target.value) })} />
         </div>
         <div>
           <Label>Valor 12h</Label>
-          <Input type="number" step="0.01" value={formData.valor_12h} onChange={(e) => setFormData({ ...formData, valor_12h: parseFloat(e.target.value) || 0 })} />
+          <Input type="number" step="0.01" placeholder="0,00" value={formData.valor_12h || ''} onChange={(e) => setFormData({ ...formData, valor_12h: e.target.value === '' ? '' : Number(e.target.value) })} />
         </div>
         <div>
           <Label>Valor Retaguarda</Label>
-          <Input type="number" step="0.01" value={formData.valor_retaguarda} onChange={(e) => setFormData({ ...formData, valor_retaguarda: parseFloat(e.target.value) || 0 })} />
+          <Input type="number" step="0.01" placeholder="0,00" value={formData.valor_retaguarda || ''} onChange={(e) => setFormData({ ...formData, valor_retaguarda: e.target.value === '' ? '' : Number(e.target.value) })} />
         </div>
         <div>
           <Label>Valor Coordenador</Label>
-          <Input type="number" step="0.01" value={formData.valor_coordenador} onChange={(e) => setFormData({ ...formData, valor_coordenador: parseFloat(e.target.value) || 0 })} />
+          <Input type="number" step="0.01" placeholder="0,00" value={formData.valor_coordenador || ''} onChange={(e) => setFormData({ ...formData, valor_coordenador: e.target.value === '' ? '' : Number(e.target.value) })} />
         </div>
         <div>
           <Label>Valor Professor</Label>
-          <Input type="number" step="0.01" value={formData.valor_professor} onChange={(e) => setFormData({ ...formData, valor_professor: parseFloat(e.target.value) || 0 })} />
+          <Input type="number" step="0.01" placeholder="0,00" value={formData.valor_professor || ''} onChange={(e) => setFormData({ ...formData, valor_professor: e.target.value === '' ? '' : Number(e.target.value) })} />
         </div>
       </div>
       <div className="flex gap-2">
