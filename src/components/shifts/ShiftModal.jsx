@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { encontrarHospital, resolverDoctorId } from '@/lib/shiftFilters';
 import useShiftQuote from '@/lib/useShiftQuote';
 import EspecialidadeSelect from '@/components/EspecialidadeSelect';
 
@@ -26,23 +26,19 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
   const [saveError, setSaveError] = useState('');
   const { data: quote, isFetching: isLoadingQuote, error: quoteError } = useShiftQuote(formData.doctorId, formData.unit, formData.period, isOpen);
 
-  useEffect(() => {
-    if (!isOpen || !quote) return;
-    const unchanged = editingShift && editingShift.doctor_id === formData.doctorId && editingShift.hospital === formData.unit && (editingShift.period || '12h') === formData.period;
-    setFormData(prev => ({ ...prev, value: quote.configured ? quote.value : unchanged ? Number(editingShift.value) || 0 : 0 }));
-  }, [quote, isOpen, editingShift, formData.doctorId, formData.unit, formData.period]);
+  const shiftValue = quote?.configured ? quote.value : Number(formData.value) || 0;
 
   useEffect(() => {
     if (isOpen) { // Adicionado: Só inicializa/reseta quando o modal abre
       setSaveError('');
       if (editingShift) {
-        const doctor = doctors.find(d => d.full_name === editingShift.doctor_name);
+        const doctorId = resolverDoctorId(doctors, editingShift);
         setFormData({
           date: editingShift.date,
-          doctorId: editingShift.doctor_id || (doctor?.id || ''),
+          doctorId: doctorId || '',
           doctorName: editingShift.doctor_name,
           specialty: editingShift.shift_type || 'CIRURGIA GERAL',
-          unit: editingShift.hospital,
+          unit: encontrarHospital(hospitals, editingShift.hospital)?.name || editingShift.hospital,
           type: editingShift.shift_type || 'DIURNO',
           period: editingShift.period || '12h',
           value: editingShift.value,
@@ -120,7 +116,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
       hospital: formData.unit,
       shift_type: formData.type,
       period: formData.period,
-      value: formData.value,
+      value: shiftValue,
       status: formData.paid ? 'Pago' : 'Realizado'
     });
 
@@ -302,7 +298,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
           {formData.doctorId && formData.unit && (
             <div aria-live="polite" className="rounded-xl border border-border bg-muted p-4">
               <p className="text-sm text-muted-foreground">Valor do plantão</p>
-              <p className="font-bold text-foreground">{isLoadingQuote ? 'Calculando...' : formData.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+              <p className="font-bold text-foreground">{isLoadingQuote ? 'Calculando...' : shiftValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
               {quote?.configured && !isLoadingQuote && <p className="text-xs text-muted-foreground">Bruto: {quote.baseValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} • Descontos: {quote.discountValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>}
               {quoteError && <p role="alert" className="text-sm text-destructive">Não foi possível consultar o valor. Tente selecionar o hospital novamente.</p>}
             </div>

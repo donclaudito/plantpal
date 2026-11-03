@@ -1,12 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Calendar as CalendarIcon, Filter, X, Download } from 'lucide-react';
+import { Filter, X, Download } from 'lucide-react';
 import CalendarView from '@/components/shifts/CalendarView';
 import ShiftModal from '@/components/shifts/ShiftModal';
 import ShiftDetailsModal from '@/components/shifts/ShiftDetailsModal';
 import DeleteConfirmation from '@/components/common/DeleteConfirmation';
 import Toast from '@/components/common/Toast';
+import { normalizarHospital } from '@/lib/shiftFilters';
 
 const monthNames = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -177,8 +178,8 @@ export default function Shifts() {
 
       const matchSpecialty = filterSpecialty === 'TODAS' || (s.specialty || '').toUpperCase() === filterSpecialty.toUpperCase();
 
-      const normalizedFilterHospital = filterHospital === 'TODOS' ? 'TODOS' : filterHospital.trim().toUpperCase();
-      const normalizedHospital = (s.hospital || '').trim().toUpperCase();
+      const normalizedFilterHospital = filterHospital === 'TODOS' ? 'TODOS' : normalizarHospital(filterHospital);
+      const normalizedHospital = normalizarHospital(s.hospital);
       const matchHospital = normalizedFilterHospital === 'TODOS' || normalizedHospital === normalizedFilterHospital;
 
       let matchWeek = true;

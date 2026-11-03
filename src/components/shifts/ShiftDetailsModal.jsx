@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Calendar, Clock, DollarSign, MapPin, User, Stethoscope, Check, Pencil, Trash2 } from 'lucide-react';
+import { X, Calendar, MapPin, User, Stethoscope, Check, Pencil, Trash2 } from 'lucide-react';
 import ShiftValue from '@/components/shifts/ShiftValue';
 
 export default function ShiftDetailsModal({ shift, isOpen, onClose, onEdit, onDelete, isViewer = false }) {
