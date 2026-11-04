@@ -34,13 +34,29 @@ export default async function(req) {
     }
     if (period !== 'all') query.$and.push({ period });
     const groupBy = ['doctor_name', 'hospital', 'period', ...(allMonths ? ['date'] : [])];
-    const [estimated, actual, dates] = await Promise.all([
+    const surgeryQuery = { $and: [{ tipo: 'Cirurgia' }, { tipo_pagamento: 'Convenio' }] };
+    if (!allMonths) {
+      const mm = String(month).padStart(2, '0');
+      const start = `${year}-${mm}-01`, end = `${year}-${mm}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
+      surgeryQuery.$and.push({ $or: [{ data: { $gte: start, $lte: end } }, { data: { $regex: `^[0-9]{2}/${mm}/${year}$` } }] });
+    }
+    if (doctor !== 'all') {
+      const doctorName = context.doctors.find(d => d.id === doctor)?.full_name || doctor;
+      surgeryQuery.$and.push({ doctor_name: { $in: doctorNames.items.filter(name => normalizeName(name) === normalizeName(doctorName)) } });
+    }
+    if (hospital !== 'all') {
+      const hospitalName = context.hospitals.find(h => h.id === hospital)?.name || hospital;
+      surgeryQuery.$and.push({ hospital_name: { $in: hospitalNames.items.filter(name => hospitalKey(name) === hospitalKey(hospitalName)) } });
+    }
+    const wantsSurgeries = period === 'all' || period === 'cirurgias';
+    const [estimated, actual, surgeries, dates] = await Promise.all([
       client.entities.Shift.aggregate({ query: { $and: [...query.$and, { usar_valor_informado: { $ne: true } }] }, groupBy, sum: ['value'] }),
       client.entities.Shift.aggregate({ query: { $and: [...query.$and, { usar_valor_informado: true }] }, groupBy: ['doctor_name', 'hospital', 'valor_bruto_informado', allMonths ? 'date' : 'period'], sum: ['value'] }),
+      wantsSurgeries ? client.entities.Procedimento.aggregate({ query: surgeryQuery, groupBy: ['doctor_name', 'hospital_name', ...(allMonths ? ['data'] : [])] }) : { rows: [], truncated: false },
       readDistinct(client.entities.Shift, 'date')
     ]);
-    if (estimated.truncated || actual.truncated) return Response.json({ error: 'Selecione um médico ou hospital para reduzir o relatório.' }, { status: 400 });
-    const summary = summarizeShifts(context, [...estimated.rows, ...actual.rows.map(row => ({ ...row, period: row.period || 'consultas', usar_valor_informado: true }))], allMonths);
+    if (estimated.truncated || actual.truncated || surgeries.truncated) return Response.json({ error: 'Selecione um médico ou hospital para reduzir o relatório.' }, { status: 400 });
+    const summary = summarizeShifts(context, [...estimated.rows, ...actual.rows.map(row => ({ ...row, period: row.period || 'consultas', usar_valor_informado: true }))], allMonths, surgeries.rows);
     const views = financialViews(summary);
     const availableMonths = Array.from(new Set(dates.items.map(monthKeyOfDate).filter(Boolean))).sort().reverse();
     return Response.json({ summary, ...views, availableMonths, doctorOptions: options(context.doctors, doctorNames.items, 'full_name', normalizeName), hospitalOptions: options(context.hospitals, hospitalNames.items, 'name', hospitalKey) });

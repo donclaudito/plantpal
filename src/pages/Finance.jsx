@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
+const PERIOD_LABELS = { consultas: 'Período de consultas', cirurgias: 'Cirurgias do convênio' };
+
 export default function Finance() {
   const [filterDoctor, setFilterDoctor] = useState('all');
   const [filterHospital, setFilterHospital] = useState('all');
@@ -39,7 +41,7 @@ export default function Finance() {
     const rows = financialSummary.map(item => [
       item.doctorName,
       item.hospitalName,
-      item.period === 'consultas' ? 'Período de consultas' : item.period,
+      PERIOD_LABELS[item.period] || item.period,
       item.quantity,
       `R$ ${item.grossValue.toFixed(2)}`,
       `R$ ${item.discountValue.toFixed(2)}`,
@@ -198,6 +200,7 @@ export default function Finance() {
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="consultas">Período de consultas</SelectItem>
+                <SelectItem value="cirurgias">Cirurgias do convênio</SelectItem>
                 {['1h', '2h', '3h', '4h', '5h'].map(period => <SelectItem key={period} value={period}>{period}</SelectItem>)}
                 <SelectItem value="12h">12h</SelectItem>
                 <SelectItem value="6h">6h</SelectItem>
@@ -229,7 +232,7 @@ export default function Finance() {
                 <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
                   <td className="px-6 py-4 text-sm font-bold text-slate-900 dark:text-white">{item.doctorName}</td>
                   <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{item.hospitalName}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{item.period === 'consultas' ? 'Período de consultas' : item.period}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{PERIOD_LABELS[item.period] || item.period}</td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-slate-900 dark:text-white">{item.quantity}</td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-green-600 dark:text-green-400">R$ {item.grossValue.toFixed(2)}</td>
                   <td className="px-6 py-4 text-sm">

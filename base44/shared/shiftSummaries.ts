@@ -1,4 +1,4 @@
-import { quoteShift, appliesTo, hospitalKey, normalizeName, money } from './shiftPricing.ts';
+import { quoteShift, quoteSurgeries, appliesTo, hospitalKey, normalizeName, money } from './shiftPricing.ts';
 
 export function monthKeyOfDate(date) {
   const value = String(date || '');
@@ -7,9 +7,25 @@ export function monthKeyOfDate(date) {
   return parts.length === 3 ? `${parts[2]}-${parts[1]}` : '';
 }
 
-export function summarizeShifts(context, rows, allMonths) {
+export function summarizeShifts(context, rows, allMonths, surgeryRows = []) {
   const grouped = new Map();
   const fixedApplied = new Set();
+  for (const row of surgeryRows) {
+    const quote = quoteSurgeries(context, { doctor_name: row.doctor_name, hospital: row.hospital_name });
+    if (!quote) continue;
+    const monthKey = allMonths ? monthKeyOfDate(row.data) : '';
+    const key = JSON.stringify([quote.doctorId || normalizeName(row.doctor_name), quote.hospitalId || hospitalKey(row.hospital_name), 'cirurgias', monthKey]);
+    if (!grouped.has(key)) grouped.set(key, { doctorId: quote.doctorId, hospitalId: quote.hospitalId, doctorName: quote.doctorName, hospitalName: quote.hospitalName, period: 'cirurgias', monthKey, quantity: 0, grossValue: 0, discountValue: 0, netValue: 0, discountDetails: [] });
+    const item = grouped.get(key);
+    item.quantity += row.count;
+    item.grossValue += money(quote.baseValue * row.count);
+    item.discountValue += money(quote.discountValue * row.count);
+    for (const detail of quote.details) {
+      const existing = item.discountDetails.find(d => d.descricao === detail.descricao && d.tipo === detail.tipo && d.valor_config === detail.valor_config);
+      if (existing) existing.valor_calculado = money(existing.valor_calculado + detail.valor_calculado * row.count);
+      else item.discountDetails.push({ ...detail, valor_calculado: money(detail.valor_calculado * row.count) });
+    }
+  }
   for (const row of rows) {
     const quote = quoteShift(context, { ...row, value: 0 });
     const multiplier = row.count;

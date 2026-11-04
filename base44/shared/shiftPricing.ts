@@ -47,6 +47,18 @@ export function periodValue(config, period) {
   const field = { '6h': 'valor_6h', '12h': 'valor_12h', 'mais tarde': 'valor_12h', retaguarda: 'valor_retaguarda', coordenador: 'valor_coordenador', professor: 'valor_professor' }[String(period || '12h').trim().toLowerCase()];
   return field ? money(config[field]) : 0;
 }
+export function quoteSurgeries(context, row) {
+  const parties = resolveParties(context, row);
+  const rank = c => (c.doctor_id ? 2 : 0) + (c.hospital_id ? 1 : 0);
+  const rate = context.rates
+    .filter(c => c.tipo_calculo === 'por_cirurgia' && appliesTo(c, parties.doctorId, parties.hospitalId))
+    .sort((a, b) => rank(b) - rank(a) || String(b.updated_date).localeCompare(String(a.updated_date)))[0];
+  if (!rate) return null;
+  const baseValue = money(rate.valor_cirurgia);
+  const details = context.discounts.filter(d => d.tipo_desconto === 'percentual' && appliesTo(d, parties.doctorId, parties.hospitalId)).map(d => ({ descricao: d.descricao, tipo: d.tipo_desconto, valor_config: d.valor_desconto, valor_calculado: money(baseValue * d.valor_desconto / 100) }));
+  const discountValue = money(details.reduce((total, d) => total + d.valor_calculado, 0));
+  return { ...parties, configurationId: rate.id, baseValue, discountValue, value: money(Math.max(0, baseValue - discountValue)), details };
+}
 export function quoteShift(context, shift) {
   const parties = resolveParties(context, shift);
   const candidates = context.rates.filter(c => appliesTo(c, parties.doctorId, parties.hospitalId)).sort((a, b) => {
