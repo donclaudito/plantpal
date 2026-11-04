@@ -11,9 +11,15 @@ export const normalizarNome = (valor) =>
     .trim()
     .toUpperCase();
 
+const HOSPITAL_ALIASES = {
+  AMBULATORIO: 'AMBULATORIO CONVENIO',
+  'AMBULATORIO CONV': 'AMBULATORIO CONVENIO',
+  'AMBULATORIO CONVENIO': 'AMBULATORIO CONVENIO',
+};
+
 export const normalizarHospital = (valor) => {
   const nome = normalizarNome(valor);
-  return nome === 'AMBULATORIO CONV' ? 'AMBULATORIO CONVENIO' : nome;
+  return HOSPITAL_ALIASES[nome] || nome;
 };
 
 export const encontrarHospital = (hospitals, nomeHospital) => {

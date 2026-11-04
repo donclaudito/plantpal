@@ -1,7 +1,12 @@
 export const normalizeName = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
+const HOSPITAL_ALIASES = {
+  'AMBULATORIO': 'AMBULATORIO CONVENIO',
+  'AMBULATORIO CONV': 'AMBULATORIO CONVENIO',
+  'AMBULATORIO CONVENIO': 'AMBULATORIO CONVENIO',
+};
 export const hospitalKey = (value) => {
   const name = normalizeName(value);
-  return name === 'AMBULATORIO CONV' ? 'AMBULATORIO CONVENIO' : name;
+  return HOSPITAL_ALIASES[name] || name;
 };
 export const money = (value) => Math.round((Number(value) || 0) * 100) / 100;
 export async function readPages(entity, query = {}, sort = '-updated_date') {
