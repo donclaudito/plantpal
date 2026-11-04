@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
-import { loadPricing, hospitalKey, normalizeName } from '../../shared/shiftPricing.ts';
+import { loadPricing, readDistinct, hospitalKey, normalizeName } from '../../shared/shiftPricing.ts';
 import { summarizeShifts, financialViews, monthKeyOfDate } from '../../shared/shiftSummaries.ts';
 
 export default async function(req) {
@@ -11,7 +11,7 @@ export default async function(req) {
     const { year, month, doctor = 'all', hospital = 'all', period = 'all', allMonths = false } = await req.json().catch(() => ({}));
     if (typeof allMonths !== 'boolean' || (!allMonths && (!Number.isInteger(year) || year < 2000 || year > 2100 || !Number.isInteger(month) || month < 1 || month > 12)) || [doctor, hospital, period].some(v => typeof v !== 'string' || v.length > 200)) return Response.json({ error: 'Filtros inválidos.' }, { status: 400 });
     const [context, hospitalNames, doctorNames] = await Promise.all([
-      loadPricing(client), client.entities.Shift.list({ distinct: 'hospital' }), client.entities.Shift.list({ distinct: 'doctor_name' })
+      loadPricing(client), readDistinct(client.entities.Shift, 'hospital'), readDistinct(client.entities.Shift, 'doctor_name')
     ]);
     const options = (records, names, field, normalize) => {
       const map = new Map(records.map(r => [normalize(r[field]), r[field]]));
@@ -33,12 +33,14 @@ export default async function(req) {
       query.$and.push({ hospital: { $in: hospitalNames.items.filter(name => hospitalKey(name) === hospitalKey(hospitalName)) } });
     }
     if (period !== 'all') query.$and.push({ period });
-    const [aggregate, dates] = await Promise.all([
-      client.entities.Shift.aggregate({ query: query.$and.length ? query : {}, groupBy: ['doctor_id', 'doctor_name', 'hospital', 'period', 'usar_valor_informado', 'valor_bruto_informado', ...(allMonths ? ['date'] : [])], sum: ['value'] }),
-      client.entities.Shift.list({ distinct: 'date' })
+    const groupBy = ['doctor_name', 'hospital', 'period', ...(allMonths ? ['date'] : [])];
+    const [estimated, actual, dates] = await Promise.all([
+      client.entities.Shift.aggregate({ query: { $and: [...query.$and, { usar_valor_informado: { $ne: true } }] }, groupBy, sum: ['value'] }),
+      client.entities.Shift.aggregate({ query: { $and: [...query.$and, { usar_valor_informado: true }] }, groupBy: ['doctor_name', 'hospital', 'valor_bruto_informado', allMonths ? 'date' : 'period'], sum: ['value'] }),
+      readDistinct(client.entities.Shift, 'date')
     ]);
-    if (aggregate.truncated) return Response.json({ error: 'Selecione um médico ou hospital para reduzir o relatório.' }, { status: 400 });
-    const summary = summarizeShifts(context, aggregate.rows, allMonths);
+    if (estimated.truncated || actual.truncated) return Response.json({ error: 'Selecione um médico ou hospital para reduzir o relatório.' }, { status: 400 });
+    const summary = summarizeShifts(context, [...estimated.rows, ...actual.rows.map(row => ({ ...row, period: row.period || 'consultas', usar_valor_informado: true }))], allMonths);
     const views = financialViews(summary);
     const availableMonths = Array.from(new Set(dates.items.map(monthKeyOfDate).filter(Boolean))).sort().reverse();
     return Response.json({ summary, ...views, availableMonths, doctorOptions: options(context.doctors, doctorNames.items, 'full_name', normalizeName), hospitalOptions: options(context.hospitals, hospitalNames.items, 'name', hospitalKey) });

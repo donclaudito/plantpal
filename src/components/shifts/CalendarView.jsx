@@ -158,7 +158,7 @@ export default function CalendarView({
                           </div>
                           <div className="flex items-center justify-between mt-1">
                             <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400">
-                              {shift.shift_type} • {shift.period || '12h'}
+                              {shift.shift_type} • {shift.period === 'consultas' ? 'Consultas' : shift.period || '12h'}
                             </span>
                             {shift.status === 'Pago' && (
                               <Check size={10} className="text-green-600 dark:text-green-400" />

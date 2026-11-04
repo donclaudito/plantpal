@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
-import { loadPricing, quoteShift, resolveParties, hospitalKey, normalizeName, money } from '../../shared/shiftPricing.ts';
+import { loadPricing, readDistinct, quoteShift, resolveParties, hospitalKey, normalizeName, money } from '../../shared/shiftPricing.ts';
 
 export default async function(req) {
   try {
@@ -16,12 +16,12 @@ export default async function(req) {
     if (config.hospital_id) {
       const hospital = context.hospitals.find(h => h.id === config.hospital_id);
       if (!hospital) return Response.json({ error: 'Hospital da configuração não encontrado.' }, { status: 400 });
-      const { items: names } = await client.entities.Shift.list({ distinct: 'hospital' });
+      const { items: names } = await readDistinct(client.entities.Shift, 'hospital');
       query.hospital = { $in: names.filter(name => hospitalKey(name) === hospitalKey(hospital.name)) };
     }
     if (config.doctor_id) {
       const doctor = context.doctors.find(d => d.id === config.doctor_id);
-      const { items: names } = await client.entities.Shift.list({ distinct: 'doctor_name' });
+      const { items: names } = await readDistinct(client.entities.Shift, 'doctor_name');
       query.$or = [{ doctor_id: config.doctor_id }, { doctor_name: { $in: names.filter(name => doctor && normalizeName(name) === normalizeName(doctor.full_name)) } }];
     }
     let cursor;

@@ -85,9 +85,9 @@ export default function Deposits() {
       mes_competencia: deposit.mesCompetencia || deposit.mes_competencia,
       mes_deposito: deposit.mesDeposito || deposit.mes_deposito,
       num_plantoes: deposit.numPlantoes || deposit.num_plantoes,
-      valor_bruto: deposit.valorBruto || deposit.valor_bruto,
-      valor_descontos: deposit.valorDescontos || deposit.valor_descontos,
-      valor_liquido: deposit.valorLiquido || deposit.valor_liquido,
+      valor_bruto: deposit.valorBruto ?? deposit.valor_bruto,
+      valor_descontos: deposit.valorDescontos ?? deposit.valor_descontos,
+      valor_liquido: deposit.valorLiquido ?? deposit.valor_liquido,
       descontos_detalhados: deposit.descontosDetalhados || deposit.descontos_detalhados,
       comprovante_pix: file_url,
       status: 'Pago',
@@ -122,7 +122,7 @@ export default function Deposits() {
     doc.text('RESUMO FINANCEIRO', 20, 110);
     doc.setFontSize(11);
     doc.text(`Número de Plantões: ${deposit.numPlantoes || deposit.num_plantoes}`, 20, 120);
-    doc.text(`Valor Bruto: R$ ${((deposit.valorBruto || deposit.valor_bruto) || 0).toFixed(2)}`, 20, 130);
+    doc.text(`Valor Bruto: R$ ${((deposit.valorBruto ?? deposit.valor_bruto) || 0).toFixed(2)}`, 20, 130);
 
     let yPos = 150;
     doc.setFontSize(14);
@@ -142,11 +142,11 @@ export default function Deposits() {
     }
 
     yPos += 10;
-    doc.text(`Total de Descontos: R$ ${((deposit.valorDescontos || deposit.valor_descontos) || 0).toFixed(2)}`, 20, yPos);
+    doc.text(`Total de Descontos: R$ ${((deposit.valorDescontos ?? deposit.valor_descontos) || 0).toFixed(2)}`, 20, yPos);
 
     yPos += 20;
     doc.setFontSize(16);
-    doc.text(`VALOR LÍQUIDO A PAGAR: R$ ${((deposit.valorLiquido || deposit.valor_liquido) || 0).toFixed(2)}`, 20, yPos);
+    doc.text(`VALOR LÍQUIDO A PAGAR: R$ ${((deposit.valorLiquido ?? deposit.valor_liquido) || 0).toFixed(2)}`, 20, yPos);
 
     const pdfOutput = doc.output('datauristring');
     setHoleritePdfUrl(pdfOutput);
@@ -182,13 +182,13 @@ export default function Deposits() {
 
 💼 *RESUMO FINANCEIRO:*
   • Número de Plantões: ${selectedDeposit.numPlantoes || selectedDeposit.num_plantoes}
-  • Valor Bruto: R$ ${((selectedDeposit.valorBruto || selectedDeposit.valor_bruto) || 0).toFixed(2)}${descontosText}
+  • Valor Bruto: R$ ${((selectedDeposit.valorBruto ?? selectedDeposit.valor_bruto) || 0).toFixed(2)}${descontosText}
 
 ━━━━━━━━━━━━━━━━━━━━━━
 
-📊 *Total de Descontos:* R$ ${((selectedDeposit.valorDescontos || selectedDeposit.valor_descontos) || 0).toFixed(2)}
+📊 *Total de Descontos:* R$ ${((selectedDeposit.valorDescontos ?? selectedDeposit.valor_descontos) || 0).toFixed(2)}
 
-💰 *VALOR LÍQUIDO A PAGAR:* R$ ${((selectedDeposit.valorLiquido || selectedDeposit.valor_liquido) || 0).toFixed(2)}${dataPagamento}
+💰 *VALOR LÍQUIDO A PAGAR:* R$ ${((selectedDeposit.valorLiquido ?? selectedDeposit.valor_liquido) || 0).toFixed(2)}${dataPagamento}
 
 ━━━━━━━━━━━━━━━━━━━━━━
 
@@ -329,7 +329,7 @@ Qualquer dúvida, estamos à disposição! 🙂`;
                   <td className="px-6 py-4 text-sm text-slate-600">{formatMonth(deposit.mesCompetencia || deposit.mes_competencia)}</td>
                   <td className="px-6 py-4 text-sm text-slate-600">{formatMonth(deposit.mesDeposito || deposit.mes_deposito)}</td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-slate-900">{deposit.numPlantoes || deposit.num_plantoes}</td>
-                  <td className="px-6 py-4 text-sm text-right font-bold text-blue-600">R$ {((deposit.valorLiquido || deposit.valor_liquido) || 0).toFixed(2)}</td>
+                  <td className="px-6 py-4 text-sm text-right font-bold text-blue-600">R$ {((deposit.valorLiquido ?? deposit.valor_liquido) || 0).toFixed(2)}</td>
                   <td className="px-6 py-4 text-center">
                     {deposit.status === 'Pago' ? (
                       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">

@@ -19,6 +19,16 @@ export async function readPages(entity, query = {}, sort = '-updated_date') {
   } while (cursor);
   return records;
 }
+export async function readDistinct(entity, field) {
+  const items = [];
+  let cursor;
+  do {
+    const page = await entity.list({ distinct: field, limit: 200, cursor });
+    items.push(...page.items);
+    cursor = page.has_more ? page.next_cursor : null;
+  } while (cursor);
+  return { items };
+}
 export async function loadPricing(client) {
   const [rates, discounts, doctors, hospitals] = await Promise.all([
     readPages(client.entities.ConfiguracaoPlantao), readPages(client.entities.ConfiguracaoDesconto),

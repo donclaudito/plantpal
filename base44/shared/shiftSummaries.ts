@@ -12,18 +12,19 @@ export function summarizeShifts(context, rows, allMonths) {
   const fixedApplied = new Set();
   for (const row of rows) {
     const quote = quoteShift(context, { ...row, value: 0 });
+    const multiplier = row.count;
     const period = quote.billingMode === 'por_periodo' ? 'consultas' : row.period || '12h';
     const monthKey = allMonths ? monthKeyOfDate(row.date) : '';
     const key = JSON.stringify([quote.doctorId || normalizeName(row.doctor_name), quote.hospitalId || hospitalKey(row.hospital), period, monthKey]);
     if (!grouped.has(key)) grouped.set(key, { doctorId: quote.doctorId, hospitalId: quote.hospitalId, doctorName: quote.doctorName, hospitalName: quote.hospitalName, period, monthKey, quantity: 0, grossValue: 0, discountValue: 0, netValue: 0, discountDetails: [] });
     const item = grouped.get(key);
     item.quantity += row.count;
-    item.grossValue += quote.configured || quote.manual ? money(quote.baseValue * row.count) : money(row.sum_value);
-    item.discountValue += money(quote.discountValue * row.count);
+    item.grossValue += quote.configured || quote.manual ? money(quote.baseValue * multiplier) : money(row.sum_value);
+    item.discountValue += money(quote.discountValue * multiplier);
     for (const detail of quote.details) {
       const existing = item.discountDetails.find(d => d.descricao === detail.descricao && d.tipo === detail.tipo && d.valor_config === detail.valor_config);
-      if (existing) existing.valor_calculado = money(existing.valor_calculado + detail.valor_calculado * row.count);
-      else item.discountDetails.push({ ...detail, valor_calculado: money(detail.valor_calculado * row.count) });
+      if (existing) existing.valor_calculado = money(existing.valor_calculado + detail.valor_calculado * multiplier);
+      else item.discountDetails.push({ ...detail, valor_calculado: money(detail.valor_calculado * multiplier) });
     }
   }
   const summary = Array.from(grouped.values());
