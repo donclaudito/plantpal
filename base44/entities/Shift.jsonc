@@ -28,22 +28,63 @@
         "Noturno",
         "24h"
       ],
+      "enumColors": [
+        "blue",
+        "purple",
+        "yellow",
+        "gray",
+        "pink"
+      ],
       "description": "Tipo de plant\u00e3o"
     },
     "period": {
       "type": "string",
       "enum": [
-        "12h",
+        "consultas",
+        "1h",
+        "2h",
+        "3h",
+        "4h",
+        "5h",
         "6h",
+        "12h",
+        "24h",
         "retaguarda",
-        "mais tarde"
+        "mais tarde",
+        "coordenador",
+        "professor"
+      ],
+      "enumColors": [
+        "green",
+        "blue",
+        "blue",
+        "blue",
+        "blue",
+        "blue",
+        "blue",
+        "purple",
+        "pink",
+        "gray",
+        "yellow",
+        "yellow",
+        "yellow"
       ],
       "default": "12h",
-      "description": "Per\u00edodo do plant\u00e3o"
+      "description": "Identifica\u00e7\u00e3o do per\u00edodo, nunca usada para calcular valor por hora"
     },
     "value": {
       "type": "number",
-      "description": "Valor do plant\u00e3o"
+      "description": "Valor l\u00edquido do plant\u00e3o ap\u00f3s descontos percentuais"
+    },
+    "usar_valor_informado": {
+      "type": "boolean",
+      "default": false,
+      "description": "Usa o valor real informado em vez da estimativa configurada"
+    },
+    "valor_bruto_informado": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Valor bruto real deste per\u00edodo de consultas, sem rela\u00e7\u00e3o com a dura\u00e7\u00e3o"
     },
     "status": {
       "type": "string",
@@ -51,6 +92,11 @@
         "Realizado",
         "Cancelado",
         "Pago"
+      ],
+      "enumColors": [
+        "blue",
+        "red",
+        "green"
       ],
       "default": "Realizado",
       "description": "Status do plant\u00e3o"

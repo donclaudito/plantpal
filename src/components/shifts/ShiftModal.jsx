@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { encontrarHospital, resolverDoctorId } from '@/lib/shiftFilters';
 import useShiftQuote from '@/lib/useShiftQuote';
 import EspecialidadeSelect from '@/components/EspecialidadeSelect';
+import ConsultationValueFields from '@/components/shifts/ConsultationValueFields';
 
 const shiftTypes = ["DIURNO MANHÃ", "DIURNO TARDE", "DIURNO", "NOTURNO", "24H", "PARCIAL", "ESPECIAL(DAS10 AS 22)"];
 
@@ -24,13 +25,16 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
-  const { data: quote, isFetching: isLoadingQuote, error: quoteError } = useShiftQuote(formData.doctorId, formData.unit, formData.period, isOpen);
-
-  const shiftValue = quote?.configured ? quote.value : Number(formData.value) || 0;
+  const [actualValue, setActualValue] = useState('');
+  const grossValue = actualValue === '' ? null : Number(actualValue);
+  const { data: quote, isFetching: isLoadingQuote, error: quoteError } = useShiftQuote(formData.doctorId, formData.unit, formData.period, isOpen, grossValue);
+  const byConsultations = quote?.billingMode === 'por_periodo';
+  const shiftValue = quote?.configured || quote?.manual ? quote.value : Number(formData.value) || 0;
 
   useEffect(() => {
     if (isOpen) { // Adicionado: Só inicializa/reseta quando o modal abre
       setSaveError('');
+      setActualValue(editingShift?.usar_valor_informado ? String(editingShift.valor_bruto_informado) : '');
       if (editingShift) {
         const doctorId = resolverDoctorId(doctors, editingShift);
         setFormData({
@@ -64,6 +68,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
   }, [isOpen, initialDate, editingShift, doctors]); // Adicionado 'isOpen' aqui
 
   const handleDoctorChange = (e) => {
+    setActualValue('');
     const doctorId = e.target.value;
     const doctor = doctors.find(d => d.id === doctorId);
     if (doctor) {
@@ -78,11 +83,13 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
   };
 
   const handleHospitalChange = (e) => {
+    setActualValue('');
     const hospitalName = e.target.value;
     setFormData({ ...formData, unit: hospitalName, value: 0 });
   };
 
   const handlePeriodChange = (e) => {
+    setActualValue('');
     const period = e.target.value;
     setFormData({ ...formData, period, value: 0 });
   };
@@ -115,7 +122,9 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
       doctor_name: formData.doctorName,
       hospital: formData.unit,
       shift_type: formData.type,
-      period: formData.period,
+      period: byConsultations ? 'consultas' : formData.period,
+      usar_valor_informado: grossValue !== null,
+      valor_bruto_informado: grossValue ?? 0,
       value: shiftValue,
       status: formData.paid ? 'Pago' : 'Realizado'
     });
@@ -229,10 +238,12 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
                 Período
               </label>
               <select
-                value={formData.period || '12h'}
+                value={byConsultations ? 'consultas' : formData.period || '12h'}
+                disabled={byConsultations}
                 onChange={handlePeriodChange}
                 className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-700 border-2 border-transparent focus:border-blue-600 dark:focus:border-blue-400 rounded-xl font-bold text-slate-900 dark:text-white transition-colors"
               >
+                {byConsultations && <option value="consultas">Período de consultas (sem duração)</option>}
                 <option value="1h">1h</option>
                 <option value="2h">2h</option>
                 <option value="3h">3h</option>
@@ -295,9 +306,10 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
             </div>
           )}
 
+          {byConsultations && <ConsultationValueFields quote={quote} actualValue={actualValue} onChange={setActualValue} />}
           {formData.doctorId && formData.unit && (
             <div aria-live="polite" className="rounded-xl border border-border bg-muted p-4">
-              <p className="text-sm text-muted-foreground">Valor do plantão</p>
+              <p className="text-sm text-muted-foreground">{byConsultations ? grossValue === null ? 'Estimativa líquida por período' : 'Valor real líquido do período' : 'Valor do plantão'}</p>
               <p className="font-bold text-foreground">{isLoadingQuote ? 'Calculando...' : shiftValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
               {quote?.configured && !isLoadingQuote && <p className="text-xs text-muted-foreground">Bruto: {quote.baseValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} • Descontos: {quote.discountValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>}
               {quoteError && <p role="alert" className="text-sm text-destructive">Não foi possível consultar o valor. Tente selecionar o hospital novamente.</p>}

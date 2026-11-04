@@ -30,10 +30,12 @@ export default async function(req) {
       const page = await client.entities.Shift.filter(query, { sort: 'created_date', limit: 200, cursor });
       const changes = [];
       for (const shift of page.items) {
+        if (shift.usar_valor_informado === true) continue;
         const parties = resolveParties(context, shift);
         if ((config.doctor_id && parties.doctorId !== config.doctor_id) || (config.hospital_id && parties.hospitalId !== config.hospital_id)) continue;
         const quote = quoteShift(context, shift);
-        if (quote.configured && money(shift.value) !== quote.value) changes.push({ id: shift.id, value: quote.value });
+        const period = quote.billingMode === 'por_periodo' ? 'consultas' : shift.period;
+        if (quote.configured && (money(shift.value) !== quote.value || period !== shift.period)) changes.push({ id: shift.id, value: quote.value, period });
       }
       if (changes.length) {
         await client.entities.Shift.bulkUpdate(changes);
@@ -41,7 +43,7 @@ export default async function(req) {
       }
       cursor = page.has_more ? page.next_cursor : null;
     } while (cursor);
-    return Response.json({ updated, message: 'Valores sincronizados. Plantões pagos foram preservados.' });
+    return Response.json({ updated, message: 'Valores por período sincronizados. Plantões pagos e valores reais informados foram preservados.' });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -15,9 +15,12 @@ export default function Relatorios() {
     queryFn: () => base44.auth.me(),
   });
 
-  const { data: shifts = [] } = useQuery({
-    queryKey: ['shifts', user?.email],
-    queryFn: () => base44.entities.Shift.list('-date'),
+  const { data: financialData, isPending: loadingFinance, error: financeError, refetch: reloadFinance } = useQuery({
+    queryKey: ['finance', 'reports', user?.email, selectedMonth, selectedHospital, selectedDoctor],
+    queryFn: async () => {
+      const [year, month] = selectedMonth.split('-').map(Number);
+      return (await base44.functions.invoke('getShiftFinance', { year, month, doctor: selectedDoctor, hospital: selectedHospital })).data;
+    },
     enabled: !!user,
   });
 
@@ -33,257 +36,8 @@ export default function Relatorios() {
     enabled: !!user,
   });
 
-  const { data: configValores = [] } = useQuery({
-    queryKey: ['configValores', user?.email],
-    queryFn: () => base44.entities.ConfiguracaoPlantao.list(),
-    enabled: !!user,
-  });
-
-  const { data: configDescontos = [] } = useQuery({
-    queryKey: ['configDescontos', user?.email],
-    queryFn: () => base44.entities.ConfiguracaoDesconto.list(),
-    enabled: !!user,
-  });
-
-  const calculateBaseValue = (doctorId, hospitalId, period) => {
-    let config = configValores.find(c => c.doctor_id === doctorId && c.hospital_id === hospitalId);
-    if (!config) config = configValores.find(c => c.doctor_id === doctorId && !c.hospital_id);
-    if (!config) config = configValores.find(c => !c.doctor_id && c.hospital_id === hospitalId);
-    if (!config) config = configValores.find(c => !c.doctor_id && !c.hospital_id);
-
-    if (!config) return 0;
-
-    switch (period) {
-      case '6h': return config.valor_6h || 0;
-      case '12h':
-      case 'mais tarde': return config.valor_12h || 0;
-      case 'retaguarda': return config.valor_retaguarda || 0;
-      case 'coordenador': return config.valor_coordenador || 0;
-      default: return 0;
-    }
-  };
-
-  const calculatePercentageDiscounts = (doctorId, hospitalId, baseValue) => {
-    const applicableDiscounts = [];
-
-    const specific = configDescontos.filter(d => d.doctor_id === doctorId && d.hospital_id === hospitalId && d.tipo_desconto === 'percentual');
-    applicableDiscounts.push(...specific);
-
-    const byDoctor = configDescontos.filter(d => d.doctor_id === doctorId && !d.hospital_id && d.tipo_desconto === 'percentual');
-    applicableDiscounts.push(...byDoctor);
-
-    const byHospital = configDescontos.filter(d => !d.doctor_id && d.hospital_id === hospitalId && d.tipo_desconto === 'percentual');
-    applicableDiscounts.push(...byHospital);
-
-    const global = configDescontos.filter(d => !d.doctor_id && !d.hospital_id && d.tipo_desconto === 'percentual');
-    applicableDiscounts.push(...global);
-
-    let totalDiscount = 0;
-
-    applicableDiscounts.forEach(desconto => {
-      const value = baseValue * desconto.valor_desconto / 100;
-      totalDiscount += value;
-    });
-
-    return totalDiscount;
-  };
-
-  const calculateFixedDiscounts = (doctorId, hospitalId) => {
-    const applicableDiscounts = [];
-
-    const specific = configDescontos.filter(d => d.doctor_id === doctorId && d.hospital_id === hospitalId && d.tipo_desconto === 'valor_fixo');
-    applicableDiscounts.push(...specific);
-
-    const byDoctor = configDescontos.filter(d => d.doctor_id === doctorId && !d.hospital_id && d.tipo_desconto === 'valor_fixo');
-    applicableDiscounts.push(...byDoctor);
-
-    const byHospital = configDescontos.filter(d => !d.doctor_id && d.hospital_id === hospitalId && d.tipo_desconto === 'valor_fixo');
-    applicableDiscounts.push(...byHospital);
-
-    const global = configDescontos.filter(d => !d.doctor_id && !d.hospital_id && d.tipo_desconto === 'valor_fixo');
-    applicableDiscounts.push(...global);
-
-    let totalDiscount = 0;
-
-    applicableDiscounts.forEach(desconto => {
-      totalDiscount += desconto.valor_desconto;
-    });
-
-    return totalDiscount;
-  };
-
-  const reports = useMemo(() => {
-    const [year, month] = selectedMonth.split('-').map(Number);
-    const filteredShifts = shifts.filter(s => {
-      if (!s.date) return false;
-      const [sYear, sMonth] = s.date.split('-').map(Number);
-      const monthMatch = sYear === year && sMonth === month;
-      const hospitalMatch = selectedHospital === 'all' || s.hospital === selectedHospital;
-      const doctorMatch = selectedDoctor === 'all' || s.doctor_name === selectedDoctor;
-      return monthMatch && hospitalMatch && doctorMatch;
-    });
-
-    // Totais gerais - com cálculo correto
-    const fixedDiscountsApplied = new Map();
-    let totalBruto = 0;
-    let totalDescontos = 0;
-    
-    filteredShifts.forEach(shift => {
-      const hospitalData = hospitals.find(h => h.name === shift.hospital);
-      const hospitalId = hospitalData?.id;
-      const baseValue = calculateBaseValue(shift.doctor_id, hospitalId, shift.period || '12h');
-      const percentageDiscount = calculatePercentageDiscounts(shift.doctor_id, hospitalId, baseValue);
-      
-      totalBruto += baseValue;
-      totalDescontos += percentageDiscount;
-      
-      const fixedKey = `${shift.doctor_id}-${hospitalId}`;
-      if (!fixedDiscountsApplied.has(fixedKey)) {
-        const fixedDiscount = calculateFixedDiscounts(shift.doctor_id, hospitalId);
-        fixedDiscountsApplied.set(fixedKey, true);
-        totalDescontos += fixedDiscount;
-      }
-    });
-    
-    const totalLiquido = totalBruto - totalDescontos;
-    const totals = {
-      bruto: totalBruto,
-      descontos: totalDescontos,
-      liquido: totalLiquido,
-      numShifts: filteredShifts.length,
-    };
-
-    // Relatório por Hospital
-    const byHospital = {};
-    const fixedByHospital = new Map();
-    
-    filteredShifts.forEach(shift => {
-      const hospital = shift.hospital;
-      const hospitalData = hospitals.find(h => h.name === hospital);
-      const hospitalId = hospitalData?.id;
-      
-      if (!byHospital[hospital]) {
-        byHospital[hospital] = {
-          name: hospital,
-          doctors: new Set(),
-          numPlantoes: 0,
-          valorBruto: 0,
-          valorDescontos: 0,
-          valorLiquido: 0,
-        };
-      }
-      byHospital[hospital].doctors.add(shift.doctor_name);
-      byHospital[hospital].numPlantoes += 1;
-
-      const baseValue = calculateBaseValue(shift.doctor_id, hospitalId, shift.period || '12h');
-      const percentageDiscount = calculatePercentageDiscounts(shift.doctor_id, hospitalId, baseValue);
-
-      byHospital[hospital].valorBruto += baseValue;
-      byHospital[hospital].valorDescontos += percentageDiscount;
-      byHospital[hospital].valorLiquido += (baseValue - percentageDiscount);
-      
-      const fixedKey = `${shift.doctor_id}-${hospitalId}`;
-      if (!fixedByHospital.has(fixedKey)) {
-        const fixedDiscount = calculateFixedDiscounts(shift.doctor_id, hospitalId);
-        fixedByHospital.set(fixedKey, true);
-        byHospital[hospital].valorDescontos += fixedDiscount;
-        byHospital[hospital].valorLiquido -= fixedDiscount;
-      }
-    });
-
-    // Relatório por Médico
-    const byDoctor = {};
-    const fixedByDoctor = new Map();
-    
-    filteredShifts.forEach(shift => {
-      const doctor = shift.doctor_name;
-      const hospitalData = hospitals.find(h => h.name === shift.hospital);
-      const hospitalId = hospitalData?.id;
-      
-      if (!byDoctor[doctor]) {
-        byDoctor[doctor] = {
-          name: doctor,
-          hospitals: new Set(),
-          numPlantoes: 0,
-          valorBruto: 0,
-          valorDescontos: 0,
-          valorLiquido: 0,
-        };
-      }
-      byDoctor[doctor].hospitals.add(shift.hospital);
-      byDoctor[doctor].numPlantoes += 1;
-
-      const baseValue = calculateBaseValue(shift.doctor_id, hospitalId, shift.period || '12h');
-      const percentageDiscount = calculatePercentageDiscounts(shift.doctor_id, hospitalId, baseValue);
-
-      byDoctor[doctor].valorBruto += baseValue;
-      byDoctor[doctor].valorDescontos += percentageDiscount;
-      byDoctor[doctor].valorLiquido += (baseValue - percentageDiscount);
-      
-      const fixedKey = `${shift.doctor_id}-${hospitalId}`;
-      if (!fixedByDoctor.has(fixedKey)) {
-        const fixedDiscount = calculateFixedDiscounts(shift.doctor_id, hospitalId);
-        fixedByDoctor.set(fixedKey, true);
-        byDoctor[doctor].valorDescontos += fixedDiscount;
-        byDoctor[doctor].valorLiquido -= fixedDiscount;
-      }
-    });
-
-    // Relatório por Médico e Hospital
-    const byDoctorHospital = {};
-    const fixedByDoctorHospital = new Map();
-    
-    filteredShifts.forEach(shift => {
-      const key = `${shift.doctor_name}|${shift.hospital}`;
-      const hospitalData = hospitals.find(h => h.name === shift.hospital);
-      const hospitalId = hospitalData?.id;
-      
-      if (!byDoctorHospital[key]) {
-        byDoctorHospital[key] = {
-          doctor: shift.doctor_name,
-          hospital: shift.hospital,
-          numPlantoes: 0,
-          valorBruto: 0,
-          valorDescontos: 0,
-          valorLiquido: 0,
-        };
-      }
-      byDoctorHospital[key].numPlantoes += 1;
-
-      const baseValue = calculateBaseValue(shift.doctor_id, hospitalId, shift.period || '12h');
-      const percentageDiscount = calculatePercentageDiscounts(shift.doctor_id, hospitalId, baseValue);
-
-      byDoctorHospital[key].valorBruto += baseValue;
-      byDoctorHospital[key].valorDescontos += percentageDiscount;
-      byDoctorHospital[key].valorLiquido += (baseValue - percentageDiscount);
-      
-      const fixedKey = `${shift.doctor_id}-${hospitalId}`;
-      if (!fixedByDoctorHospital.has(fixedKey)) {
-        const fixedDiscount = calculateFixedDiscounts(shift.doctor_id, hospitalId);
-        fixedByDoctorHospital.set(fixedKey, true);
-        byDoctorHospital[key].valorDescontos += fixedDiscount;
-        byDoctorHospital[key].valorLiquido -= fixedDiscount;
-      }
-    });
-
-    return {
-      totals,
-      byHospital: Object.values(byHospital),
-      byDoctor: Object.values(byDoctor),
-      byDoctorHospital: Object.values(byDoctorHospital),
-    };
-  }, [shifts, selectedMonth, selectedHospital, selectedDoctor, hospitals, configValores, configDescontos]);
-
-  const availableMonths = useMemo(() => {
-    const months = new Set();
-    shifts.forEach(shift => {
-      if (shift.date) {
-        const [year, month] = shift.date.split('-').map(Number);
-        months.add(`${year}-${String(month).padStart(2, '0')}`);
-      }
-    });
-    return Array.from(months).sort().reverse();
-  }, [shifts]);
+  const reports = financialData?.reports || { totals: { bruto: 0, descontos: 0, liquido: 0, numShifts: 0 }, byHospital: [], byDoctor: [], byDoctorHospital: [] };
+  const availableMonths = financialData?.availableMonths || [];
 
   const monthNames = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -303,13 +57,13 @@ export default function Relatorios() {
     csv += '--- POR HOSPITAL ---\n';
     csv += 'Hospital,Nº Médicos,Nº Plantões,Valor Bruto,Descontos,Valor Líquido\n';
     reports.byHospital.forEach(h => {
-      csv += `"${h.name}",${h.doctors.size},${h.numPlantoes},${h.valorBruto.toFixed(2)},${h.valorDescontos.toFixed(2)},${h.valorLiquido.toFixed(2)}\n`;
+      csv += `"${h.name}",${h.doctorCount},${h.numPlantoes},${h.valorBruto.toFixed(2)},${h.valorDescontos.toFixed(2)},${h.valorLiquido.toFixed(2)}\n`;
     });
 
     csv += '\n--- POR MÉDICO ---\n';
     csv += 'Médico,Nº Hospitais,Nº Plantões,Valor Bruto,Descontos,Valor Líquido\n';
     reports.byDoctor.forEach(d => {
-      csv += `"${d.name}",${d.hospitals.size},${d.numPlantoes},${d.valorBruto.toFixed(2)},${d.valorDescontos.toFixed(2)},${d.valorLiquido.toFixed(2)}\n`;
+      csv += `"${d.name}",${d.hospitalCount},${d.numPlantoes},${d.valorBruto.toFixed(2)},${d.valorDescontos.toFixed(2)},${d.valorLiquido.toFixed(2)}\n`;
     });
 
     csv += '\n--- POR MÉDICO E HOSPITAL ---\n';
@@ -325,7 +79,9 @@ export default function Relatorios() {
     link.click();
   };
 
-  if (!user) {
+  if (financeError) return <div className="p-6 space-y-3"><p role="alert" className="text-destructive">Não foi possível carregar o relatório: {financeError.message}</p><Button onClick={() => reloadFinance()}>Tentar novamente</Button></div>;
+
+  if (!user || loadingFinance) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
@@ -433,7 +189,7 @@ export default function Relatorios() {
               {reports.byHospital.map((h, idx) => (
                 <tr key={idx} className="hover:bg-slate-50">
                   <td className="px-6 py-4 text-sm font-bold text-slate-900">{h.name}</td>
-                  <td className="px-6 py-4 text-sm text-right text-slate-600">{h.doctors.size}</td>
+                  <td className="px-6 py-4 text-sm text-right text-slate-600">{h.doctorCount}</td>
                   <td className="px-6 py-4 text-sm text-right text-slate-600">{h.numPlantoes}</td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-slate-900">R$ {h.valorBruto.toFixed(2)}</td>
                   <td className="px-6 py-4 text-sm text-right text-red-600">R$ {h.valorDescontos.toFixed(2)}</td>
@@ -466,7 +222,7 @@ export default function Relatorios() {
               {reports.byDoctor.map((d, idx) => (
                 <tr key={idx} className="hover:bg-slate-50">
                   <td className="px-6 py-4 text-sm font-bold text-slate-900">{d.name}</td>
-                  <td className="px-6 py-4 text-sm text-right text-slate-600">{d.hospitals.size}</td>
+                  <td className="px-6 py-4 text-sm text-right text-slate-600">{d.hospitalCount}</td>
                   <td className="px-6 py-4 text-sm text-right text-slate-600">{d.numPlantoes}</td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-slate-900">R$ {d.valorBruto.toFixed(2)}</td>
                   <td className="px-6 py-4 text-sm text-right text-red-600">R$ {d.valorDescontos.toFixed(2)}</td>

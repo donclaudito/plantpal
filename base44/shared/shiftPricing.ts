@@ -33,22 +33,20 @@ export function resolveParties(context, shift) {
 }
 export const appliesTo = (config, doctorId, hospitalId) => (!config.doctor_id || config.doctor_id === doctorId) && (!config.hospital_id || config.hospital_id === hospitalId);
 export function periodValue(config, period) {
-  const key = String(period || '12h').trim().toLowerCase();
-  const field = { '6h': 'valor_6h', '12h': 'valor_12h', 'mais tarde': 'valor_12h', retaguarda: 'valor_retaguarda', coordenador: 'valor_coordenador', professor: 'valor_professor' }[key];
-  if (Number(config[field]) > 0) return money(config[field]);
-  if (!/^\d+h$/.test(key)) return 0;
-  const hourly = Number(config.valor_12h) / 12 || Number(config.valor_6h) / 6 || 0;
-  return money(hourly * parseInt(key, 10));
+  if (config.tipo_calculo === 'por_periodo') return money(config.valor_periodo);
+  const field = { '6h': 'valor_6h', '12h': 'valor_12h', 'mais tarde': 'valor_12h', retaguarda: 'valor_retaguarda', coordenador: 'valor_coordenador', professor: 'valor_professor' }[String(period || '12h').trim().toLowerCase()];
+  return field ? money(config[field]) : 0;
 }
 export function quoteShift(context, shift) {
   const parties = resolveParties(context, shift);
   const candidates = context.rates.filter(c => appliesTo(c, parties.doctorId, parties.hospitalId)).sort((a, b) => {
-    const score = c => (c.doctor_id ? 2 : 0) + (c.hospital_id ? 1 : 0);
+    const score = c => (c.doctor_id ? 2 : 0) + (c.hospital_id ? (c.tipo_calculo === 'por_periodo' ? 4 : 1) : 0);
     return score(b) - score(a) || String(b.updated_date).localeCompare(String(a.updated_date));
   });
-  const rate = candidates.find(c => periodValue(c, shift.period) > 0);
-  const baseValue = rate ? periodValue(rate, shift.period) : money(shift.value);
-  const details = rate ? context.discounts.filter(d => d.tipo_desconto === 'percentual' && appliesTo(d, parties.doctorId, parties.hospitalId)).map(d => ({ descricao: d.descricao, tipo: d.tipo_desconto, valor_config: d.valor_desconto, valor_calculado: money(baseValue * d.valor_desconto / 100) })) : [];
+  const rate = candidates.find(c => c.tipo_calculo === 'por_periodo' || periodValue(c, shift.period) > 0);
+  const manual = shift.usar_valor_informado === true && Number.isFinite(shift.valor_bruto_informado) && shift.valor_bruto_informado >= 0;
+  const baseValue = manual ? money(shift.valor_bruto_informado) : rate ? periodValue(rate, shift.period) : money(shift.value);
+  const details = rate || manual ? context.discounts.filter(d => d.tipo_desconto === 'percentual' && appliesTo(d, parties.doctorId, parties.hospitalId)).map(d => ({ descricao: d.descricao, tipo: d.tipo_desconto, valor_config: d.valor_desconto, valor_calculado: money(baseValue * d.valor_desconto / 100) })) : [];
   const discountValue = money(details.reduce((total, d) => total + d.valor_calculado, 0));
-  return { ...parties, configured: !!rate, configurationId: rate?.id || null, baseValue, discountValue, value: money(Math.max(0, baseValue - discountValue)), details };
+  return { ...parties, configured: !!rate, manual, billingMode: rate?.tipo_calculo || 'por_plantao', configurationId: rate?.id || null, estimatedBaseValue: rate ? periodValue(rate, shift.period) : 0, baseValue, discountValue, value: money(Math.max(0, baseValue - discountValue)), details };
 }

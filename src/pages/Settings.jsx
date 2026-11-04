@@ -9,6 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import Toast from '@/components/common/Toast';
+import ShiftRateForm from '@/components/settings/ShiftRateForm';
+import RateSummary from '@/components/settings/RateSummary';
 
 export default function Settings() {
   const [message, setMessage] = useState(null);
@@ -61,7 +63,7 @@ export default function Settings() {
   });
 
   const refreshFinancialValues = () => {
-    ['configValores', 'shifts', 'finance', 'shiftQuote'].forEach(key => queryClient.invalidateQueries({ queryKey: [key] }));
+    ['configValores', 'shifts', 'finance', 'shiftQuote', 'deposits'].forEach(key => queryClient.invalidateQueries({ queryKey: [key] }));
   };
 
   const saveValor = async (data, id) => {
@@ -205,7 +207,7 @@ export default function Settings() {
           </CardHeader>
           <CardContent>
             {showValorForm && (
-              <ValorForm
+              <ShiftRateForm
                 doctors={doctors}
                 hospitals={hospitals}
                 onSave={(data) => createValorMutation.mutate(data)}
@@ -219,7 +221,7 @@ export default function Settings() {
                 <AccordionItem key={config.id} value={`item-${index}`} className="border rounded-lg bg-white">
                   {editingValor?.id === config.id ? (
                     <div className="p-4">
-                      <ValorForm
+                      <ShiftRateForm
                         doctors={doctors}
                         hospitals={hospitals}
                         initialData={config}
@@ -247,28 +249,7 @@ export default function Settings() {
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                          <div>
-                            <p className="text-sm text-gray-500">6 horas</p>
-                            <p className="font-bold">R$ {config.valor_6h?.toFixed(2) || '0.00'}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-500">12 horas</p>
-                            <p className="font-bold">R$ {config.valor_12h?.toFixed(2) || '0.00'}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-500">Retaguarda</p>
-                            <p className="font-bold">R$ {config.valor_retaguarda?.toFixed(2) || '0.00'}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-500">Coordenador</p>
-                            <p className="font-bold">R$ {config.valor_coordenador?.toFixed(2) || '0.00'}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-500">Professor</p>
-                            <p className="font-bold">R$ {config.valor_professor?.toFixed(2) || '0.00'}</p>
-                          </div>
-                        </div>
+                        <RateSummary config={config} />
                       </AccordionContent>
                     </>
                   )}
@@ -397,93 +378,6 @@ export default function Settings() {
         </Card>
       </div>
     </div>
-  );
-}
-
-function ValorForm({ doctors, hospitals, initialData, onSave, onCancel, isSaving }) {
-  const [formData, setFormData] = useState(initialData || {
-    doctor_id: '',
-    hospital_id: '',
-    valor_6h: '',
-    valor_12h: '',
-    valor_retaguarda: '',
-    valor_coordenador: '',
-    valor_professor: '',
-  });
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSave({
-      ...formData,
-      valor_6h: Number(formData.valor_6h) || 0,
-      valor_12h: Number(formData.valor_12h) || 0,
-      valor_retaguarda: Number(formData.valor_retaguarda) || 0,
-      valor_coordenador: Number(formData.valor_coordenador) || 0,
-      valor_professor: Number(formData.valor_professor) || 0,
-    });
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4 p-4 bg-slate-50 rounded-lg">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label>Médico (opcional)</Label>
-          <Select value={formData.doctor_id || 'global'} onValueChange={(v) => setFormData({ ...formData, doctor_id: v === 'global' ? '' : v })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="global">Todos os médicos</SelectItem>
-              {doctors.map(d => <SelectItem key={d.id} value={d.id}>{d.full_name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Hospital (opcional)</Label>
-          <Select value={formData.hospital_id || 'global'} onValueChange={(v) => setFormData({ ...formData, hospital_id: v === 'global' ? '' : v })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="global">Todos os hospitais</SelectItem>
-              {hospitals.map(h => <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div>
-          <Label>Valor 6h</Label>
-          <Input type="number" step="0.01" placeholder="0,00" value={formData.valor_6h || ''} onChange={(e) => setFormData({ ...formData, valor_6h: e.target.value === '' ? '' : Number(e.target.value) })} />
-        </div>
-        <div>
-          <Label>Valor 12h</Label>
-          <Input type="number" step="0.01" placeholder="0,00" value={formData.valor_12h || ''} onChange={(e) => setFormData({ ...formData, valor_12h: e.target.value === '' ? '' : Number(e.target.value) })} />
-        </div>
-        <div>
-          <Label>Valor Retaguarda</Label>
-          <Input type="number" step="0.01" placeholder="0,00" value={formData.valor_retaguarda || ''} onChange={(e) => setFormData({ ...formData, valor_retaguarda: e.target.value === '' ? '' : Number(e.target.value) })} />
-        </div>
-        <div>
-          <Label>Valor Coordenador</Label>
-          <Input type="number" step="0.01" placeholder="0,00" value={formData.valor_coordenador || ''} onChange={(e) => setFormData({ ...formData, valor_coordenador: e.target.value === '' ? '' : Number(e.target.value) })} />
-        </div>
-        <div>
-          <Label>Valor Professor</Label>
-          <Input type="number" step="0.01" placeholder="0,00" value={formData.valor_professor || ''} onChange={(e) => setFormData({ ...formData, valor_professor: e.target.value === '' ? '' : Number(e.target.value) })} />
-        </div>
-      </div>
-      <div className="flex gap-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          <X className="w-4 h-4 mr-2" />
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={isSaving}>
-          <Save className="w-4 h-4 mr-2" />
-          {isSaving ? 'Salvando e sincronizando...' : 'Salvar'}
-        </Button>
-      </div>
-    </form>
   );
 }
 

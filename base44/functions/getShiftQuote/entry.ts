@@ -6,12 +6,12 @@ export default async function(req) {
     const client = createClientFromRequest(req);
     const user = await client.auth.me().catch(e => e.status === 401 ? null : Promise.reject(e));
     if (!user) return Response.json({ error: 'Acesso não autorizado.' }, { status: 401 });
-    const { doctorId, hospital, period } = await req.json().catch(() => ({}));
-    if (typeof doctorId !== 'string' || doctorId.length > 100 || typeof hospital !== 'string' || !hospital.trim() || hospital.length > 200 || !['1h','2h','3h','4h','5h','6h','12h','24h','retaguarda','mais tarde','coordenador','professor'].includes(period)) {
+    const { doctorId, hospital, period, grossValue = null } = await req.json().catch(() => ({}));
+    if (typeof doctorId !== 'string' || doctorId.length > 100 || typeof hospital !== 'string' || !hospital.trim() || hospital.length > 200 || !['consultas','1h','2h','3h','4h','5h','6h','12h','24h','retaguarda','mais tarde','coordenador','professor'].includes(period) || (grossValue !== null && (!Number.isFinite(grossValue) || grossValue < 0 || grossValue > 100000000))) {
       return Response.json({ error: 'Informe médico, hospital e período válidos.' }, { status: 400 });
     }
     const context = await loadPricing(client);
-    return Response.json(quoteShift(context, { doctor_id: doctorId, hospital, period }));
+    return Response.json(quoteShift(context, { doctor_id: doctorId, hospital, period, usar_valor_informado: grossValue !== null, valor_bruto_informado: grossValue }));
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

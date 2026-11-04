@@ -30,9 +30,9 @@ export default function Deposits() {
     queryFn: () => base44.auth.me(),
   });
 
-  const { data: shifts = [] } = useQuery({
-    queryKey: ['shifts', user?.email],
-    queryFn: () => base44.entities.Shift.list('-date'),
+  const { data: financialData, isPending: loadingFinance, error: financeError, refetch: reloadFinance } = useQuery({
+    queryKey: ['finance', 'deposits', user?.email, filterDoctor, filterHospital],
+    queryFn: async () => (await base44.functions.invoke('getShiftFinance', { allMonths: true, doctor: filterDoctor, hospital: filterHospital })).data,
     enabled: !!user,
   });
 
@@ -48,230 +48,18 @@ export default function Deposits() {
     enabled: !!user,
   });
 
-  const { data: configValores = [] } = useQuery({
-    queryKey: ['configValores', user?.email],
-    queryFn: () => base44.entities.ConfiguracaoPlantao.list(),
-    enabled: !!user,
-  });
-
-  const { data: configDescontos = [] } = useQuery({
-    queryKey: ['configDescontos', user?.email],
-    queryFn: () => base44.entities.ConfiguracaoDesconto.list(),
-    enabled: !!user,
-  });
-
   const { data: savedDeposits = [] } = useQuery({
     queryKey: ['deposits', user?.email],
     queryFn: () => base44.entities.Deposit.list('-created_date'),
     enabled: !!user,
   });
 
-  const calculateBaseValue = (doctorId, hospitalId, period) => {
-    let config = configValores.find(c => c.doctor_id === doctorId && c.hospital_id === hospitalId);
-    if (!config) {
-      config = configValores.find(c => c.doctor_id === doctorId && !c.hospital_id);
-    }
-    if (!config) {
-      config = configValores.find(c => !c.doctor_id && c.hospital_id === hospitalId);
-    }
-    if (!config) {
-      config = configValores.find(c => !c.doctor_id && !c.hospital_id);
-    }
+  const depositsData = useMemo(() => (financialData?.deposits || []).map(calc => {
+    const saved = savedDeposits.find(s => s.doctor_id === calc.doctorId && s.hospital_id === calc.hospitalId && s.mes_competencia === calc.mesCompetencia);
+    return saved ? { ...calc, ...saved, isSaved: true } : { ...calc, isSaved: false };
+  }), [financialData, savedDeposits]);
 
-    if (!config) return 0;
-
-    switch (period) {
-      case '6h': return config.valor_6h || 0;
-      case '12h':
-      case 'mais tarde': return config.valor_12h || 0;
-      case 'retaguarda': return config.valor_retaguarda || 0;
-      case 'coordenador': return config.valor_coordenador || 0;
-      default: return 0;
-    }
-  };
-
-  const calculatePercentageDiscounts = (doctorId, hospitalId, baseValue) => {
-    const applicableDiscounts = [];
-
-    const specific = configDescontos.filter(d => d.doctor_id === doctorId && d.hospital_id === hospitalId && d.tipo_desconto === 'percentual');
-    applicableDiscounts.push(...specific);
-
-    const byDoctor = configDescontos.filter(d => d.doctor_id === doctorId && !d.hospital_id && d.tipo_desconto === 'percentual');
-    applicableDiscounts.push(...byDoctor);
-
-    const byHospital = configDescontos.filter(d => !d.doctor_id && d.hospital_id === hospitalId && d.tipo_desconto === 'percentual');
-    applicableDiscounts.push(...byHospital);
-
-    const global = configDescontos.filter(d => !d.doctor_id && !d.hospital_id && d.tipo_desconto === 'percentual');
-    applicableDiscounts.push(...global);
-
-    let totalDiscount = 0;
-    const details = [];
-
-    applicableDiscounts.forEach(desconto => {
-      const value = baseValue * desconto.valor_desconto / 100;
-
-      totalDiscount += value;
-
-      details.push({
-        descricao: desconto.descricao,
-        tipo: desconto.tipo_desconto,
-        valor_config: desconto.valor_desconto,
-        valor_calculado: value
-      });
-    });
-
-    return {
-      totalValue: totalDiscount,
-      details
-    };
-  };
-
-  const calculateFixedDiscounts = (doctorId, hospitalId) => {
-    const applicableDiscounts = [];
-
-    const specific = configDescontos.filter(d => d.doctor_id === doctorId && d.hospital_id === hospitalId && d.tipo_desconto === 'valor_fixo');
-    applicableDiscounts.push(...specific);
-
-    const byDoctor = configDescontos.filter(d => d.doctor_id === doctorId && !d.hospital_id && d.tipo_desconto === 'valor_fixo');
-    applicableDiscounts.push(...byDoctor);
-
-    const byHospital = configDescontos.filter(d => !d.doctor_id && d.hospital_id === hospitalId && d.tipo_desconto === 'valor_fixo');
-    applicableDiscounts.push(...byHospital);
-
-    const global = configDescontos.filter(d => !d.doctor_id && !d.hospital_id && d.tipo_desconto === 'valor_fixo');
-    applicableDiscounts.push(...global);
-
-    let totalDiscount = 0;
-    const details = [];
-
-    applicableDiscounts.forEach(desconto => {
-      totalDiscount += desconto.valor_desconto;
-
-      details.push({
-        descricao: desconto.descricao,
-        tipo: desconto.tipo_desconto,
-        valor_config: desconto.valor_desconto,
-        valor_calculado: desconto.valor_desconto
-      });
-    });
-
-    return {
-      totalValue: totalDiscount,
-      details
-    };
-  };
-
-  const depositsData = useMemo(() => {
-    const grouped = {};
-    const fixedDiscountsByDoctorHospital = new Map();
-
-    shifts.forEach(shift => {
-      if (!shift.date) return;
-
-      const [year, month] = shift.date.split('-').map(Number);
-      const mesCompetencia = `${year}-${String(month).padStart(2, '0')}`;
-      const depositMonth = month === 12 ? 1 : month + 1;
-      const depositYear = month === 12 ? year + 1 : year;
-      const mesDeposito = `${depositYear}-${String(depositMonth).padStart(2, '0')}`;
-
-      const doctorId = shift.doctor_id;
-      const doctorName = shift.doctor_name;
-      const hospital = hospitals.find(h => h.name === shift.hospital);
-      const hospitalId = hospital?.id;
-      const hospitalName = shift.hospital;
-      const period = shift.period || '12h';
-
-      const key = `${doctorId}-${hospitalId}-${mesCompetencia}`;
-      const fixedKey = `${doctorId}-${hospitalId}`;
-
-      if (!grouped[key]) {
-        grouped[key] = {
-          doctorId,
-          doctorName,
-          hospitalId,
-          hospitalName,
-          mesCompetencia,
-          mesDeposito,
-          numPlantoes: 0,
-          valorBruto: 0,
-          valorDescontos: 0,
-          valorLiquido: 0,
-          descontosDetailsMap: new Map()
-        };
-      }
-
-      const baseValue = calculateBaseValue(doctorId, hospitalId, period);
-      const percentageDiscounts = calculatePercentageDiscounts(doctorId, hospitalId, baseValue);
-
-      grouped[key].numPlantoes += 1;
-      grouped[key].valorBruto += baseValue;
-      grouped[key].valorDescontos += percentageDiscounts.totalValue;
-      grouped[key].valorLiquido += baseValue - percentageDiscounts.totalValue;
-
-      if (percentageDiscounts.details.length > 0) {
-        percentageDiscounts.details.forEach(detail => {
-          const detailKey = detail.descricao;
-          if (!grouped[key].descontosDetailsMap.has(detailKey)) {
-            grouped[key].descontosDetailsMap.set(detailKey, {
-              descricao: detail.descricao,
-              tipo: detail.tipo,
-              valor_config: detail.valor_config,
-              valor_calculado: 0
-            });
-          }
-          const existing = grouped[key].descontosDetailsMap.get(detailKey);
-          existing.valor_calculado += detail.valor_calculado;
-        });
-      }
-
-      if (!fixedDiscountsByDoctorHospital.has(fixedKey)) {
-        const fixedDiscounts = calculateFixedDiscounts(doctorId, hospitalId);
-        fixedDiscountsByDoctorHospital.set(fixedKey, fixedDiscounts);
-      }
-    });
-
-    const groupedArray = Object.values(grouped);
-    groupedArray.forEach(item => {
-      const fixedKey = `${item.doctorId}-${item.hospitalId}`;
-      const fixedDiscounts = fixedDiscountsByDoctorHospital.get(fixedKey);
-      
-      if (fixedDiscounts) {
-        item.valorDescontos += fixedDiscounts.totalValue;
-        item.valorLiquido -= fixedDiscounts.totalValue;
-        
-        fixedDiscounts.details.forEach(detail => {
-          item.descontosDetailsMap.set(detail.descricao, detail);
-        });
-      }
-
-      item.descontosDetalhados = Array.from(item.descontosDetailsMap.values());
-      delete item.descontosDetailsMap;
-    });
-
-    const calculated = groupedArray;
-    
-    return calculated.map(calc => {
-      const saved = savedDeposits.find(
-        s => s.doctor_id === calc.doctorId && 
-             s.hospital_id === calc.hospitalId && 
-             s.mes_competencia === calc.mesCompetencia
-      );
-      
-      return saved ? { ...calc, ...saved, isSaved: true } : { ...calc, isSaved: false };
-    });
-  }, [shifts, hospitals, configValores, configDescontos, savedDeposits]);
-
-  const filteredDeposits = useMemo(() => {
-    return depositsData.filter(d => {
-      const matchDoctor = filterDoctor === 'all' || d.doctorId === filterDoctor || d.doctor_id === filterDoctor;
-      const matchHospital = filterHospital === 'all' || d.hospitalId === filterHospital || d.hospital_id === filterHospital;
-      const matchCompetencia = filterCompetencia === 'all' || d.mesCompetencia === filterCompetencia || d.mes_competencia === filterCompetencia;
-      const matchDeposito = filterDeposito === 'all' || d.mesDeposito === filterDeposito || d.mes_deposito === filterDeposito;
-      
-      return matchDoctor && matchHospital && matchCompetencia && matchDeposito;
-    });
-  }, [depositsData, filterDoctor, filterHospital, filterCompetencia, filterDeposito]);
+  const filteredDeposits = depositsData.filter(d => (filterCompetencia === 'all' || d.mesCompetencia === filterCompetencia) && (filterDeposito === 'all' || d.mesDeposito === filterDeposito));
 
   const createOrUpdateDepositMutation = useMutation({
     mutationFn: (depositData) => {
@@ -413,16 +201,7 @@ Qualquer dúvida, estamos à disposição! 🙂`;
     setAdminPassword('');
   };
 
-  const availableCompetencias = useMemo(() => {
-    const competencias = new Set();
-    shifts.forEach(shift => {
-      if (shift.date) {
-        const [year, month] = shift.date.split('-').map(Number);
-        competencias.add(`${year}-${String(month).padStart(2, '0')}`);
-      }
-    });
-    return Array.from(competencias).sort().reverse();
-  }, [shifts]);
+  const availableCompetencias = financialData?.availableMonths || [];
 
   const availableDepositos = useMemo(() => {
     const depositos = new Set();
@@ -443,7 +222,9 @@ Qualquer dúvida, estamos à disposição! 🙂`;
     return `${monthNames[parseInt(month) - 1]} ${year}`;
   };
 
-  if (!user) {
+  if (financeError) return <div className="p-6 space-y-3"><p role="alert" className="text-destructive">Não foi possível carregar os valores: {financeError.message}</p><Button onClick={() => reloadFinance()}>Tentar novamente</Button></div>;
+
+  if (!user || loadingFinance) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">

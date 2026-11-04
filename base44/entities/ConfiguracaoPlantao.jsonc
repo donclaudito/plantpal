@@ -10,13 +10,30 @@
       "type": "string",
       "description": "ID do hospital (opcional, se vazio aplica-se globalmente)"
     },
+    "tipo_calculo": {
+      "type": "string",
+      "enum": [
+        "por_plantao",
+        "por_periodo"
+      ],
+      "enumColors": [
+        "blue",
+        "purple"
+      ],
+      "description": "Valor fixo por tipo de plant\u00e3o ou estimativa por per\u00edodo de consultas, nunca proporcional \u00e0s horas"
+    },
+    "valor_periodo": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Estimativa bruta por per\u00edodo de consultas, independente da dura\u00e7\u00e3o"
+    },
     "valor_6h": {
       "type": "number",
-      "description": "Valor para plant\u00e3o de 6 horas"
+      "description": "Valor integral do plant\u00e3o identificado como 6h, sem proporcionalidade"
     },
     "valor_12h": {
       "type": "number",
-      "description": "Valor para plant\u00e3o de 12 horas"
+      "description": "Valor integral do plant\u00e3o identificado como 12h, sem proporcionalidade"
     },
     "valor_retaguarda": {
       "type": "number",
