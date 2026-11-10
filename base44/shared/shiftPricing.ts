@@ -9,6 +9,10 @@ export const hospitalKey = (value) => {
   return HOSPITAL_ALIASES[name] || name;
 };
 export const money = (value) => Math.round((Number(value) || 0) * 100) / 100;
+export function twelveHourWeight(period) {
+  const hours = { '1h': 1, '2h': 2, '3h': 3, '4h': 4, '5h': 5, '6h': 6, '12h': 12, '24h': 24 }[String(period || '12h').trim().toLowerCase()];
+  return hours ? Math.round((hours / 12) * 1000) / 1000 : 1;
+}
 export async function readPages(entity, query = {}, sort = '-updated_date') {
   const records = [];
   let cursor;

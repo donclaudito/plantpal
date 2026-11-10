@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
+import { formatQuantity } from '@/lib/quantity';
 
 export default function Relatorios() {
   const [selectedMonth, setSelectedMonth] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`);
@@ -190,7 +191,7 @@ export default function Relatorios() {
                 <tr key={idx} className="hover:bg-slate-50">
                   <td className="px-6 py-4 text-sm font-bold text-slate-900">{h.name}</td>
                   <td className="px-6 py-4 text-sm text-right text-slate-600">{h.doctorCount}</td>
-                  <td className="px-6 py-4 text-sm text-right text-slate-600">{h.numPlantoes}</td>
+                  <td className="px-6 py-4 text-sm text-right text-slate-600">{formatQuantity(h.numPlantoes)}</td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-slate-900">R$ {h.valorBruto.toFixed(2)}</td>
                   <td className="px-6 py-4 text-sm text-right text-red-600">R$ {h.valorDescontos.toFixed(2)}</td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-blue-600">R$ {h.valorLiquido.toFixed(2)}</td>
@@ -223,7 +224,7 @@ export default function Relatorios() {
                 <tr key={idx} className="hover:bg-slate-50">
                   <td className="px-6 py-4 text-sm font-bold text-slate-900">{d.name}</td>
                   <td className="px-6 py-4 text-sm text-right text-slate-600">{d.hospitalCount}</td>
-                  <td className="px-6 py-4 text-sm text-right text-slate-600">{d.numPlantoes}</td>
+                  <td className="px-6 py-4 text-sm text-right text-slate-600">{formatQuantity(d.numPlantoes)}</td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-slate-900">R$ {d.valorBruto.toFixed(2)}</td>
                   <td className="px-6 py-4 text-sm text-right text-red-600">R$ {d.valorDescontos.toFixed(2)}</td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-blue-600">R$ {d.valorLiquido.toFixed(2)}</td>
@@ -256,7 +257,7 @@ export default function Relatorios() {
                 <tr key={idx} className="hover:bg-slate-50">
                   <td className="px-6 py-4 text-sm font-bold text-slate-900">{dh.doctor}</td>
                   <td className="px-6 py-4 text-sm text-slate-600">{dh.hospital}</td>
-                  <td className="px-6 py-4 text-sm text-right text-slate-600">{dh.numPlantoes}</td>
+                  <td className="px-6 py-4 text-sm text-right text-slate-600">{formatQuantity(dh.numPlantoes)}</td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-slate-900">R$ {dh.valorBruto.toFixed(2)}</td>
                   <td className="px-6 py-4 text-sm text-right text-red-600">R$ {dh.valorDescontos.toFixed(2)}</td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-blue-600">R$ {dh.valorLiquido.toFixed(2)}</td>

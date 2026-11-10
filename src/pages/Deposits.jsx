@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import jsPDF from 'jspdf';
+import { formatQuantity } from '@/lib/quantity';
 
 export default function Deposits() {
   const queryClient = useQueryClient();
@@ -121,7 +122,7 @@ export default function Deposits() {
     doc.setFontSize(14);
     doc.text('RESUMO FINANCEIRO', 20, 110);
     doc.setFontSize(11);
-    doc.text(`Número de Plantões: ${deposit.numPlantoes || deposit.num_plantoes}`, 20, 120);
+    doc.text(`Número de Plantões: ${formatQuantity(deposit.numPlantoes || deposit.num_plantoes)}`, 20, 120);
     doc.text(`Valor Bruto: R$ ${((deposit.valorBruto ?? deposit.valor_bruto) || 0).toFixed(2)}`, 20, 130);
 
     let yPos = 150;
@@ -181,7 +182,7 @@ export default function Deposits() {
 ━━━━━━━━━━━━━━━━━━━━━━
 
 💼 *RESUMO FINANCEIRO:*
-  • Número de Plantões: ${selectedDeposit.numPlantoes || selectedDeposit.num_plantoes}
+  • Número de Plantões: ${formatQuantity(selectedDeposit.numPlantoes || selectedDeposit.num_plantoes)}
   • Valor Bruto: R$ ${((selectedDeposit.valorBruto ?? selectedDeposit.valor_bruto) || 0).toFixed(2)}${descontosText}
 
 ━━━━━━━━━━━━━━━━━━━━━━
@@ -328,7 +329,7 @@ Qualquer dúvida, estamos à disposição! 🙂`;
                   <td className="px-6 py-4 text-sm text-slate-600">{deposit.hospitalName || deposit.hospital_name}</td>
                   <td className="px-6 py-4 text-sm text-slate-600">{formatMonth(deposit.mesCompetencia || deposit.mes_competencia)}</td>
                   <td className="px-6 py-4 text-sm text-slate-600">{formatMonth(deposit.mesDeposito || deposit.mes_deposito)}</td>
-                  <td className="px-6 py-4 text-sm text-right font-bold text-slate-900">{deposit.numPlantoes || deposit.num_plantoes}</td>
+                  <td className="px-6 py-4 text-sm text-right font-bold text-slate-900">{formatQuantity(deposit.numPlantoes || deposit.num_plantoes)}</td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-blue-600">R$ {((deposit.valorLiquido ?? deposit.valor_liquido) || 0).toFixed(2)}</td>
                   <td className="px-6 py-4 text-center">
                     {deposit.status === 'Pago' ? (

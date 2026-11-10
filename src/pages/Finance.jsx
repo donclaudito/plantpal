@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Download, DollarSign, TrendingUp, TrendingDown, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { formatQuantity } from '@/lib/quantity';
 
 
 const PERIOD_LABELS = { consultas: 'Período de consultas', cirurgias: 'Cirurgias do convênio' };
@@ -100,9 +101,9 @@ export default function Finance() {
         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-md">
           <div className="flex items-center gap-3 mb-2">
             <Calendar className="text-blue-600 dark:text-blue-400" size={24} />
-            <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase">Plantões</span>
+            <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase">Plantões (12h)</span>
           </div>
-          <p className="text-3xl font-black text-slate-900 dark:text-white">{totals.quantity}</p>
+          <p className="text-3xl font-black text-slate-900 dark:text-white">{formatQuantity(totals.quantity)}</p>
         </div>
 
         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-md">
@@ -233,7 +234,7 @@ export default function Finance() {
                   <td className="px-6 py-4 text-sm font-bold text-slate-900 dark:text-white">{item.doctorName}</td>
                   <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{item.hospitalName}</td>
                   <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{PERIOD_LABELS[item.period] || item.period}</td>
-                  <td className="px-6 py-4 text-sm text-right font-bold text-slate-900 dark:text-white">{item.quantity}</td>
+                  <td className="px-6 py-4 text-sm text-right font-bold text-slate-900 dark:text-white">{formatQuantity(item.quantity)}</td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-green-600 dark:text-green-400">R$ {item.grossValue.toFixed(2)}</td>
                   <td className="px-6 py-4 text-sm">
                     <div className="font-bold text-red-600 dark:text-red-400">R$ {item.discountValue.toFixed(2)}</div>
@@ -265,7 +266,7 @@ export default function Finance() {
               <tfoot className="bg-slate-100 dark:bg-slate-700">
                 <tr>
                   <td colSpan="3" className="px-6 py-4 text-sm font-black text-slate-900 dark:text-white uppercase">Total</td>
-                  <td className="px-6 py-4 text-sm text-right font-black text-slate-900 dark:text-white">{totals.quantity}</td>
+                  <td className="px-6 py-4 text-sm text-right font-black text-slate-900 dark:text-white">{formatQuantity(totals.quantity)}</td>
                   <td className="px-6 py-4 text-sm text-right font-black text-green-600 dark:text-green-400">R$ {totals.grossValue.toFixed(2)}</td>
                   <td className="px-6 py-4 text-sm text-right font-black text-red-600 dark:text-red-400">R$ {totals.discountValue.toFixed(2)}</td>
                   <td className="px-6 py-4 text-sm text-right font-black text-blue-600 dark:text-blue-400">R$ {totals.netValue.toFixed(2)}</td>

@@ -1,4 +1,4 @@
-import { quoteShift, quoteSurgeries, appliesTo, hospitalKey, normalizeName, money } from './shiftPricing.ts';
+import { quoteShift, quoteSurgeries, appliesTo, hospitalKey, normalizeName, money, twelveHourWeight } from './shiftPricing.ts';
 
 export function monthKeyOfDate(date) {
   const value = String(date || '');
@@ -34,7 +34,7 @@ export function summarizeShifts(context, rows, allMonths, surgeryRows = []) {
     const key = JSON.stringify([quote.doctorId || normalizeName(row.doctor_name), quote.hospitalId || hospitalKey(row.hospital), period, monthKey]);
     if (!grouped.has(key)) grouped.set(key, { doctorId: quote.doctorId, hospitalId: quote.hospitalId, doctorName: quote.doctorName, hospitalName: quote.hospitalName, period, monthKey, quantity: 0, grossValue: 0, discountValue: 0, netValue: 0, discountDetails: [] });
     const item = grouped.get(key);
-    item.quantity += row.count;
+    item.quantity = money(item.quantity + row.count * twelveHourWeight(period));
     item.grossValue += quote.configured || quote.manual ? money(quote.baseValue * multiplier) : money(row.sum_value);
     item.discountValue += money(quote.discountValue * multiplier);
     for (const detail of quote.details) {
@@ -53,6 +53,7 @@ export function summarizeShifts(context, rows, allMonths, surgeryRows = []) {
         item.discountDetails.push({ descricao: d.descricao, tipo: d.tipo_desconto, valor_config: d.valor_desconto, valor_calculado: d.valor_desconto });
       }
     }
+    item.quantity = money(item.quantity);
     item.grossValue = money(item.grossValue);
     item.discountValue = money(item.discountValue);
     item.netValue = money(item.grossValue - item.discountValue);
