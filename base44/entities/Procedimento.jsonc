@@ -84,6 +84,11 @@
         }
       }
     },
+    "concluido": {
+      "type": "boolean",
+      "default": false,
+      "description": "Procedimento conclu\u00eddo; ao marcar, o recibo \u00e9 enviado automaticamente pelo Gmail"
+    },
     "recibo_enviado_em": {
       "type": "string",
       "format": "date-time",

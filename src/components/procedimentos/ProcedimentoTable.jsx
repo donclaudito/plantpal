@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { procedimentoQuantidade, procedimentoTotal } from '@/lib/procedimentoTotals';
 import { formatDatePtBr } from '@/lib/dateKeys';
 import StatusRecibo from '@/components/procedimentos/StatusRecibo';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const CORES_LINHA = {
   Cirurgia: 'bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500',
@@ -17,7 +18,7 @@ const SemDado = ({ texto }) => (
   </span>
 );
 
-export default function ProcedimentoTable({ items, tipo, onEdit, onDelete, onEnviarRecibo }) {
+export default function ProcedimentoTable({ items, tipo, onEdit, onDelete, onEnviarRecibo, onConcluir, concluindoId }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
@@ -31,6 +32,7 @@ export default function ProcedimentoTable({ items, tipo, onEdit, onDelete, onEnv
             <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Qtd</th>
             <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Valor Unit.</th>
             <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Concluído</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recibo</th>
             <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
           </tr>
@@ -65,6 +67,17 @@ export default function ProcedimentoTable({ items, tipo, onEdit, onDelete, onEnv
               </td>
               <td className="px-4 py-4 text-sm text-right font-semibold text-gray-900">
                 R$ {procedimentoTotal(proc).toFixed(2)}
+              </td>
+              <td className="px-4 py-4 text-center">
+                <Checkbox
+                  className="mx-auto"
+                  checked={!!proc.concluido}
+                  disabled={concluindoId === proc.id}
+                  onCheckedChange={(valor) => onConcluir && onConcluir(proc, valor === true)}
+                  title={proc.concluido
+                    ? 'Concluído — recibo enviado pelo Gmail quando o hospital tem e-mail'
+                    : 'Marcar como concluído e enviar o recibo pelo Gmail'}
+                />
               </td>
               <td className="px-4 py-4">
                 <StatusRecibo procedimento={proc} />

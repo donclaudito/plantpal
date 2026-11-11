@@ -25,6 +25,7 @@ export default function Procedimentos() {
   const [tipoModal, setTipoModal] = useState('Cirurgia');
   const [view, setView] = useState('todas');
   const [reciboProcedimento, setReciboProcedimento] = useState(null);
+  const [concluindoId, setConcluindoId] = useState(null);
   const [filters, setFilters] = useState({
     tipo: 'all',
     doctor: null,
@@ -154,6 +155,44 @@ export default function Procedimentos() {
     }
     queryClient.invalidateQueries({ queryKey: ['procedimentos'] });
     showToast(`Recibo enviado para ${resultado?.destinatario || destinatario}!`);
+  };
+
+  const handleConcluir = async (procedimento, concluido) => {
+    setConcluindoId(procedimento.id);
+    try {
+      await base44.entities.Procedimento.update(procedimento.id, { concluido });
+
+      if (!concluido) {
+        showToast('Procedimento reaberto.');
+        return;
+      }
+
+      if (procedimento.recibo_enviado_em) {
+        showToast('Procedimento concluído. O recibo já tinha sido enviado.');
+        return;
+      }
+
+      const destinatario = hospitalDoProcedimento(procedimento)?.email;
+      if (!destinatario) {
+        showToast('Procedimento concluído, mas o hospital não tem e-mail para receber o recibo.', 'error');
+        return;
+      }
+
+      const { data } = await base44.functions.invoke('enviarReciboProcedimento', {
+        procedimento_id: procedimento.id,
+        email_destino: destinatario,
+      });
+      if (data?.error) {
+        showToast(data.error, 'error');
+        return;
+      }
+      showToast(`Procedimento concluído e recibo enviado para ${data?.destinatario || destinatario}!`);
+    } catch (e) {
+      showToast('Não foi possível concluir o procedimento ou enviar o recibo.', 'error');
+    } finally {
+      setConcluindoId(null);
+      queryClient.invalidateQueries({ queryKey: ['procedimentos'] });
+    }
   };
 
   const nomeMedico = (procedimento) =>
@@ -378,7 +417,7 @@ export default function Procedimentos() {
             {cirurgias.length === 0 ? (
               <p className="text-gray-500 text-center py-8">Nenhuma cirurgia cadastrada</p>
             ) : (
-              <ProcedimentoTable items={cirurgias} tipo="Cirurgia" onEdit={handleEdit} onDelete={handleDelete} onEnviarRecibo={setReciboProcedimento} />
+              <ProcedimentoTable items={cirurgias} tipo="Cirurgia" onEdit={handleEdit} onDelete={handleDelete} onEnviarRecibo={setReciboProcedimento} onConcluir={handleConcluir} concluindoId={concluindoId} />
             )}
           </CardContent>
         </Card>
@@ -397,7 +436,7 @@ export default function Procedimentos() {
             {consultas.length === 0 ? (
               <p className="text-gray-500 text-center py-8">Nenhuma consulta cadastrada</p>
             ) : (
-              <ProcedimentoTable items={consultas} tipo="Consulta" onEdit={handleEdit} onDelete={handleDelete} onEnviarRecibo={setReciboProcedimento} />
+              <ProcedimentoTable items={consultas} tipo="Consulta" onEdit={handleEdit} onDelete={handleDelete} onEnviarRecibo={setReciboProcedimento} onConcluir={handleConcluir} concluindoId={concluindoId} />
             )}
           </CardContent>
         </Card>
