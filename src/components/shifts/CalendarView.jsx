@@ -51,6 +51,7 @@ export default function CalendarView({
   surgeries = [],
   onDeleteSurgery,
   onUpdateSurgeryDate,
+  onViewSurgery,
   isViewer = false
 }) {
   const todayStr = new Date().toISOString().split('T')[0];
@@ -214,7 +215,11 @@ export default function CalendarView({
                         } : undefined}
                         onDragEnd={!isViewer ? () => setDraggedSurgery(null) : undefined}
                         title={[surgery.hospital_name, surgery.paciente, surgery.descricao].filter(Boolean).join(' • ')}
-                        className={`group relative p-2 rounded-xl text-xs bg-rose-100 dark:bg-rose-900/30 border border-rose-400 dark:border-rose-600 hover:shadow-lg transition-all ${
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onViewSurgery) onViewSurgery(surgery);
+                        }}
+                        className={`group relative p-2 rounded-xl text-xs bg-rose-100 dark:bg-rose-900/30 border border-rose-400 dark:border-rose-600 hover:shadow-lg transition-all cursor-pointer ${
                           !isViewer ? 'cursor-move' : ''
                         } ${draggedSurgery?.id === surgery.id ? 'opacity-50 scale-95' : ''}`}
                       >

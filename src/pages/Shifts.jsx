@@ -1,10 +1,13 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Filter, X, Download } from 'lucide-react';
 import CalendarView from '@/components/shifts/CalendarView';
 import ShiftModal from '@/components/shifts/ShiftModal';
 import ShiftDetailsModal from '@/components/shifts/ShiftDetailsModal';
+import SurgeryModal from '@/components/shifts/SurgeryModal';
 import DeleteConfirmation from '@/components/common/DeleteConfirmation';
 import Toast from '@/components/common/Toast';
 import { normalizarHospital } from '@/lib/shiftFilters';
@@ -33,8 +36,10 @@ export default function Shifts() {
   const [selectedShifts, setSelectedShifts] = useState([]);
   const [viewDetailsShift, setViewDetailsShift] = useState(null);
   const [editingShift, setEditingShift] = useState(null);
+  const [viewSurgery, setViewSurgery] = useState(null);
 
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: user, isLoading: isLoadingUser, error: userError } = useQuery({
     queryKey: ['user'],
@@ -131,13 +136,13 @@ export default function Shifts() {
   });
 
   const updateSurgeryMutation = useMutation({
-    mutationFn: ({ id, date }) => base44.entities.Procedimento.update(id, { data: date }),
+    mutationFn: ({ id, data }) => base44.entities.Procedimento.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cirurgias-agenda'] });
       queryClient.invalidateQueries({ queryKey: ['cirurgias-data'] });
       queryClient.invalidateQueries({ queryKey: ['procedimentos'] });
       queryClient.invalidateQueries({ queryKey: ['finance'] });
-      showToast('Cirurgia reagendada!');
+      showToast('Cirurgia atualizada!');
     },
   });
 
@@ -273,7 +278,12 @@ export default function Shifts() {
   };
 
   const handleUpdateSurgeryDate = (surgery, newDate) => {
-    updateSurgeryMutation.mutate({ id: surgery.id, date: newDate });
+    updateSurgeryMutation.mutate({ id: surgery.id, data: { data: newDate } });
+  };
+
+  const handleSaveSurgery = async (payload) => {
+    await updateSurgeryMutation.mutateAsync({ id: viewSurgery.id, data: payload });
+    setViewSurgery(null);
   };
 
   const handleTogglePaid = (id, paid) => {
@@ -502,6 +512,7 @@ export default function Shifts() {
         surgeries={cirurgias}
         onDeleteSurgery={handleDeleteSurgery}
         onUpdateSurgeryDate={handleUpdateSurgeryDate}
+        onViewSurgery={setViewSurgery}
         isViewer={isViewer}
       />
 
@@ -536,6 +547,21 @@ export default function Shifts() {
         hospitals={hospitals}
         initialDate={selectedDate}
         editingShift={editingShift}
+      />
+
+      <SurgeryModal
+        surgery={viewSurgery}
+        isOpen={!!viewSurgery}
+        onClose={() => setViewSurgery(null)}
+        doctors={doctors}
+        hospitals={hospitals}
+        onSave={handleSaveSurgery}
+        onDelete={(surgery) => {
+          setViewSurgery(null);
+          handleDeleteSurgery(surgery);
+        }}
+        onGoToProcedimentos={() => navigate(createPageUrl('Procedimentos'))}
+        isViewer={isViewer}
       />
 
       <DeleteConfirmation 
