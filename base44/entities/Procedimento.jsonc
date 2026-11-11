@@ -61,6 +61,28 @@
     "observacoes": {
       "type": "string",
       "description": "Observa\u00e7\u00f5es adicionais"
+    },
+    "anexos": {
+      "type": "array",
+      "description": "Documentos e fotos do prontu\u00e1rio enviados para a cirurgia",
+      "items": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "description": "Nome do ficheiro"
+          },
+          "file_uri": {
+            "type": "string",
+            "description": "Refer\u00eancia privada do ficheiro"
+          },
+          "enviado_em": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Data do envio"
+          }
+        }
+      }
     }
   },
   "required": [

@@ -1,12 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Filter } from 'lucide-react';
+import { Plus, Filter, List, Paperclip } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ProcedimentoModal from '@/components/procedimentos/ProcedimentoModal';
 import ProcedimentoTable from '@/components/procedimentos/ProcedimentoTable';
+import CirurgiasPendentes from '@/components/procedimentos/CirurgiasPendentes';
 import DadosFaltandoAlerta from '@/components/procedimentos/DadosFaltandoAlerta';
 import Toast from '@/components/common/Toast';
 import { procedimentoTotal, somaProcedimentos } from '@/lib/procedimentoTotals';
@@ -21,6 +22,7 @@ export default function Procedimentos() {
   const [showModal, setShowModal] = useState(false);
   const [editingProcedimento, setEditingProcedimento] = useState(null);
   const [tipoModal, setTipoModal] = useState('Cirurgia');
+  const [view, setView] = useState('todas');
   const [filters, setFilters] = useState({
     tipo: 'all',
     doctor: null,
@@ -122,6 +124,20 @@ export default function Procedimentos() {
     setShowModal(true);
   };
 
+  const handleAnexarDocumentos = async (procedimento, files) => {
+    try {
+      const anexos = [...(procedimento.anexos || [])];
+      for (const file of files) {
+        const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file });
+        anexos.push({ nome: file.name, file_uri, enviado_em: new Date().toISOString() });
+      }
+      updateMutation.mutate({ id: procedimento.id, data: { anexos } });
+      showToast('Documentos anexados à cirurgia!');
+    } catch (e) {
+      showToast('Não foi possível anexar os documentos.', 'error');
+    }
+  };
+
   const nomeMedico = (procedimento) =>
     normalizarNome(procedimento.doctor_name) ||
     normalizarNome(doctors.find(d => d.id === procedimento.doctor_id)?.full_name);
@@ -164,6 +180,7 @@ export default function Procedimentos() {
 
   const cirurgias = filteredProcedimentos.filter(p => p.tipo === 'Cirurgia');
   const consultas = filteredProcedimentos.filter(p => p.tipo === 'Consulta');
+  const cirurgiasPendentes = cirurgias.filter(p => !(p.anexos || []).length);
   const semHospital = filteredProcedimentos.filter(p => !nomeHospital(p)).length;
 
   if (isLoading) {
@@ -195,12 +212,22 @@ export default function Procedimentos() {
       />
 
       <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Procedimentos</h1>
             <p className="text-sm text-gray-600 mt-1">
               Faturamento dos procedimentos filtrados: <span className="font-bold text-gray-900">R$ {somaProcedimentos(filteredProcedimentos).toFixed(2)}</span>
             </p>
+          </div>
+          <div className="flex gap-2 bg-white border border-gray-200 p-1.5 rounded-2xl w-fit">
+            <Button variant={view === 'todas' ? 'default' : 'ghost'} size="sm" onClick={() => setView('todas')}>
+              <List className="w-4 h-4 mr-2" />
+              Todas
+            </Button>
+            <Button variant={view === 'pendentes' ? 'default' : 'ghost'} size="sm" onClick={() => setView('pendentes')}>
+              <Paperclip className="w-4 h-4 mr-2" />
+              Sem documentos ({cirurgiasPendentes.length})
+            </Button>
           </div>
         </div>
 
@@ -295,6 +322,23 @@ export default function Procedimentos() {
           </CardContent>
         </Card>
 
+        {view === 'pendentes' ? (
+          <Card className="border-l-4 border-l-amber-500">
+            <CardHeader>
+              <CardTitle className="text-amber-800">
+                Cirurgias pendentes de documentos ({cirurgiasPendentes.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CirurgiasPendentes
+                items={cirurgiasPendentes}
+                onAnexar={handleAnexarDocumentos}
+                onEdit={handleEdit}
+              />
+            </CardContent>
+          </Card>
+        ) : (
+        <>
         <Card className="border-l-4 border-l-green-500">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -332,6 +376,8 @@ export default function Procedimentos() {
             )}
           </CardContent>
         </Card>
+        </>
+        )}
       </div>
     </div>
   );
