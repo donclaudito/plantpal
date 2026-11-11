@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Filter, X, Download } from 'lucide-react';
+import { Filter, X, Download, FileSpreadsheet } from 'lucide-react';
 import CalendarView from '@/components/shifts/CalendarView';
 import ShiftModal from '@/components/shifts/ShiftModal';
 import ShiftDetailsModal from '@/components/shifts/ShiftDetailsModal';
 import SurgeryModal from '@/components/shifts/SurgeryModal';
 import AlertasAgenda from '@/components/shifts/AlertasAgenda';
 import GoogleCalendarSync from '@/components/shifts/GoogleCalendarSync';
+import ImportarPlantoesSheets from '@/components/shifts/ImportarPlantoesSheets';
 import { dataHoje } from '@/lib/shiftConflicts';
 import DeleteConfirmation from '@/components/common/DeleteConfirmation';
 import Toast from '@/components/common/Toast';
@@ -42,6 +43,7 @@ export default function Shifts() {
   const [viewDetailsShift, setViewDetailsShift] = useState(null);
   const [editingShift, setEditingShift] = useState(null);
   const [viewSurgery, setViewSurgery] = useState(null);
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -471,6 +473,14 @@ export default function Shifts() {
                 <Download size={16} /> Exportar CSV
               </button>
             )}
+            {!isViewer && (
+              <button
+                onClick={() => setIsImportOpen(true)}
+                className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-xl font-bold text-xs uppercase hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-md"
+              >
+                <FileSpreadsheet size={16} /> Importar do Sheets
+              </button>
+            )}
           
           <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 w-fit">
             {[
@@ -663,6 +673,21 @@ export default function Shifts() {
         }}
         onDelete={handleDeleteShift}
         isViewer={isViewer}
+      />
+
+      <ImportarPlantoesSheets
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        hospitals={hospitals}
+        onImportado={(resultado) => {
+          queryClient.invalidateQueries({ queryKey: ['shifts'] });
+          queryClient.invalidateQueries({ queryKey: ['finance'] });
+          if (resultado.criados > 0) {
+            showToast(`${resultado.criados} plantões do CLAUDIO importados da planilha!`);
+          } else {
+            showToast('Todos os plantões do CLAUDIO da planilha já estavam na agenda.');
+          }
+        }}
       />
     </div>
   );
