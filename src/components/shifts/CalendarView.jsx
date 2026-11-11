@@ -49,10 +49,13 @@ export default function CalendarView({
   onToggleSelectAll,
   onViewShiftDetails,
   surgeries = [],
+  onDeleteSurgery,
+  onUpdateSurgeryDate,
   isViewer = false
 }) {
   const todayStr = new Date().toISOString().split('T')[0];
   const [draggedShift, setDraggedShift] = useState(null);
+  const [draggedSurgery, setDraggedSurgery] = useState(null);
 
   const surgeriesByDate = useMemo(() => {
     const map = new Map();
@@ -84,7 +87,11 @@ export default function CalendarView({
     if (draggedShift && draggedShift.date !== targetDate) {
       onUpdateShiftDate(draggedShift.id, targetDate);
     }
+    if (draggedSurgery && onUpdateSurgeryDate && draggedSurgery.date !== targetDate) {
+      onUpdateSurgeryDate(draggedSurgery, targetDate);
+    }
     setDraggedShift(null);
+    setDraggedSurgery(null);
   };
 
   return (
@@ -198,8 +205,18 @@ export default function CalendarView({
                     {(surgeriesByDate.get(dayData.date) || []).map(surgery => (
                       <div
                         key={surgery.id}
+                        draggable={!isViewer}
+                        onDragStart={!isViewer ? (e) => {
+                          e.stopPropagation();
+                          setDraggedSurgery(surgery);
+                          setDraggedShift(null);
+                          e.dataTransfer.effectAllowed = 'move';
+                        } : undefined}
+                        onDragEnd={!isViewer ? () => setDraggedSurgery(null) : undefined}
                         title={[surgery.hospital_name, surgery.paciente, surgery.descricao].filter(Boolean).join(' • ')}
-                        className="p-2 rounded-xl text-xs bg-rose-100 dark:bg-rose-900/30 border border-rose-400 dark:border-rose-600"
+                        className={`group relative p-2 rounded-xl text-xs bg-rose-100 dark:bg-rose-900/30 border border-rose-400 dark:border-rose-600 hover:shadow-lg transition-all ${
+                          !isViewer ? 'cursor-move' : ''
+                        } ${draggedSurgery?.id === surgery.id ? 'opacity-50 scale-95' : ''}`}
                       >
                         <div className="font-black text-rose-800 dark:text-rose-200 truncate text-[10px] uppercase tracking-wide">
                           Cirurgia • {surgery.hospital_name}
@@ -207,6 +224,18 @@ export default function CalendarView({
                         <div className="text-rose-700 dark:text-rose-300 truncate text-[9px] mt-0.5">
                           {surgery.paciente || surgery.descricao || 'Programada'}
                         </div>
+
+                        {!isViewer && onDeleteSurgery && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteSurgery(surgery);
+                            }}
+                            className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 dark:bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg"
+                          >
+                            <Trash2 size={10} />
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>

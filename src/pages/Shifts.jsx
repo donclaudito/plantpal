@@ -130,6 +130,29 @@ export default function Shifts() {
     },
   });
 
+  const updateSurgeryMutation = useMutation({
+    mutationFn: ({ id, date }) => base44.entities.Procedimento.update(id, { data: date }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cirurgias-agenda'] });
+      queryClient.invalidateQueries({ queryKey: ['cirurgias-data'] });
+      queryClient.invalidateQueries({ queryKey: ['procedimentos'] });
+      queryClient.invalidateQueries({ queryKey: ['finance'] });
+      showToast('Cirurgia reagendada!');
+    },
+  });
+
+  const deleteSurgeryMutation = useMutation({
+    mutationFn: (id) => base44.entities.Procedimento.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cirurgias-agenda'] });
+      queryClient.invalidateQueries({ queryKey: ['cirurgias-data'] });
+      queryClient.invalidateQueries({ queryKey: ['procedimentos'] });
+      queryClient.invalidateQueries({ queryKey: ['finance'] });
+      setDeleteConfirmation({ isOpen: false, id: '', name: '' });
+      showToast('Cirurgia removida!');
+    },
+  });
+
   const bulkDeleteMutation = useMutation({
     mutationFn: async (ids) => {
       const results = await Promise.allSettled(ids.map(id => base44.entities.Shift.delete(id)));
@@ -237,7 +260,20 @@ export default function Shifts() {
   };
 
   const handleDeleteShift = (id, name) => {
-    setDeleteConfirmation({ isOpen: true, id, name });
+    setDeleteConfirmation({ isOpen: true, id, name, kind: 'shift' });
+  };
+
+  const handleDeleteSurgery = (surgery) => {
+    setDeleteConfirmation({
+      isOpen: true,
+      id: surgery.id,
+      name: `Cirurgia • ${surgery.hospital_name || ''}${surgery.paciente ? ` • ${surgery.paciente}` : ''}`,
+      kind: 'surgery'
+    });
+  };
+
+  const handleUpdateSurgeryDate = (surgery, newDate) => {
+    updateSurgeryMutation.mutate({ id: surgery.id, date: newDate });
   };
 
   const handleTogglePaid = (id, paid) => {
@@ -464,6 +500,8 @@ export default function Shifts() {
         onToggleSelectAll={isViewer ? null : toggleSelectAll}
         onViewShiftDetails={(shift) => setViewDetailsShift(shift)}
         surgeries={cirurgias}
+        onDeleteSurgery={handleDeleteSurgery}
+        onUpdateSurgeryDate={handleUpdateSurgeryDate}
         isViewer={isViewer}
       />
 
@@ -503,7 +541,11 @@ export default function Shifts() {
       <DeleteConfirmation 
         isOpen={deleteConfirmation.isOpen}
         name={deleteConfirmation.name}
-        onConfirm={() => deleteShiftMutation.mutate(deleteConfirmation.id)}
+        onConfirm={() => (
+          deleteConfirmation.kind === 'surgery'
+            ? deleteSurgeryMutation.mutate(deleteConfirmation.id)
+            : deleteShiftMutation.mutate(deleteConfirmation.id)
+        )}
         onCancel={() => setDeleteConfirmation({ isOpen: false, id: '', name: '' })}
       />
 
