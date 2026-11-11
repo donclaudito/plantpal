@@ -221,6 +221,28 @@ export default async function (req) {
     ]);
 
     const mapa = new Map(vinculos.map((v) => [`${v.record_type}:${v.record_id}`, v]));
+
+    // Sincronizações simultâneas podem deixar mais de um vínculo por registo:
+    // mantém o mais antigo e apaga os eventos extra no Google
+    const porRegisto = new Map();
+    for (const vinculo of vinculos) {
+      const chave = `${vinculo.record_type}:${vinculo.record_id}`;
+      const lista = porRegisto.get(chave) || [];
+      lista.push(vinculo);
+      porRegisto.set(chave, lista);
+    }
+    for (const [chave, lista] of porRegisto.entries()) {
+      if (lista.length < 2) continue;
+      const [manter, ...extras] = lista.sort((a, b) =>
+        String(a.created_date || '').localeCompare(String(b.created_date || ''))
+      );
+      for (const extra of extras) {
+        await removerEvento(accessToken, extra.google_event_id);
+        await base44.asServiceRole.entities.CalendarSync.delete(extra.id);
+      }
+      mapa.set(chave, manter);
+    }
+
     const eventos = await buscarEventos(
       accessToken,
       [...mapa.values()].map((v) => v.google_event_id)
