@@ -11,6 +11,7 @@ import SurgeryModal from '@/components/shifts/SurgeryModal';
 import AlertasAgenda from '@/components/shifts/AlertasAgenda';
 import GoogleCalendarSync from '@/components/shifts/GoogleCalendarSync';
 import ImportarPlantoesSheets from '@/components/shifts/ImportarPlantoesSheets';
+import ResumoPlantaoHoje from '@/components/shifts/ResumoPlantaoHoje';
 import { dataHoje } from '@/lib/shiftConflicts';
 import DeleteConfirmation from '@/components/common/DeleteConfirmation';
 import Toast from '@/components/common/Toast';
@@ -394,14 +395,12 @@ export default function Shifts() {
             <div className="w-3 h-3 bg-white rounded-full animate-ping"></div>
             <div className="flex-1">
               <p className="font-black text-sm uppercase tracking-wide">Hoje está de plantão!</p>
-              <p className="text-xs opacity-90 mt-1">
-                Médicos de serviço: {todayShifts.map((s, i) => (
-                  <span key={s.id}>
-                    <strong>{s.doctor_name}</strong> em {s.hospital} ({s.shift_type})
-                    {i < todayShifts.length - 1 ? ' • ' : ''}
-                  </span>
+              <p className="text-xs opacity-90 mt-1">Médicos de serviço:</p>
+              <div className="divide-y divide-white/25">
+                {todayShifts.map((s) => (
+                  <ResumoPlantaoHoje key={s.id} shift={s} cirurgias={cirurgiasHoje} />
                 ))}
-              </p>
+              </div>
             </div>
           </div>
         </div>
