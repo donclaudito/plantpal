@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import jsPDF from 'jspdf';
 import { formatQuantity } from '@/lib/quantity';
+import PixReceiptImport from '@/components/deposits/PixReceiptImport';
 
 export default function Deposits() {
   const queryClient = useQueryClient();
@@ -25,6 +26,7 @@ export default function Deposits() {
   const [uploadingPix, setUploadingPix] = useState(null);
   const [comprovanteUrl, setComprovanteUrl] = useState(null);
   const [comprovanteDeposit, setComprovanteDeposit] = useState(null);
+  const [showImport, setShowImport] = useState(false);
 
   const { data: user } = useQuery({
     queryKey: ['user'],
@@ -240,7 +242,23 @@ Qualquer dúvida, estamos à disposição! 🙂`;
     <div className="max-w-7xl mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-black text-slate-900">Depósitos</h1>
+        <Button onClick={() => setShowImport((value) => !value)} className="gap-2 bg-green-600 hover:bg-green-700">
+          <Upload size={16} />
+          Importar Recibo PIX
+        </Button>
       </div>
+
+      {showImport && (
+        <PixReceiptImport
+          doctors={doctors}
+          hospitals={hospitals}
+          competencias={availableCompetencias}
+          depositsData={depositsData}
+          formatMonth={formatMonth}
+          onSave={(payload) => createOrUpdateDepositMutation.mutateAsync(payload)}
+          onClose={() => setShowImport(false)}
+        />
+      )}
 
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-md">
         <h2 className="text-lg font-black text-slate-900 mb-4">Filtros</h2>
@@ -330,7 +348,12 @@ Qualquer dúvida, estamos à disposição! 🙂`;
                   <td className="px-6 py-4 text-sm text-slate-600">{formatMonth(deposit.mesCompetencia || deposit.mes_competencia)}</td>
                   <td className="px-6 py-4 text-sm text-slate-600">{formatMonth(deposit.mesDeposito || deposit.mes_deposito)}</td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-slate-900">{formatQuantity(deposit.numPlantoes || deposit.num_plantoes)}</td>
-                  <td className="px-6 py-4 text-sm text-right font-bold text-blue-600">R$ {((deposit.valorLiquido ?? deposit.valor_liquido) || 0).toFixed(2)}</td>
+                  <td className="px-6 py-4 text-sm text-right font-bold text-blue-600">
+                    R$ {((deposit.valorLiquido ?? deposit.valor_liquido) || 0).toFixed(2)}
+                    {deposit.valor_pago ? (
+                      <div className="text-xs font-bold text-green-700">Recebido: R$ {deposit.valor_pago.toFixed(2)}</div>
+                    ) : null}
+                  </td>
                   <td className="px-6 py-4 text-center">
                     {deposit.status === 'Pago' ? (
                       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">

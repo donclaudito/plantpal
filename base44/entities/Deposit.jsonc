@@ -42,6 +42,10 @@
       "type": "number",
       "description": "Valor l\u00edquido a pagar"
     },
+    "valor_pago": {
+      "type": "number",
+      "description": "Valor efetivamente recebido no PIX, extra\u00eddo do comprovante"
+    },
     "descontos_detalhados": {
       "type": "array",
       "items": {
