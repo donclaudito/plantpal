@@ -140,10 +140,26 @@ export default async function (req) {
 
     if (novos.length) await base44.entities.Shift.bulkCreate(novos);
 
+    // Mantém a lista fiel à planilha: apaga apenas importações anteriores que saíram
+    // da escala no mesmo dia (nunca plantões já pagos nem os editados manualmente).
+    const datasNaPlanilha = new Set(encontrados.map((p) => dataIso(p.date)));
+    const naPlanilha = new Set(encontrados.map(chave));
+    const aRemover = existentes.filter(
+      (registro) =>
+        String(registro.notes || '').startsWith('Escala Google') &&
+        registro.status !== 'Pago' &&
+        datasNaPlanilha.has(dataIso(registro.date)) &&
+        !naPlanilha.has(chave(registro))
+    );
+    if (aRemover.length) {
+      await base44.entities.Shift.deleteMany({ id: { $in: aRemover.map((registro) => registro.id) } });
+    }
+
     return Response.json({
       hospital: hospitalNome,
       encontrados: encontrados.length,
       criados: novos.length,
+      removidos: aRemover.length,
       ignorados,
       plantoes: novos.map((p) => ({ date: p.date, shift_type: p.shift_type, period: p.period, value: p.value })),
     });
