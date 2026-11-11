@@ -8,6 +8,8 @@ import CalendarView from '@/components/shifts/CalendarView';
 import ShiftModal from '@/components/shifts/ShiftModal';
 import ShiftDetailsModal from '@/components/shifts/ShiftDetailsModal';
 import SurgeryModal from '@/components/shifts/SurgeryModal';
+import AlertasAgenda from '@/components/shifts/AlertasAgenda';
+import { dataHoje } from '@/lib/shiftConflicts';
 import DeleteConfirmation from '@/components/common/DeleteConfirmation';
 import Toast from '@/components/common/Toast';
 import { normalizarHospital } from '@/lib/shiftFilters';
@@ -73,6 +75,18 @@ export default function Shifts() {
       const ultimoDia = String(new Date(currentYear, currentMonth + 1, 0).getDate()).padStart(2, '0');
       const page = await base44.entities.Procedimento.filter(
         { tipo: 'Cirurgia', data: { $gte: `${currentYear}-${mes}-01`, $lte: `${currentYear}-${mes}-${ultimoDia}` } },
+        { limit: 200 }
+      );
+      return page.items || [];
+    },
+    enabled: !!user,
+  });
+
+  const { data: cirurgiasHoje = [] } = useQuery({
+    queryKey: ['cirurgias-hoje', user?.email],
+    queryFn: async () => {
+      const page = await base44.entities.Procedimento.filter(
+        { tipo: 'Cirurgia', data: dataHoje() },
         { limit: 200 }
       );
       return page.items || [];
@@ -497,6 +511,13 @@ export default function Shifts() {
           </div>
         </div>
       </div>
+
+      <AlertasAgenda
+        shifts={shifts}
+        cirurgiasHoje={cirurgiasHoje}
+        month={currentMonth}
+        year={currentYear}
+      />
 
       <CalendarView 
         calendarDays={calendarDays}
