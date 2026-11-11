@@ -19,7 +19,8 @@ export default function ProcedimentoModal({ isOpen, onClose, onSave, doctors, ho
       tipo_pagamento: 'SUS',
       descricao: '',
       valor: 0,
-      observacoes: ''
+      observacoes: '',
+      paciente: ''
     }),
     quantidade: procedimentoQuantidade(initialData),
   });
@@ -117,6 +118,15 @@ export default function ProcedimentoModal({ isOpen, onClose, onSave, doctors, ho
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div>
+              <Label>Paciente</Label>
+              <Input
+                value={formData.paciente || ''}
+                onChange={(e) => setFormData({ ...formData, paciente: e.target.value })}
+                placeholder="Nome do paciente"
+              />
             </div>
 
             <div>

@@ -4,10 +4,12 @@ import { encontrarHospital, resolverDoctorId } from '@/lib/shiftFilters';
 import useShiftQuote from '@/lib/useShiftQuote';
 import EspecialidadeSelect from '@/components/EspecialidadeSelect';
 import ConsultationValueFields from '@/components/shifts/ConsultationValueFields';
+import ProntuarioSection from '@/components/shifts/ProntuarioSection';
+import { emptyProntuario, isSurgeryHospital, tipoPagamentoDoConvenio } from '@/lib/prontuario';
 
 const shiftTypes = ["DIURNO MANHÃ", "DIURNO TARDE", "DIURNO", "NOTURNO", "24H", "PARCIAL", "ESPECIAL(DAS10 AS 22)"];
 
-export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals, initialDate, editingShift }) {
+export default function ShiftModal({ isOpen, onClose, onSave, onSaveProcedure, doctors, hospitals, initialDate, editingShift }) {
   const [formData, setFormData] = useState({
     date: initialDate || '',
     doctorId: '',
@@ -25,6 +27,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [prontuario, setProntuario] = useState(emptyProntuario());
   const [quantidadeConsultas, setQuantidadeConsultas] = useState('');
   const [valorConsulta, setValorConsulta] = useState('');
   const quantidade = Number(quantidadeConsultas);
@@ -34,11 +37,13 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
     : null;
   const { data: quote, isFetching: isLoadingQuote, error: quoteError } = useShiftQuote(formData.doctorId, formData.unit, formData.period, isOpen, grossValue);
   const byConsultations = quote?.billingMode === 'por_periodo';
+  const isSurgery = !editingShift && isSurgeryHospital(formData.unit);
   const shiftValue = quote?.configured || quote?.manual ? quote.value : Number(formData.value) || 0;
 
   useEffect(() => {
     if (isOpen) { // Adicionado: Só inicializa/reseta quando o modal abre
       setSaveError('');
+      setProntuario(emptyProntuario());
       setQuantidadeConsultas(editingShift?.quantidade_consultas ? String(editingShift.quantidade_consultas) : '');
       setValorConsulta(editingShift?.valor_consulta ? String(editingShift.valor_consulta) : '');
       if (editingShift) {
@@ -122,6 +127,35 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (isSurgery) {
+      if (isSaving) return;
+      setIsSaving(true);
+      setSaveError('');
+      try {
+        await onSaveProcedure({
+          tipo: 'Cirurgia',
+          doctor_id: formData.doctorId,
+          doctor_name: formData.doctorName,
+          hospital_id: hospitals.find(h => h.name === formData.unit)?.id || '',
+          hospital_name: formData.unit,
+          paciente: prontuario.paciente,
+          data: formData.date,
+          tipo_pagamento: tipoPagamentoDoConvenio(prontuario.convenio),
+          descricao: [prontuario.nomeCirurgia, prontuario.tipoCirurgia].filter(Boolean).join(' • '),
+          observacoes: prontuario.convenio ? `Convênio: ${prontuario.convenio}` : '',
+          quantidade: 1,
+          valor: Number(prontuario.valor) || 0
+        });
+        onClose();
+      } catch (error) {
+        setSaveError(`Não foi possível guardar a cirurgia: ${error.message}`);
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
     if (isLoadingQuote || quoteError || isSaving) return;
     setIsSaving(true);
     setSaveError('');
@@ -162,7 +196,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
       <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
         <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-6 flex items-center justify-between">
           <h2 className="text-2xl font-black text-slate-900 dark:text-white">
-            {editingShift ? 'Editar Plantão' : 'Novo Plantão'}
+            {editingShift ? 'Editar Plantão' : isSurgery ? 'Nova Cirurgia' : 'Novo Plantão'}
           </h2>
           <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
             <X className="text-slate-400 dark:text-slate-500" size={24} />
@@ -229,47 +263,61 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
               </select>
             </div>
 
-            <div>
-              <label className="block text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
-                Tipo de Plantão
-              </label>
-              <select
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-700 border-2 border-transparent focus:border-blue-600 dark:focus:border-blue-400 rounded-xl font-bold text-slate-900 dark:text-white transition-colors"
-              >
-                {shiftTypes.map(t => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
+            {!isSurgery && (
+              <div>
+                <label className="block text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
+                  Tipo de Plantão
+                </label>
+                <select
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-700 border-2 border-transparent focus:border-blue-600 dark:focus:border-blue-400 rounded-xl font-bold text-slate-900 dark:text-white transition-colors"
+                >
+                  {shiftTypes.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
-            <div>
-              <label className="block text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
-                Período
-              </label>
-              <select
-                value={byConsultations ? 'consultas' : formData.period || '12h'}
-                disabled={byConsultations}
-                onChange={handlePeriodChange}
-                className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-700 border-2 border-transparent focus:border-blue-600 dark:focus:border-blue-400 rounded-xl font-bold text-slate-900 dark:text-white transition-colors"
-              >
-                {byConsultations && <option value="consultas">Período de consultas (sem duração)</option>}
-                <option value="1h">1h</option>
-                <option value="2h">2h</option>
-                <option value="3h">3h</option>
-                <option value="4h">4h</option>
-                <option value="5h">5h</option>
-                <option value="6h">6h</option>
-                <option value="12h">12h</option>
-                <option value="retaguarda">Retaguarda</option>
-                <option value="coordenador">Coordenador</option>
-                <option value="professor">Professor</option>
-              </select>
-            </div>
+            {!isSurgery && (
+              <div>
+                <label className="block text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
+                  Período
+                </label>
+                <select
+                  value={byConsultations ? 'consultas' : formData.period || '12h'}
+                  disabled={byConsultations}
+                  onChange={handlePeriodChange}
+                  className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-700 border-2 border-transparent focus:border-blue-600 dark:focus:border-blue-400 rounded-xl font-bold text-slate-900 dark:text-white transition-colors"
+                >
+                  {byConsultations && <option value="consultas">Período de consultas (sem duração)</option>}
+                  <option value="1h">1h</option>
+                  <option value="2h">2h</option>
+                  <option value="3h">3h</option>
+                  <option value="4h">4h</option>
+                  <option value="5h">5h</option>
+                  <option value="6h">6h</option>
+                  <option value="12h">12h</option>
+                  <option value="retaguarda">Retaguarda</option>
+                  <option value="coordenador">Coordenador</option>
+                  <option value="professor">Professor</option>
+                </select>
+              </div>
+            )}
           </div>
 
-          {!editingShift && (
+          {isSurgery && (
+            <ProntuarioSection
+              dados={prontuario}
+              onChange={(patch) => {
+                setProntuario(prev => ({ ...prev, ...patch }));
+                if (patch.data) setFormData(prev => ({ ...prev, date: patch.data }));
+              }}
+            />
+          )}
+
+          {!editingShift && !isSurgery && (
             <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-600">
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
@@ -317,7 +365,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
             </div>
           )}
 
-          {byConsultations && (
+          {!isSurgery && byConsultations && (
             <ConsultationValueFields
               quote={quote}
               quantidade={quantidadeConsultas}
@@ -326,7 +374,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
               onChangeValorConsulta={setValorConsulta}
             />
           )}
-          {formData.doctorId && formData.unit && (
+          {!isSurgery && formData.doctorId && formData.unit && (
             <div aria-live="polite" className="rounded-xl border border-border bg-muted p-4">
               <p className="text-sm text-muted-foreground">{byConsultations ? grossValue === null ? 'Estimativa líquida por período' : 'Valor real líquido do período' : 'Valor do plantão'}</p>
               <p className="font-bold text-foreground">{isLoadingQuote ? 'Calculando...' : shiftValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
@@ -345,10 +393,10 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
             </button>
             <button
               type="submit"
-              disabled={isSaving || isLoadingQuote || !!quoteError}
+              disabled={isSaving || (!isSurgery && (isLoadingQuote || !!quoteError))}
               className="flex-1 py-4 bg-blue-600 dark:bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
             >
-              {isSaving ? 'Salvando...' : editingShift ? 'Atualizar' : 'Guardar Plantão'}
+              {isSaving ? 'Salvando...' : editingShift ? 'Atualizar' : isSurgery ? 'Guardar Cirurgia' : 'Guardar Plantão'}
             </button>
           </div>
         </form>

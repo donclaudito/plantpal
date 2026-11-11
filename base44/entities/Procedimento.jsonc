@@ -26,6 +26,10 @@
       "type": "string",
       "description": "Nome do hospital"
     },
+    "paciente": {
+      "type": "string",
+      "description": "Nome do paciente extra\u00eddo do prontu\u00e1rio"
+    },
     "data": {
       "type": "string",
       "format": "date",

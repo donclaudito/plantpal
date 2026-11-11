@@ -1,4 +1,6 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Filter, X, Download } from 'lucide-react';
@@ -35,6 +37,7 @@ export default function Shifts() {
   const [editingShift, setEditingShift] = useState(null);
 
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: user, isLoading: isLoadingUser, error: userError } = useQuery({
     queryKey: ['user'],
@@ -468,6 +471,14 @@ export default function Shifts() {
             await createShiftMutation.mutateAsync(data);
           }
           setEditingShift(null);
+        }}
+        onSaveProcedure={async (data) => {
+          await base44.entities.Procedimento.create(data);
+          queryClient.invalidateQueries({ queryKey: ['procedimentos'] });
+          setIsModalOpen(false);
+          setEditingShift(null);
+          showToast('Cirurgia registada nos procedimentos!');
+          navigate(createPageUrl('Procedimentos'));
         }}
         doctors={doctors}
         hospitals={hospitals}
