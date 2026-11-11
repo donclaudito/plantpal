@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { formatQuantity } from '@/lib/quantity';
 import { MEDICO_PADRAO } from '@/lib/defaultDoctor';
+import HospitalGanhos from '@/components/relatorios/HospitalGanhos';
 
 export default function Relatorios() {
   const [selectedMonth, setSelectedMonth] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`);
@@ -169,6 +170,8 @@ export default function Relatorios() {
           </div>
         </div>
       </div>
+
+      <HospitalGanhos summary={financialData?.summary || []} />
 
       {/* Relatório por Hospital */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden">
