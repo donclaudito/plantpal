@@ -86,6 +86,16 @@
       "minimum": 0,
       "description": "Valor bruto real deste per\u00edodo de consultas, sem rela\u00e7\u00e3o com a dura\u00e7\u00e3o"
     },
+    "quantidade_consultas": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Quantidade de consultas realizadas no per\u00edodo (manh\u00e3 ou tarde)"
+    },
+    "valor_consulta": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Valor bruto de cada consulta"
+    },
     "status": {
       "type": "string",
       "enum": [

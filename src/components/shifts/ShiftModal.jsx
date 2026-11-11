@@ -25,8 +25,13 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
-  const [actualValue, setActualValue] = useState('');
-  const grossValue = actualValue === '' ? null : Number(actualValue);
+  const [quantidadeConsultas, setQuantidadeConsultas] = useState('');
+  const [valorConsulta, setValorConsulta] = useState('');
+  const quantidade = Number(quantidadeConsultas);
+  const unitario = Number(valorConsulta);
+  const grossValue = quantidadeConsultas !== '' && valorConsulta !== '' && Number.isFinite(quantidade) && Number.isFinite(unitario)
+    ? Math.round(quantidade * unitario * 100) / 100
+    : null;
   const { data: quote, isFetching: isLoadingQuote, error: quoteError } = useShiftQuote(formData.doctorId, formData.unit, formData.period, isOpen, grossValue);
   const byConsultations = quote?.billingMode === 'por_periodo';
   const shiftValue = quote?.configured || quote?.manual ? quote.value : Number(formData.value) || 0;
@@ -34,7 +39,8 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
   useEffect(() => {
     if (isOpen) { // Adicionado: Só inicializa/reseta quando o modal abre
       setSaveError('');
-      setActualValue(editingShift?.usar_valor_informado ? String(editingShift.valor_bruto_informado) : '');
+      setQuantidadeConsultas(editingShift?.quantidade_consultas ? String(editingShift.quantidade_consultas) : '');
+      setValorConsulta(editingShift?.valor_consulta ? String(editingShift.valor_consulta) : '');
       if (editingShift) {
         const doctorId = resolverDoctorId(doctors, editingShift);
         setFormData({
@@ -68,7 +74,8 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
   }, [isOpen, initialDate, editingShift, doctors]); // Adicionado 'isOpen' aqui
 
   const handleDoctorChange = (e) => {
-    setActualValue('');
+    setQuantidadeConsultas('');
+    setValorConsulta('');
     const doctorId = e.target.value;
     const doctor = doctors.find(d => d.id === doctorId);
     if (doctor) {
@@ -83,13 +90,15 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
   };
 
   const handleHospitalChange = (e) => {
-    setActualValue('');
+    setQuantidadeConsultas('');
+    setValorConsulta('');
     const hospitalName = e.target.value;
     setFormData({ ...formData, unit: hospitalName, value: 0 });
   };
 
   const handlePeriodChange = (e) => {
-    setActualValue('');
+    setQuantidadeConsultas('');
+    setValorConsulta('');
     const period = e.target.value;
     setFormData({ ...formData, period, value: 0 });
   };
@@ -125,6 +134,8 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
       period: byConsultations ? 'consultas' : formData.period,
       usar_valor_informado: grossValue !== null,
       valor_bruto_informado: grossValue ?? 0,
+      quantidade_consultas: byConsultations && grossValue !== null ? quantidade : 0,
+      valor_consulta: byConsultations && grossValue !== null ? unitario : 0,
       value: shiftValue,
       status: formData.paid ? 'Pago' : 'Realizado'
     });
@@ -306,7 +317,15 @@ export default function ShiftModal({ isOpen, onClose, onSave, doctors, hospitals
             </div>
           )}
 
-          {byConsultations && <ConsultationValueFields quote={quote} actualValue={actualValue} onChange={setActualValue} />}
+          {byConsultations && (
+            <ConsultationValueFields
+              quote={quote}
+              quantidade={quantidadeConsultas}
+              valorConsulta={valorConsulta}
+              onChangeQuantidade={setQuantidadeConsultas}
+              onChangeValorConsulta={setValorConsulta}
+            />
+          )}
           {formData.doctorId && formData.unit && (
             <div aria-live="polite" className="rounded-xl border border-border bg-muted p-4">
               <p className="text-sm text-muted-foreground">{byConsultations ? grossValue === null ? 'Estimativa líquida por período' : 'Valor real líquido do período' : 'Valor do plantão'}</p>

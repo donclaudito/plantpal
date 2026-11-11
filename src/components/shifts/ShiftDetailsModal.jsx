@@ -73,6 +73,16 @@ export default function ShiftDetailsModal({ shift, isOpen, onClose, onEdit, onDe
             </div>
           </div>
 
+          {shift.quantidade_consultas > 0 && shift.valor_consulta > 0 && (
+            <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl space-y-1">
+              <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">Consultas</span>
+              <p className="text-lg font-black text-slate-900 dark:text-white">
+                {shift.quantidade_consultas} × {Number(shift.valor_consulta).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} ={' '}
+                {Number(shift.quantidade_consultas * shift.valor_consulta).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              </p>
+            </div>
+          )}
+
           <ShiftValue shift={shift} />
 
           <div className="flex gap-3">
