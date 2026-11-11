@@ -31,6 +31,7 @@ export default function Shifts() {
   const [filterDoctor, setFilterDoctor] = useState(MEDICO_PADRAO);
   const [filterWeek, setFilterWeek] = useState('TODAS');
   const [filterHospital, setFilterHospital] = useState('TODOS');
+  const [filterDuracao, setFilterDuracao] = useState('TODAS');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [message, setMessage] = useState(null);
@@ -249,9 +250,12 @@ export default function Shifts() {
         matchWeek = weekOfMonth === weekNum;
       }
 
-      return matchMonth && matchDoctor && matchSpecialty && matchWeek && matchHospital;
+      const duracao = (s.period || '12h').trim().toLowerCase();
+      const matchDuracao = filterDuracao === 'TODAS' || duracao === filterDuracao;
+
+      return matchMonth && matchDoctor && matchSpecialty && matchWeek && matchHospital && matchDuracao;
     }).sort((a, b) => b.date.localeCompare(a.date));
-  }, [shifts, currentMonth, currentYear, filterDoctor, filterSpecialty, filterWeek, filterHospital]);
+  }, [shifts, currentMonth, currentYear, filterDoctor, filterSpecialty, filterWeek, filterHospital, filterDuracao]);
 
   const calendarDays = useMemo(() => {
     const firstDay = new Date(currentYear, currentMonth, 1);
@@ -458,6 +462,26 @@ export default function Shifts() {
               </button>
             )}
           
+          <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 w-fit">
+            {[
+              { valor: 'TODAS', rotulo: 'Todos' },
+              { valor: '6h', rotulo: '6h' },
+              { valor: '12h', rotulo: '12h' },
+            ].map(opcao => (
+              <button
+                key={opcao.valor}
+                onClick={() => setFilterDuracao(opcao.valor)}
+                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-colors ${
+                  filterDuracao === opcao.valor
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                {opcao.rotulo}
+              </button>
+            ))}
+          </div>
+
           <div className="flex gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 w-fit">
             <div className="p-2 text-slate-400 dark:text-slate-500"><Filter size={16}/></div>
             <select 
