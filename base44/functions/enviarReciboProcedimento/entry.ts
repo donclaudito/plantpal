@@ -113,6 +113,59 @@ function montarRecibo(procedimento, hospital, emitidoEm) {
   return doc.output('arraybuffer');
 }
 
+const PASTA_DRIVE = 'Recibos de Plantão';
+
+const obterPastaDrive = async (accessToken: string) => {
+  const busca = new URL('https://www.googleapis.com/drive/v3/files');
+  busca.searchParams.set(
+    'q',
+    `mimeType='application/vnd.google-apps.folder' and name='${PASTA_DRIVE}' and trashed=false`
+  );
+  busca.searchParams.set('fields', 'files(id,name)');
+  const resposta = await fetch(busca, { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!resposta.ok) throw new Error(`Google Drive respondeu ${resposta.status}`);
+  const dados = await resposta.json();
+  if (dados.files?.[0]?.id) return dados.files[0].id;
+
+  const criada = await fetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: PASTA_DRIVE, mimeType: 'application/vnd.google-apps.folder' }),
+  });
+  if (!criada.ok) throw new Error(`Google Drive respondeu ${criada.status}`);
+  return (await criada.json()).id;
+};
+
+const guardarNoDrive = async (accessToken: string, pdf: Uint8Array, nomeFicheiro: string) => {
+  const pasta = await obterPastaDrive(accessToken);
+  const fronteira = `recibo_${crypto.randomUUID()}`;
+  const cabecalho = new TextEncoder().encode(
+    `--${fronteira}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n` +
+      JSON.stringify({ name: nomeFicheiro, parents: [pasta] }) +
+      `\r\n--${fronteira}\r\nContent-Type: application/pdf\r\n\r\n`
+  );
+  const rodape = new TextEncoder().encode(`\r\n--${fronteira}--`);
+  const corpo = new Uint8Array(cabecalho.length + pdf.length + rodape.length);
+  corpo.set(cabecalho, 0);
+  corpo.set(pdf, cabecalho.length);
+  corpo.set(rodape, cabecalho.length + pdf.length);
+
+  const resposta = await fetch(
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': `multipart/related; boundary=${fronteira}`,
+      },
+      body: corpo,
+      signal: AbortSignal.timeout(20000),
+    }
+  );
+  if (!resposta.ok) throw new Error(`Google Drive respondeu ${resposta.status}`);
+  return resposta.json();
+};
+
 const paraBase64 = (bytes: Uint8Array) => {
   let binario = '';
   const bloco = 0x8000;
@@ -186,6 +239,15 @@ export default async function (req) {
 
     const referencia = String(procedimento.id || '').slice(-8).toLowerCase();
     const nomeFicheiro = `recibo-${referencia}.pdf`;
+
+    // Cópia automática na pasta do Google Drive
+    let copiaDrive: any;
+    try {
+      const { accessToken: tokenDrive } = await base44.asServiceRole.connectors.getConnection('googledrive');
+      copiaDrive = await guardarNoDrive(tokenDrive, pdf, nomeFicheiro);
+    } catch (e: any) {
+      copiaDrive = { erro: e.message };
+    }
     const assunto = `Recibo de procedimento - ${hospital?.name || procedimento.hospital_name || 'hospital'} - ${formatarData(procedimento.data)}`;
     const corpo = [
       'Segue em anexo o recibo do procedimento realizado.',
@@ -243,7 +305,7 @@ export default async function (req) {
       recibo_enviado_para: destinatario,
     });
 
-    return Response.json({ enviado: true, destinatario, assunto });
+    return Response.json({ enviado: true, destinatario, assunto, drive: copiaDrive });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
