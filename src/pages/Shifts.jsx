@@ -8,6 +8,7 @@ import ShiftDetailsModal from '@/components/shifts/ShiftDetailsModal';
 import DeleteConfirmation from '@/components/common/DeleteConfirmation';
 import Toast from '@/components/common/Toast';
 import { normalizarHospital } from '@/lib/shiftFilters';
+import { MEDICO_PADRAO } from '@/lib/defaultDoctor';
 
 const monthNames = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -22,7 +23,7 @@ export default function Shifts() {
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [filterSpecialty, setFilterSpecialty] = useState('TODAS');
-  const [filterDoctor, setFilterDoctor] = useState('TODOS');
+  const [filterDoctor, setFilterDoctor] = useState(MEDICO_PADRAO);
   const [filterWeek, setFilterWeek] = useState('TODAS');
   const [filterHospital, setFilterHospital] = useState('TODOS');
   const [isModalOpen, setIsModalOpen] = useState(false);

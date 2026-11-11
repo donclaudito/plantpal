@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import jsPDF from 'jspdf';
 import { formatQuantity } from '@/lib/quantity';
 import PixReceiptImport from '@/components/deposits/PixReceiptImport';
+import { MEDICO_PADRAO } from '@/lib/defaultDoctor';
 
 export default function Deposits() {
   const queryClient = useQueryClient();
@@ -15,7 +16,7 @@ export default function Deposits() {
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
 
-  const [filterDoctor, setFilterDoctor] = useState('all');
+  const [filterDoctor, setFilterDoctor] = useState(MEDICO_PADRAO);
   const [filterHospital, setFilterHospital] = useState('all');
   const [filterCompetencia, setFilterCompetencia] = useState(`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`);
   const [filterDeposito, setFilterDeposito] = useState('all');

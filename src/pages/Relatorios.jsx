@@ -5,11 +5,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { formatQuantity } from '@/lib/quantity';
+import { MEDICO_PADRAO } from '@/lib/defaultDoctor';
 
 export default function Relatorios() {
   const [selectedMonth, setSelectedMonth] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`);
   const [selectedHospital, setSelectedHospital] = useState('all');
-  const [selectedDoctor, setSelectedDoctor] = useState('all');
+  const [selectedDoctor, setSelectedDoctor] = useState(MEDICO_PADRAO);
 
   const { data: user } = useQuery({
     queryKey: ['user'],

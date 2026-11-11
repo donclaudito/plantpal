@@ -1,14 +1,20 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2, Edit, Filter } from 'lucide-react';
+import { Plus, Filter } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ProcedimentoModal from '@/components/procedimentos/ProcedimentoModal';
+import ProcedimentoTable from '@/components/procedimentos/ProcedimentoTable';
+import DadosFaltandoAlerta from '@/components/procedimentos/DadosFaltandoAlerta';
 import Toast from '@/components/common/Toast';
-import { procedimentoQuantidade, procedimentoTotal, somaProcedimentos } from '@/lib/procedimentoTotals';
-import { monthKeyFromDate, formatMonthLabel, formatDatePtBr } from '@/lib/dateKeys';
+import { procedimentoTotal, somaProcedimentos } from '@/lib/procedimentoTotals';
+import { monthKeyFromDate, formatMonthLabel } from '@/lib/dateKeys';
+import { normalizarHospital, normalizarNome } from '@/lib/shiftFilters';
+import { idMedicoPadrao } from '@/lib/defaultDoctor';
+
+const SEM_HOSPITAL = '__sem-hospitais__';
 
 export default function Procedimentos() {
   const [message, setMessage] = useState(null);
@@ -17,7 +23,7 @@ export default function Procedimentos() {
   const [tipoModal, setTipoModal] = useState('Cirurgia');
   const [filters, setFilters] = useState({
     tipo: 'all',
-    doctor: 'all',
+    doctor: null,
     hospital: 'all',
     tipo_pagamento: 'all',
     mes: 'all'
@@ -116,10 +122,41 @@ export default function Procedimentos() {
     setShowModal(true);
   };
 
+  const nomeMedico = (procedimento) =>
+    normalizarNome(procedimento.doctor_name) ||
+    normalizarNome(doctors.find(d => d.id === procedimento.doctor_id)?.full_name);
+
+  const nomeHospital = (procedimento) =>
+    normalizarHospital(procedimento.hospital_name) ||
+    normalizarHospital(hospitals.find(h => h.id === procedimento.hospital_id)?.name);
+
+  const hospitalOptions = useMemo(() => {
+    const mapa = new Map();
+    hospitals.forEach(h => {
+      const chave = normalizarHospital(h.name);
+      if (chave && !mapa.has(chave)) mapa.set(chave, h.name);
+    });
+    procedimentos.forEach(p => {
+      const chave = normalizarHospital(p.hospital_name);
+      if (chave && !mapa.has(chave)) mapa.set(chave, p.hospital_name);
+    });
+    return Array.from(mapa, ([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'pt'));
+  }, [hospitals, procedimentos]);
+
+  const doctorFilter = filters.doctor ?? idMedicoPadrao(doctors);
+
   const filteredProcedimentos = procedimentos.filter(p => {
     if (filters.tipo !== 'all' && p.tipo !== filters.tipo) return false;
-    if (filters.doctor !== 'all' && p.doctor_id !== filters.doctor) return false;
-    if (filters.hospital !== 'all' && p.hospital_id !== filters.hospital) return false;
+    if (doctorFilter !== 'all') {
+      const alvo = normalizarNome(doctors.find(d => d.id === doctorFilter)?.full_name) || doctorFilter;
+      if (nomeMedico(p) !== alvo) return false;
+    }
+    if (filters.hospital === SEM_HOSPITAL) {
+      if (nomeHospital(p)) return false;
+    } else if (filters.hospital !== 'all' && nomeHospital(p) !== filters.hospital) {
+      return false;
+    }
     if (filters.tipo_pagamento !== 'all' && p.tipo_pagamento !== filters.tipo_pagamento) return false;
     if (filters.mes !== 'all' && monthKeyFromDate(p.data) !== filters.mes) return false;
     return true;
@@ -127,6 +164,7 @@ export default function Procedimentos() {
 
   const cirurgias = filteredProcedimentos.filter(p => p.tipo === 'Cirurgia');
   const consultas = filteredProcedimentos.filter(p => p.tipo === 'Consulta');
+  const semHospital = filteredProcedimentos.filter(p => !nomeHospital(p)).length;
 
   if (isLoading) {
     return (
@@ -165,6 +203,8 @@ export default function Procedimentos() {
             </p>
           </div>
         </div>
+
+        <DadosFaltandoAlerta procedimentos={filteredProcedimentos} />
 
         <Card>
           <CardHeader>
@@ -206,7 +246,7 @@ export default function Procedimentos() {
 
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-2 block">Médico</label>
-                <Select value={filters.doctor} onValueChange={(v) => setFilters({ ...filters, doctor: v })}>
+                <Select value={doctorFilter} onValueChange={(v) => setFilters({ ...filters, doctor: v })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -227,8 +267,11 @@ export default function Procedimentos() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
-                    {hospitals.map(h => (
-                      <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>
+                    <SelectItem value={SEM_HOSPITAL}>
+                      Sem hospital{semHospital > 0 ? ` (${semHospital})` : ''}
+                    </SelectItem>
+                    {hospitalOptions.map(h => (
+                      <SelectItem key={h.value} value={h.value}>{h.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -252,10 +295,10 @@ export default function Procedimentos() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-green-500">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Cirurgias ({cirurgias.length}) · R$ {somaProcedimentos(cirurgias).toFixed(2)}</CardTitle>
+              <CardTitle className="text-green-800">Cirurgias ({cirurgias.length}) · R$ {somaProcedimentos(cirurgias).toFixed(2)}</CardTitle>
               <Button onClick={() => handleNewProcedimento('Cirurgia')}>
                 <Plus className="w-4 h-4 mr-2" />
                 Nova Cirurgia
@@ -266,63 +309,15 @@ export default function Procedimentos() {
             {cirurgias.length === 0 ? (
               <p className="text-gray-500 text-center py-8">Nenhuma cirurgia cadastrada</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Médico</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pagamento</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descrição</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Qtd</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Valor Unit.</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {cirurgias.map(proc => (
-                      <tr key={proc.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-4 text-sm text-gray-900">{formatDatePtBr(proc.data)}</td>
-                        <td className="px-4 py-4 text-sm text-gray-900">{proc.doctor_name}</td>
-                        <td className="px-4 py-4 text-sm text-gray-900">{proc.hospital_name}</td>
-                        <td className="px-4 py-4">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            proc.tipo_pagamento === 'SUS' ? 'bg-blue-100 text-blue-800' :
-                            proc.tipo_pagamento === 'Convenio' ? 'bg-green-100 text-green-800' :
-                            'bg-purple-100 text-purple-800'
-                          }`}>
-                            {proc.tipo_pagamento}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-sm text-gray-600">{proc.descricao || '-'}</td>
-                        <td className="px-4 py-4 text-sm text-right text-gray-900">{procedimentoQuantidade(proc)}</td>
-                        <td className="px-4 py-4 text-sm text-right text-gray-600">R$ {proc.valor.toFixed(2)}</td>
-                        <td className="px-4 py-4 text-sm text-right font-semibold text-gray-900">R$ {procedimentoTotal(proc).toFixed(2)}</td>
-                        <td className="px-4 py-4 text-right">
-                          <div className="flex gap-2 justify-end">
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(proc)}>
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(proc.id)}>
-                              <Trash2 className="w-4 h-4 text-red-600" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ProcedimentoTable items={cirurgias} tipo="Cirurgia" onEdit={handleEdit} onDelete={handleDelete} />
             )}
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-orange-500">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Consultas ({consultas.length}) · R$ {somaProcedimentos(consultas).toFixed(2)}</CardTitle>
+              <CardTitle className="text-orange-800">Consultas ({consultas.length}) · R$ {somaProcedimentos(consultas).toFixed(2)}</CardTitle>
               <Button onClick={() => handleNewProcedimento('Consulta')}>
                 <Plus className="w-4 h-4 mr-2" />
                 Nova Consulta
@@ -333,55 +328,7 @@ export default function Procedimentos() {
             {consultas.length === 0 ? (
               <p className="text-gray-500 text-center py-8">Nenhuma consulta cadastrada</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Médico</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pagamento</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descrição</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Qtd</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Valor Unit.</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {consultas.map(proc => (
-                      <tr key={proc.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-4 text-sm text-gray-900">{formatDatePtBr(proc.data)}</td>
-                        <td className="px-4 py-4 text-sm text-gray-900">{proc.doctor_name}</td>
-                        <td className="px-4 py-4 text-sm text-gray-900">{proc.hospital_name}</td>
-                        <td className="px-4 py-4">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            proc.tipo_pagamento === 'SUS' ? 'bg-blue-100 text-blue-800' :
-                            proc.tipo_pagamento === 'Convenio' ? 'bg-green-100 text-green-800' :
-                            'bg-purple-100 text-purple-800'
-                          }`}>
-                            {proc.tipo_pagamento}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-sm text-gray-600">{proc.descricao || '-'}</td>
-                        <td className="px-4 py-4 text-sm text-right text-gray-900">{procedimentoQuantidade(proc)}</td>
-                        <td className="px-4 py-4 text-sm text-right text-gray-600">R$ {proc.valor.toFixed(2)}</td>
-                        <td className="px-4 py-4 text-sm text-right font-semibold text-gray-900">R$ {procedimentoTotal(proc).toFixed(2)}</td>
-                        <td className="px-4 py-4 text-right">
-                          <div className="flex gap-2 justify-end">
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(proc)}>
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(proc.id)}>
-                              <Trash2 className="w-4 h-4 text-red-600" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ProcedimentoTable items={consultas} tipo="Consulta" onEdit={handleEdit} onDelete={handleDelete} />
             )}
           </CardContent>
         </Card>

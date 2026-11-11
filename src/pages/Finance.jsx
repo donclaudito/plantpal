@@ -5,12 +5,13 @@ import { Download, DollarSign, TrendingUp, TrendingDown, Calendar } from 'lucide
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatQuantity } from '@/lib/quantity';
+import { MEDICO_PADRAO } from '@/lib/defaultDoctor';
 
 
 const PERIOD_LABELS = { consultas: 'Período de consultas', cirurgias: 'Cirurgias do convênio' };
 
 export default function Finance() {
-  const [filterDoctor, setFilterDoctor] = useState('all');
+  const [filterDoctor, setFilterDoctor] = useState(MEDICO_PADRAO);
   const [filterHospital, setFilterHospital] = useState('all');
   const [filterPeriod, setFilterPeriod] = useState('all');
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth());
