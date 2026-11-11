@@ -29,6 +29,19 @@ const somarMinutos = (data, minutos) => {
   return instante.toISOString().slice(0, 19);
 };
 
+const VERSAO_EVENTO = 'v2-horario-real';
+
+// Horário escrito no próprio tipo: "ESPECIAL(DAS10 AS 22)" ou "DAS 8 AS 14"
+const janelaExplicita = (tipo) => {
+  const achado = tipo.match(/DAS?\s*(\d{1,2})\s*(?:H(?:S|ORAS)?)?\s*(?:AS|A|ATE)\s*(\d{1,2})/);
+  if (!achado) return null;
+  const inicio = Number(achado[1]);
+  let fim = Number(achado[2]);
+  if (!Number.isFinite(inicio) || !Number.isFinite(fim) || inicio > 23 || fim > 24) return null;
+  if (fim <= inicio) fim += 24;
+  return [inicio * 60, fim * 60];
+};
+
 const JANELAS_POR_TIPO = [
   { chave: (t) => t.includes('24H'), janela: [420, 1860] },
   { chave: (t) => t.includes('DIURN') && t.includes('MANHA'), janela: [420, 780] },
@@ -45,6 +58,8 @@ const JANELAS_POR_PERIODO = {
 
 const janelaDoPlantao = (shift) => {
   const tipo = normalizar(shift.shift_type);
+  const explicita = janelaExplicita(tipo);
+  if (explicita) return explicita;
   const porTipo = JANELAS_POR_TIPO.find((item) => item.chave(tipo));
   if (porTipo) return porTipo.janela;
   const porPeriodo = JANELAS_POR_PERIODO[normalizar(shift.period)];
@@ -295,6 +310,8 @@ export default async function (req) {
       if (!shift.date) continue;
       const chave = `Shift:${shift.id}`;
       const vinculo = mapa.get(chave);
+      // A versão garante que eventos antigos com horário errado sejam reenviados
+      const marca = `${shift.updated_date || ''}|${VERSAO_EVENTO}`;
 
       if (shift.status === 'Cancelado') {
         if (vinculo) {
@@ -308,7 +325,7 @@ export default async function (req) {
 
       if (!vinculo) {
         const criado = await salvarEvento(accessToken, null, eventoDoPlantao(shift));
-        await gravarVinculo('Shift', shift.id, criado.id, shift.date, shift.updated_date);
+        await gravarVinculo('Shift', shift.id, criado.id, shift.date, marca);
         contadoresPlantoes.created += 1;
         continue;
       }
@@ -343,13 +360,13 @@ export default async function (req) {
         continue;
       }
 
-      if (vinculo.record_updated && vinculo.record_updated === shift.updated_date) {
+      if (vinculo.record_updated && vinculo.record_updated === marca) {
         // Sem alterações desde a última sincronização: nada a reenviar
         continue;
       }
 
       const evento = await salvarEvento(accessToken, vinculo.google_event_id, eventoDoPlantao(shift));
-      await gravarVinculo('Shift', shift.id, evento.id, shift.date, shift.updated_date);
+      await gravarVinculo('Shift', shift.id, evento.id, shift.date, marca);
       if (evento.criado) contadoresPlantoes.created += 1;
       else contadoresPlantoes.updated += 1;
     }
