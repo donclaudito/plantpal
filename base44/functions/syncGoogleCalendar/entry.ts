@@ -33,7 +33,7 @@ const JANELAS_POR_TIPO = [
   { chave: (t) => t.includes('24H'), janela: [420, 1860] },
   { chave: (t) => t.includes('DIURN') && t.includes('MANHA'), janela: [420, 780] },
   { chave: (t) => t.includes('DIURN') && t.includes('TARDE'), janela: [780, 1140] },
-  { chave: (t) => t.includes('NOTURN') || t.includes('NOITE'), janela: [1140, 1860] },
+  { chave: (t) => t.includes('NOTURNO') || t.includes('NOTURN') || t.includes('NOITE'), janela: [1140, 1860] },
   { chave: (t) => t.includes('DIURN'), janela: [420, 1140] },
 ];
 
@@ -153,6 +153,43 @@ const removerEvento = async (accessToken, eventoId) => {
   }).catch(() => null);
 };
 
+// Lê do Google os eventos já ligados ao app, em lotes, para trazer alterações de data
+const buscarEventos = async (accessToken, ids) => {
+  const cache = new Map();
+  const unicos = [...new Set(ids.filter(Boolean))];
+
+  for (let i = 0; i < unicos.length; i += 8) {
+    const lote = unicos.slice(i, i + 8);
+    await Promise.all(
+      lote.map(async (id) => {
+        const resposta = await fetch(`${API}/${encodeURIComponent(id)}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (resposta.status === 404 || resposta.status === 410) {
+          cache.set(id, null);
+          return;
+        }
+        if (!resposta.ok) throw new Error(`Google Calendar respondeu ${resposta.status}`);
+        cache.set(id, await resposta.json());
+      })
+    );
+  }
+
+  return cache;
+};
+
+const dataDoEvento = (evento) => {
+  if (!evento?.start) return null;
+  if (evento.start.date) return evento.start.date;
+  if (!evento.start.dateTime) return null;
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(evento.start.dateTime));
+};
+
 export default async function (req) {
   try {
     const base44 = createClientFromRequest(req);
@@ -184,6 +221,10 @@ export default async function (req) {
     ]);
 
     const mapa = new Map(vinculos.map((v) => [`${v.record_type}:${v.record_id}`, v]));
+    const eventos = await buscarEventos(
+      accessToken,
+      [...mapa.values()].map((v) => v.google_event_id)
+    );
 
     const gravarVinculo = async (tipo, recordId, eventoId, data) => {
       const chave = `${tipo}:${recordId}`;
@@ -192,36 +233,77 @@ export default async function (req) {
         await base44.asServiceRole.entities.CalendarSync.update(vinculo.id, {
           google_event_id: eventoId,
           event_date: data,
+          removido_no_google: false,
         });
+        mapa.set(chave, { ...vinculo, google_event_id: eventoId, event_date: data, removido_no_google: false });
       } else {
         const criado = await base44.asServiceRole.entities.CalendarSync.create({
           record_type: tipo,
           record_id: recordId,
           google_event_id: eventoId,
           event_date: data,
+          removido_no_google: false,
         });
         mapa.set(chave, criado);
       }
     };
 
-    const contadoresPlantoes = { created: 0, updated: 0, removed: 0 };
-    const contadoresCirurgias = { created: 0, updated: 0, removed: 0 };
+    const contadoresPlantoes = { created: 0, updated: 0, removed: 0, pulled: 0 };
+    const contadoresCirurgias = { created: 0, updated: 0, removed: 0, pulled: 0 };
 
     for (const shift of shifts) {
       if (!shift.date) continue;
-      const vinculo = mapa.get(`Shift:${shift.id}`);
+      const chave = `Shift:${shift.id}`;
+      const vinculo = mapa.get(chave);
 
       if (shift.status === 'Cancelado') {
         if (vinculo) {
           await removerEvento(accessToken, vinculo.google_event_id);
           await base44.asServiceRole.entities.CalendarSync.delete(vinculo.id);
-          mapa.delete(`Shift:${shift.id}`);
+          mapa.delete(chave);
           contadoresPlantoes.removed += 1;
         }
         continue;
       }
 
-      const evento = await salvarEvento(accessToken, vinculo?.google_event_id, eventoDoPlantao(shift));
+      if (!vinculo) {
+        const criado = await salvarEvento(accessToken, null, eventoDoPlantao(shift));
+        await gravarVinculo('Shift', shift.id, criado.id, shift.date);
+        contadoresPlantoes.created += 1;
+        continue;
+      }
+
+      const eventoGoogle = vinculo.google_event_id ? eventos.get(vinculo.google_event_id) : undefined;
+      const apagadoNoGoogle =
+        Boolean(vinculo.google_event_id) && (eventoGoogle === null || eventoGoogle?.status === 'cancelled');
+
+      if (apagadoNoGoogle) {
+        // Evento apagado no celular: o plantão passa a cancelado no app
+        await base44.asServiceRole.entities.Shift.update(shift.id, { status: 'Cancelado' });
+        await base44.asServiceRole.entities.CalendarSync.delete(vinculo.id);
+        mapa.delete(chave);
+        contadoresPlantoes.pulled += 1;
+        continue;
+      }
+
+      const dataGoogle = dataDoEvento(eventoGoogle);
+      const mudouNoApp = shift.date !== vinculo.event_date;
+      const mudouNoGoogle = Boolean(dataGoogle) && dataGoogle !== vinculo.event_date;
+
+      if (mudouNoGoogle && !mudouNoApp) {
+        // Data alterada no Google Calendar e o app não mudou: traz para o app
+        await base44.asServiceRole.entities.Shift.update(shift.id, { date: dataGoogle });
+        shift.date = dataGoogle;
+        await base44.asServiceRole.entities.CalendarSync.update(vinculo.id, {
+          event_date: dataGoogle,
+          alterado_no_google: true,
+        });
+        mapa.set(chave, { ...vinculo, event_date: dataGoogle });
+        contadoresPlantoes.pulled += 1;
+        continue;
+      }
+
+      const evento = await salvarEvento(accessToken, vinculo.google_event_id, eventoDoPlantao(shift));
       await gravarVinculo('Shift', shift.id, evento.id, shift.date);
       if (evento.criado) contadoresPlantoes.created += 1;
       else contadoresPlantoes.updated += 1;
@@ -229,8 +311,58 @@ export default async function (req) {
 
     for (const cirurgia of cirurgias) {
       if (!cirurgia.data) continue;
-      const vinculo = mapa.get(`Procedimento:${cirurgia.id}`);
-      const evento = await salvarEvento(accessToken, vinculo?.google_event_id, eventoDaCirurgia(cirurgia));
+      const chave = `Procedimento:${cirurgia.id}`;
+      const vinculo = mapa.get(chave);
+
+      if (!vinculo) {
+        const criado = await salvarEvento(accessToken, null, eventoDaCirurgia(cirurgia));
+        await gravarVinculo('Procedimento', cirurgia.id, criado.id, cirurgia.data);
+        contadoresCirurgias.created += 1;
+        continue;
+      }
+
+      const editadoNoApp = new Date(cirurgia.updated_date || 0) > new Date(vinculo.updated_date || 0);
+      const eventoGoogle = vinculo.google_event_id ? eventos.get(vinculo.google_event_id) : undefined;
+      const apagadoNoGoogle =
+        Boolean(vinculo.google_event_id) && (eventoGoogle === null || eventoGoogle?.status === 'cancelled');
+
+      if (apagadoNoGoogle && !editadoNoApp) {
+        // Cirurgia removida do Google: não é recriada até ser editada no app
+        if (!vinculo.removido_no_google) {
+          await base44.asServiceRole.entities.CalendarSync.update(vinculo.id, {
+            removido_no_google: true,
+            google_event_id: '',
+          });
+          mapa.set(chave, { ...vinculo, removido_no_google: true, google_event_id: '' });
+          contadoresCirurgias.pulled += 1;
+        }
+        continue;
+      }
+
+      // Cirurgia já removida do Google e sem edição no app: mantém fora da agenda
+      if (vinculo.removido_no_google && !editadoNoApp) continue;
+
+      const dataGoogle = apagadoNoGoogle ? null : dataDoEvento(eventoGoogle);
+      const mudouNoApp = cirurgia.data !== vinculo.event_date;
+      const mudouNoGoogle = Boolean(dataGoogle) && dataGoogle !== vinculo.event_date;
+
+      if (mudouNoGoogle && !mudouNoApp) {
+        await base44.asServiceRole.entities.Procedimento.update(cirurgia.id, { data: dataGoogle });
+        cirurgia.data = dataGoogle;
+        await base44.asServiceRole.entities.CalendarSync.update(vinculo.id, {
+          event_date: dataGoogle,
+          alterado_no_google: true,
+        });
+        mapa.set(chave, { ...vinculo, event_date: dataGoogle });
+        contadoresCirurgias.pulled += 1;
+        continue;
+      }
+
+      const evento = await salvarEvento(
+        accessToken,
+        apagadoNoGoogle ? null : vinculo.google_event_id,
+        eventoDaCirurgia(cirurgia)
+      );
       await gravarVinculo('Procedimento', cirurgia.id, evento.id, cirurgia.data);
       if (evento.criado) contadoresCirurgias.created += 1;
       else contadoresCirurgias.updated += 1;

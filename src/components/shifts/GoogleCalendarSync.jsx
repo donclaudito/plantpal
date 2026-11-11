@@ -15,11 +15,16 @@ export default function GoogleCalendarSync() {
       const contagem = (grupo) =>
         (grupo?.created || 0) + (grupo?.updated || 0) + (grupo?.removed || 0);
       const total = contagem(dados.shifts) + contagem(dados.surgeries);
+      const puxados = (dados.shifts?.pulled || 0) + (dados.surgeries?.pulled || 0);
+
+      const partes = [];
+      if (total > 0) partes.push(`${total} enviado(s) para o Google Calendar`);
+      if (puxados > 0) partes.push(`${puxados} atualizado(s) a partir do Google Calendar`);
 
       setMessage({
         type: 'success',
-        text: total > 0
-          ? `${total} compromisso(s) sincronizado(s) com o Google Calendar.`
+        text: partes.length > 0
+          ? `${partes.join(' e ')}.`
           : 'Tudo já está sincronizado com o Google Calendar.',
       });
     } catch (error) {
@@ -46,7 +51,7 @@ export default function GoogleCalendarSync() {
             Google Calendar
           </p>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Plantões e cirurgias sincronizados automaticamente a cada 6 horas, com lembretes no celular.
+            Sincronização em mão dupla a cada 6 horas: o app envia plantões e cirurgias e recebe as alterações feitas no Google Calendar. Lembretes no celular ativados.
           </p>
         </div>
       </div>
