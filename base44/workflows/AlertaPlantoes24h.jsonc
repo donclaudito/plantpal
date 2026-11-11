@@ -1,0 +1,45 @@
+{
+  "description": "A cada hora, verifica os plant\u00f5es que come\u00e7am nas pr\u00f3ximas 24 horas e envia o aviso por WhatsApp.",
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "alerta_plantoes_24h",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "enviar_alertas": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "alertarPlantoes24h",
+            "args": {}
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Avisar plant\u00f5es 24h antes",
+            "description": "Mensagem no WhatsApp com os plant\u00f5es das pr\u00f3ximas 24 horas"
+          }
+        }
+      }
+    ]
+  },
+  "name": "Alerta de Plant\u00f5es 24h",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 * * * *",
+      "one_time_date": null,
+      "timezone": "America/Sao_Paulo",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  }
+}
