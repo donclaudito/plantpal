@@ -7,7 +7,7 @@ import RateValueFields from '@/components/settings/RateValueFields';
 import { normalizarHospital } from '@/lib/shiftFilters';
 
 export default function ShiftRateForm({ doctors, hospitals, initialData = {}, onSave, onCancel, isSaving }) {
-  const VALUE_FIELDS = ['valor_periodo', 'valor_cirurgia', 'valor_6h', 'valor_12h', 'valor_retaguarda', 'valor_coordenador', 'valor_professor'];
+  const VALUE_FIELDS = ['valor_periodo', 'valor_consulta_manha', 'valor_consulta_tarde', 'valor_cirurgia', 'valor_6h', 'valor_12h', 'valor_retaguarda', 'valor_coordenador', 'valor_professor'];
   const [data, setData] = useState({ doctor_id: initialData.doctor_id || '', hospital_id: initialData.hospital_id || '', tipo_calculo: initialData.tipo_calculo || 'por_plantao', ...Object.fromEntries(VALUE_FIELDS.map(field => [field, initialData[field] ?? ''])) });
   const change = (field, value) => setData(previous => {
     const next = { ...previous, [field]: value };

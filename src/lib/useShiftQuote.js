@@ -2,16 +2,25 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 
-export default function useShiftQuote(doctorId, hospital, period, enabled = true, grossValue = null) {
+export default function useShiftQuote({
+  doctorId,
+  hospital,
+  period,
+  shiftType = '',
+  enabled = true,
+  grossValue = null,
+  quantity = 0,
+  valorConsulta = 0,
+}) {
   const [quotedGross, setQuotedGross] = useState(grossValue);
   useEffect(() => {
     const timeout = setTimeout(() => setQuotedGross(grossValue), 300);
     return () => clearTimeout(timeout);
   }, [grossValue]);
   const query = useQuery({
-    queryKey: ['shiftQuote', doctorId, hospital, period, quotedGross],
+    queryKey: ['shiftQuote', doctorId, hospital, period, shiftType, quotedGross, quantity, valorConsulta],
     queryFn: async () => {
-      const response = await base44.functions.invoke('getShiftQuote', { doctorId, hospital, period, grossValue: quotedGross });
+      const response = await base44.functions.invoke('getShiftQuote', { doctorId, hospital, period, shiftType, grossValue: quotedGross, quantity, valorConsulta });
       return response.data;
     },
     enabled: enabled && !!doctorId && !!hospital,

@@ -51,6 +51,17 @@ export function periodValue(config, period) {
   const field = { '6h': 'valor_6h', '12h': 'valor_12h', 'mais tarde': 'valor_12h', retaguarda: 'valor_retaguarda', coordenador: 'valor_coordenador', professor: 'valor_professor' }[String(period || '12h').trim().toLowerCase()];
   return field ? money(config[field]) : 0;
 }
+export const consultationPeriod = (shift) => {
+  const type = normalizeName(shift?.shift_type);
+  if (type.includes('MANHA')) return 'manha';
+  if (type.includes('TARDE')) return 'tarde';
+  return null;
+};
+export function consultationUnitValue(config, shift) {
+  if (!config) return 0;
+  const field = { manha: 'valor_consulta_manha', tarde: 'valor_consulta_tarde' }[consultationPeriod(shift)];
+  return field ? money(config[field]) : 0;
+}
 export function quoteSurgeries(context, row) {
   const parties = resolveParties(context, row);
   const rank = c => (c.doctor_id ? 2 : 0) + (c.hospital_id ? 1 : 0);
@@ -71,8 +82,12 @@ export function quoteShift(context, shift) {
   });
   const rate = candidates.find(c => c.tipo_calculo === 'por_periodo' || periodValue(c, shift.period) > 0);
   const manual = shift.usar_valor_informado === true && Number.isFinite(shift.valor_bruto_informado) && shift.valor_bruto_informado >= 0;
-  const baseValue = manual ? money(shift.valor_bruto_informado) : rate ? periodValue(rate, shift.period) : money(shift.value);
+  const consultations = rate?.tipo_calculo === 'por_periodo';
+  const quantity = consultations ? Math.max(0, Number(shift.quantidade_consultas) || 0) : 0;
+  const unitValue = consultations ? money(shift.valor_consulta) || consultationUnitValue(rate, shift) : 0;
+  const consultationsBase = quantity > 0 && unitValue > 0 ? money(quantity * unitValue) : 0;
+  const baseValue = manual ? money(shift.valor_bruto_informado) : consultationsBase > 0 ? consultationsBase : rate ? periodValue(rate, shift.period) : money(shift.value);
   const details = rate || manual ? context.discounts.filter(d => d.tipo_desconto === 'percentual' && appliesTo(d, parties.doctorId, parties.hospitalId)).map(d => ({ descricao: d.descricao, tipo: d.tipo_desconto, valor_config: d.valor_desconto, valor_calculado: money(baseValue * d.valor_desconto / 100) })) : [];
   const discountValue = money(details.reduce((total, d) => total + d.valor_calculado, 0));
-  return { ...parties, configured: !!rate, manual, billingMode: rate?.tipo_calculo || 'por_plantao', configurationId: rate?.id || null, estimatedBaseValue: rate ? periodValue(rate, shift.period) : 0, baseValue, discountValue, value: money(Math.max(0, baseValue - discountValue)), details };
+  return { ...parties, configured: !!rate, manual, billingMode: rate?.tipo_calculo || 'por_plantao', configurationId: rate?.id || null, estimatedBaseValue: rate ? periodValue(rate, shift.period) : 0, baseValue, discountValue, value: money(Math.max(0, baseValue - discountValue)), details, consultations, quantity, unitValue, consultationPeriod: consultationPeriod(shift) };
 }

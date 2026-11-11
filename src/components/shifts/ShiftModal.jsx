@@ -35,8 +35,23 @@ export default function ShiftModal({ isOpen, onClose, onSave, onSaveProcedure, d
   const grossValue = quantidadeConsultas !== '' && valorConsulta !== '' && Number.isFinite(quantidade) && Number.isFinite(unitario)
     ? Math.round(quantidade * unitario * 100) / 100
     : null;
-  const { data: quote, isFetching: isLoadingQuote, error: quoteError } = useShiftQuote(formData.doctorId, formData.unit, formData.period, isOpen, grossValue);
+  const { data: quote, isFetching: isLoadingQuote, error: quoteError } = useShiftQuote({
+    doctorId: formData.doctorId,
+    hospital: formData.unit,
+    period: formData.period,
+    shiftType: formData.type,
+    enabled: isOpen,
+    grossValue,
+    quantity: Number(quantidadeConsultas) || 0,
+    valorConsulta: Number(valorConsulta) || 0,
+  });
   const byConsultations = quote?.billingMode === 'por_periodo';
+  const valorConsultaPeriodo = Number(quote?.unitValue) || 0;
+
+  useEffect(() => {
+    if (!isOpen || !byConsultations || valorConsultaPeriodo <= 0) return;
+    setValorConsulta(anterior => (anterior === '' ? String(valorConsultaPeriodo) : anterior));
+  }, [isOpen, byConsultations, valorConsultaPeriodo]);
   const isSurgery = !editingShift && isSurgeryHospital(formData.unit);
   const shiftValue = quote?.configured || quote?.manual ? quote.value : Number(formData.value) || 0;
 
@@ -168,8 +183,8 @@ export default function ShiftModal({ isOpen, onClose, onSave, onSaveProcedure, d
       period: byConsultations ? 'consultas' : formData.period,
       usar_valor_informado: grossValue !== null,
       valor_bruto_informado: grossValue ?? 0,
-      quantidade_consultas: byConsultations && grossValue !== null ? quantidade : 0,
-      valor_consulta: byConsultations && grossValue !== null ? unitario : 0,
+      quantidade_consultas: byConsultations ? (Number.isFinite(quantidade) ? quantidade : 0) : 0,
+      valor_consulta: byConsultations ? (Number.isFinite(unitario) ? unitario : 0) : 0,
       value: shiftValue,
       status: formData.paid ? 'Pago' : 'Realizado'
     });
@@ -376,7 +391,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, onSaveProcedure, d
           )}
           {!isSurgery && formData.doctorId && formData.unit && (
             <div aria-live="polite" className="rounded-xl border border-border bg-muted p-4">
-              <p className="text-sm text-muted-foreground">{byConsultations ? grossValue === null ? 'Estimativa líquida por período' : 'Valor real líquido do período' : 'Valor do plantão'}</p>
+              <p className="text-sm text-muted-foreground">{byConsultations ? quote?.quantity > 0 || grossValue !== null ? 'Valor líquido das consultas' : 'Estimativa líquida por período' : 'Valor do plantão'}</p>
               <p className="font-bold text-foreground">{isLoadingQuote ? 'Calculando...' : shiftValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
               {quote?.configured && !isLoadingQuote && <p className="text-xs text-muted-foreground">Bruto: {quote.baseValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} • Descontos: {quote.discountValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>}
               {quoteError && <p role="alert" className="text-sm text-destructive">Não foi possível consultar o valor. Tente selecionar o hospital novamente.</p>}

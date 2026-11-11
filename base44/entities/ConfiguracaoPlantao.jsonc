@@ -22,12 +22,22 @@
         "purple",
         "green"
       ],
-      "description": "Valor fixo por tipo de plant\u00e3o, estimativa por per\u00edodo de consultas ou valor por cirurgia realizada no conv\u00eanio"
+      "description": "Valor fixo por tipo de plant\u00e3o, valor por consulta nos per\u00edodos de manh\u00e3 e tarde ou valor por cirurgia realizada no conv\u00eanio"
     },
     "valor_periodo": {
       "type": "number",
       "minimum": 0,
-      "description": "Estimativa bruta por per\u00edodo de consultas, independente da dura\u00e7\u00e3o"
+      "description": "Estimativa bruta por per\u00edodo de consultas, usada apenas quando a quantidade de consultas n\u00e3o \u00e9 informada"
+    },
+    "valor_consulta_manha": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Valor pago por cada consulta no Ambulat\u00f3rio SUS no per\u00edodo da manh\u00e3"
+    },
+    "valor_consulta_tarde": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Valor pago por cada consulta no Ambulat\u00f3rio SUS no per\u00edodo da tarde"
     },
     "valor_cirurgia": {
       "type": "number",
