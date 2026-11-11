@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ProcedimentoModal from '@/components/procedimentos/ProcedimentoModal';
 import Toast from '@/components/common/Toast';
+import { procedimentoQuantidade, procedimentoTotal, somaProcedimentos } from '@/lib/procedimentoTotals';
 
 export default function Procedimentos() {
   const [message, setMessage] = useState(null);
@@ -151,7 +152,12 @@ export default function Procedimentos() {
 
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">Procedimentos</h1>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Procedimentos</h1>
+            <p className="text-sm text-gray-600 mt-1">
+              Faturamento dos procedimentos filtrados: <span className="font-bold text-gray-900">R$ {somaProcedimentos(filteredProcedimentos).toFixed(2)}</span>
+            </p>
+          </div>
         </div>
 
         <Card>
@@ -248,7 +254,7 @@ export default function Procedimentos() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Cirurgias ({cirurgias.length})</CardTitle>
+              <CardTitle>Cirurgias ({cirurgias.length}) · R$ {somaProcedimentos(cirurgias).toFixed(2)}</CardTitle>
               <Button onClick={() => handleNewProcedimento('Cirurgia')}>
                 <Plus className="w-4 h-4 mr-2" />
                 Nova Cirurgia
@@ -268,7 +274,9 @@ export default function Procedimentos() {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pagamento</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descrição</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Valor</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Qtd</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Valor Unit.</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
                     </tr>
                   </thead>
@@ -288,7 +296,9 @@ export default function Procedimentos() {
                           </span>
                         </td>
                         <td className="px-4 py-4 text-sm text-gray-600">{proc.descricao || '-'}</td>
-                        <td className="px-4 py-4 text-sm text-right font-semibold text-gray-900">R$ {proc.valor.toFixed(2)}</td>
+                        <td className="px-4 py-4 text-sm text-right text-gray-900">{procedimentoQuantidade(proc)}</td>
+                        <td className="px-4 py-4 text-sm text-right text-gray-600">R$ {proc.valor.toFixed(2)}</td>
+                        <td className="px-4 py-4 text-sm text-right font-semibold text-gray-900">R$ {procedimentoTotal(proc).toFixed(2)}</td>
                         <td className="px-4 py-4 text-right">
                           <div className="flex gap-2 justify-end">
                             <Button variant="ghost" size="sm" onClick={() => handleEdit(proc)}>
@@ -311,7 +321,7 @@ export default function Procedimentos() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Consultas ({consultas.length})</CardTitle>
+              <CardTitle>Consultas ({consultas.length}) · R$ {somaProcedimentos(consultas).toFixed(2)}</CardTitle>
               <Button onClick={() => handleNewProcedimento('Consulta')}>
                 <Plus className="w-4 h-4 mr-2" />
                 Nova Consulta
@@ -331,7 +341,9 @@ export default function Procedimentos() {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pagamento</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descrição</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Valor</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Qtd</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Valor Unit.</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
                     </tr>
                   </thead>
@@ -351,7 +363,9 @@ export default function Procedimentos() {
                           </span>
                         </td>
                         <td className="px-4 py-4 text-sm text-gray-600">{proc.descricao || '-'}</td>
-                        <td className="px-4 py-4 text-sm text-right font-semibold text-gray-900">R$ {proc.valor.toFixed(2)}</td>
+                        <td className="px-4 py-4 text-sm text-right text-gray-900">{procedimentoQuantidade(proc)}</td>
+                        <td className="px-4 py-4 text-sm text-right text-gray-600">R$ {proc.valor.toFixed(2)}</td>
+                        <td className="px-4 py-4 text-sm text-right font-semibold text-gray-900">R$ {procedimentoTotal(proc).toFixed(2)}</td>
                         <td className="px-4 py-4 text-right">
                           <div className="flex gap-2 justify-end">
                             <Button variant="ghost" size="sm" onClick={() => handleEdit(proc)}>

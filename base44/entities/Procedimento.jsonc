@@ -44,9 +44,15 @@
       "type": "string",
       "description": "Descri\u00e7\u00e3o do procedimento"
     },
+    "quantidade": {
+      "type": "number",
+      "minimum": 1,
+      "default": 1,
+      "description": "Quantidade realizada no atendimento"
+    },
     "valor": {
       "type": "number",
-      "description": "Valor do procedimento"
+      "description": "Valor unit\u00e1rio do procedimento"
     },
     "observacoes": {
       "type": "string",

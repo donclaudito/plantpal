@@ -5,19 +5,23 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { procedimentoQuantidade, procedimentoTotal } from '@/lib/procedimentoTotals';
 
 export default function ProcedimentoModal({ isOpen, onClose, onSave, doctors, hospitals, initialData, tipo }) {
-  const [formData, setFormData] = useState(initialData || {
-    tipo: tipo || 'Cirurgia',
-    doctor_id: '',
-    doctor_name: '',
-    hospital_id: '',
-    hospital_name: '',
-    data: '',
-    tipo_pagamento: 'SUS',
-    descricao: '',
-    valor: 0,
-    observacoes: ''
+  const [formData, setFormData] = useState({
+    ...(initialData || {
+      tipo: tipo || 'Cirurgia',
+      doctor_id: '',
+      doctor_name: '',
+      hospital_id: '',
+      hospital_name: '',
+      data: '',
+      tipo_pagamento: 'SUS',
+      descricao: '',
+      valor: 0,
+      observacoes: ''
+    }),
+    quantidade: procedimentoQuantidade(initialData),
   });
 
   const handleDoctorChange = (doctorId) => {
@@ -130,7 +134,7 @@ export default function ProcedimentoModal({ isOpen, onClose, onSave, doctors, ho
             </div>
 
             <div>
-              <Label>Valor (R$)</Label>
+              <Label>Valor Unitário (R$)</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -139,6 +143,25 @@ export default function ProcedimentoModal({ isOpen, onClose, onSave, doctors, ho
                 required
               />
             </div>
+
+            <div>
+              <Label>Quantidade</Label>
+              <Input
+                type="number"
+                step="1"
+                min="1"
+                value={formData.quantidade}
+                onChange={(e) => setFormData({ ...formData, quantidade: parseInt(e.target.value, 10) || 1 })}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-blue-50 border border-blue-100 px-4 py-3 flex items-center justify-between">
+            <span className="text-sm font-bold text-slate-700">
+              Faturamento do atendimento ({formData.quantidade} × R$ {(Number(formData.valor) || 0).toFixed(2)})
+            </span>
+            <span className="text-lg font-black text-blue-700">R$ {procedimentoTotal(formData).toFixed(2)}</span>
           </div>
 
           <div>
