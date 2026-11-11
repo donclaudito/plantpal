@@ -104,7 +104,7 @@ export default async function (req) {
 
     const medico = contexto.doctors.find((d) => normalizeName(d.full_name) === 'CLAUDIO');
 
-    const chave = (s) => `${dataIso(s.date)}|${s.period || ''}|${normalizeName(s.shift_type)}`;
+    const chave = (s) => `${dataIso(s.date)}|${s.period || ''}|${normalizeName(s.shift_type)}|${hospitalKey(s.hospital || hospitalNome)}`;
 
     const existentes = await readPages(base44.entities.Shift, { doctor_name: 'CLAUDIO' });
     const jaExistem = new Set(existentes.map(chave));

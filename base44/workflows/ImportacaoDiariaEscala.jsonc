@@ -1,0 +1,47 @@
+{
+  "name": "Importa\u00e7\u00e3o Di\u00e1ria da Escala",
+  "description": "Todos os dias \u00e0s 6h l\u00ea a escala publicada no Google Sheets e acrescenta os plant\u00f5es do CLAUDIO que ainda n\u00e3o est\u00e3o na agenda.",
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "importacao_diaria_escala",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "importar_plantoes": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "importarPlantoesSheets",
+            "args": {
+              "hospital": "CSSM"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Importar plant\u00f5es do Sheets",
+            "description": "S\u00f3 cria os que ainda n\u00e3o existem"
+          }
+        }
+      }
+    ]
+  },
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 6 * * *",
+      "one_time_date": null,
+      "timezone": "America/Sao_Paulo",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  }
+}
