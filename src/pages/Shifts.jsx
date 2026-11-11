@@ -9,6 +9,7 @@ import ShiftModal from '@/components/shifts/ShiftModal';
 import ShiftDetailsModal from '@/components/shifts/ShiftDetailsModal';
 import SurgeryModal from '@/components/shifts/SurgeryModal';
 import AlertasAgenda from '@/components/shifts/AlertasAgenda';
+import GoogleCalendarSync from '@/components/shifts/GoogleCalendarSync';
 import { dataHoje } from '@/lib/shiftConflicts';
 import DeleteConfirmation from '@/components/common/DeleteConfirmation';
 import Toast from '@/components/common/Toast';
@@ -535,6 +536,12 @@ export default function Shifts() {
           </div>
         </div>
       </div>
+
+      {!isViewer && (
+        <div className="mb-6">
+          <GoogleCalendarSync />
+        </div>
+      )}
 
       <AlertasAgenda
         shifts={shifts}
