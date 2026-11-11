@@ -109,12 +109,17 @@ export default function CalendarView({
         {calendarDays.map((dayData, idx) => {
           const isToday = dayData.date === todayStr;
           const isEmpty = !dayData.day;
+          const hasAgenda = dayData.shifts.length > 0 || (surgeriesByDate.get(dayData.date) || []).length > 0;
           
           return (
             <div
               key={idx}
               className={`group min-h-[140px] border-r border-b border-slate-200 dark:border-slate-700 p-2 transition-colors relative ${
-                isEmpty ? 'bg-slate-50 dark:bg-slate-900/50' : 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                isEmpty
+                  ? 'bg-slate-50 dark:bg-slate-900/50'
+                  : hasAgenda
+                    ? 'bg-green-100 dark:bg-green-900/30 hover:bg-green-200/70 dark:hover:bg-green-900/40'
+                    : 'bg-slate-100/60 dark:bg-slate-800/60 hover:bg-slate-200/50 dark:hover:bg-slate-700/50'
               }`}
               onDragOver={!isEmpty ? handleDragOver : undefined}
               onDrop={!isEmpty ? (e) => handleDrop(e, dayData.date) : undefined}
