@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Building, Plus, Pencil, Trash2, Phone, MapPin, User } from 'lucide-react';
+import { Building, Plus, Pencil, Trash2, Phone, MapPin, User, Mail } from 'lucide-react';
 
 export default function Hospitals() {
   const [showForm, setShowForm] = useState(false);
@@ -15,6 +15,7 @@ export default function Hospitals() {
     name: '',
     address: '',
     phone: '',
+    email: '',
     contact_person: '',
     notes: ''
   });
@@ -54,6 +55,7 @@ export default function Hospitals() {
       name: '',
       address: '',
       phone: '',
+      email: '',
       contact_person: '',
       notes: ''
     });
@@ -67,6 +69,7 @@ export default function Hospitals() {
       name: hospital.name || '',
       address: hospital.address || '',
       phone: hospital.phone || '',
+      email: hospital.email || '',
       contact_person: hospital.contact_person || '',
       notes: hospital.notes || ''
     });
@@ -158,6 +161,13 @@ export default function Hospitals() {
                     </div>
                   )}
                   
+                  {hospital.email && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="w-4 h-4 text-gray-500" />
+                      <span className="text-gray-700">{hospital.email}</span>
+                    </div>
+                  )}
+
                   {hospital.contact_person && (
                     <div className="flex items-center gap-2 text-sm">
                       <User className="w-4 h-4 text-gray-500" />
@@ -216,6 +226,18 @@ export default function Hospitals() {
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   placeholder="(00) 00000-0000"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  E-mail para recibos
+                </label>
+                <Input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="financeiro@hospital.com.br"
                 />
               </div>
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit, Trash2, AlertTriangle } from 'lucide-react';
+import { Edit, Trash2, AlertTriangle, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { procedimentoQuantidade, procedimentoTotal } from '@/lib/procedimentoTotals';
 import { formatDatePtBr } from '@/lib/dateKeys';
@@ -16,7 +16,7 @@ const SemDado = ({ texto }) => (
   </span>
 );
 
-export default function ProcedimentoTable({ items, tipo, onEdit, onDelete }) {
+export default function ProcedimentoTable({ items, tipo, onEdit, onDelete, onEnviarRecibo }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
@@ -66,6 +66,14 @@ export default function ProcedimentoTable({ items, tipo, onEdit, onDelete }) {
               </td>
               <td className="px-4 py-4 text-right">
                 <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    title="Gerar recibo PDF e enviar pelo Gmail"
+                    onClick={() => onEnviarRecibo && onEnviarRecibo(proc)}
+                  >
+                    <FileText className="w-4 h-4 text-green-700" />
+                  </Button>
                   <Button variant="ghost" size="sm" onClick={() => onEdit(proc)}>
                     <Edit className="w-4 h-4" />
                   </Button>

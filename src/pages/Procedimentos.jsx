@@ -9,6 +9,7 @@ import ProcedimentoModal from '@/components/procedimentos/ProcedimentoModal';
 import ProcedimentoTable from '@/components/procedimentos/ProcedimentoTable';
 import CirurgiasPendentes from '@/components/procedimentos/CirurgiasPendentes';
 import DadosFaltandoAlerta from '@/components/procedimentos/DadosFaltandoAlerta';
+import ReciboEnvioModal from '@/components/procedimentos/ReciboEnvioModal';
 import Toast from '@/components/common/Toast';
 import { procedimentoTotal, somaProcedimentos } from '@/lib/procedimentoTotals';
 import { monthKeyFromDate, formatMonthLabel } from '@/lib/dateKeys';
@@ -23,6 +24,7 @@ export default function Procedimentos() {
   const [editingProcedimento, setEditingProcedimento] = useState(null);
   const [tipoModal, setTipoModal] = useState('Cirurgia');
   const [view, setView] = useState('todas');
+  const [reciboProcedimento, setReciboProcedimento] = useState(null);
   const [filters, setFilters] = useState({
     tipo: 'all',
     doctor: null,
@@ -138,6 +140,21 @@ export default function Procedimentos() {
     }
   };
 
+  const hospitalDoProcedimento = (procedimento) =>
+    hospitals.find(h => h.id === procedimento?.hospital_id)
+    || hospitals.find(h => normalizarHospital(h.name) === normalizarHospital(procedimento?.hospital_name))
+    || null;
+
+  const handleReciboEnviado = async (destinatario, resultado) => {
+    const hospital = hospitalDoProcedimento(reciboProcedimento);
+    setReciboProcedimento(null);
+    if (hospital && destinatario && destinatario !== hospital.email) {
+      await base44.entities.Hospital.update(hospital.id, { email: destinatario });
+      queryClient.invalidateQueries({ queryKey: ['hospitals'] });
+    }
+    showToast(`Recibo enviado para ${resultado?.destinatario || destinatario}!`);
+  };
+
   const nomeMedico = (procedimento) =>
     normalizarNome(procedimento.doctor_name) ||
     normalizarNome(doctors.find(d => d.id === procedimento.doctor_id)?.full_name);
@@ -209,6 +226,13 @@ export default function Procedimentos() {
         hospitals={hospitals}
         initialData={editingProcedimento}
         tipo={tipoModal}
+      />
+
+      <ReciboEnvioModal
+        procedimento={reciboProcedimento}
+        hospital={hospitalDoProcedimento(reciboProcedimento)}
+        onClose={() => setReciboProcedimento(null)}
+        onSent={handleReciboEnviado}
       />
 
       <div className="max-w-7xl mx-auto space-y-6">
@@ -353,7 +377,7 @@ export default function Procedimentos() {
             {cirurgias.length === 0 ? (
               <p className="text-gray-500 text-center py-8">Nenhuma cirurgia cadastrada</p>
             ) : (
-              <ProcedimentoTable items={cirurgias} tipo="Cirurgia" onEdit={handleEdit} onDelete={handleDelete} />
+              <ProcedimentoTable items={cirurgias} tipo="Cirurgia" onEdit={handleEdit} onDelete={handleDelete} onEnviarRecibo={setReciboProcedimento} />
             )}
           </CardContent>
         </Card>
@@ -372,7 +396,7 @@ export default function Procedimentos() {
             {consultas.length === 0 ? (
               <p className="text-gray-500 text-center py-8">Nenhuma consulta cadastrada</p>
             ) : (
-              <ProcedimentoTable items={consultas} tipo="Consulta" onEdit={handleEdit} onDelete={handleDelete} />
+              <ProcedimentoTable items={consultas} tipo="Consulta" onEdit={handleEdit} onDelete={handleDelete} onEnviarRecibo={setReciboProcedimento} />
             )}
           </CardContent>
         </Card>
