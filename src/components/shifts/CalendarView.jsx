@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Trash2, Check, Plus } from 'lucide-react';
+import { getHospitalColor } from '@/lib/hospitalColors';
 
 const weekDays = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
 
@@ -129,7 +130,7 @@ export default function CalendarView({
                       const isSelected = selectedShifts.includes(shift.id);
                       const isDragging = draggedShift?.id === shift.id;
                       const isPaid = shift.status === 'Pago';
-                      const doctorColor = getShiftTypeColor(shift.shift_type);
+                      const doctorColor = getHospitalColor(shift.hospital) || getShiftTypeColor(shift.shift_type);
                       
                       return (
                         <div
