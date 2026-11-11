@@ -118,8 +118,8 @@ export default function CalendarView({
                 isEmpty
                   ? 'bg-slate-50 dark:bg-slate-900/50'
                   : hasAgenda
-                    ? 'bg-green-100 dark:bg-green-900/30 hover:bg-green-200/70 dark:hover:bg-green-900/40'
-                    : 'bg-slate-100/60 dark:bg-slate-800/60 hover:bg-slate-200/50 dark:hover:bg-slate-700/50'
+                    ? 'bg-green-200/80 dark:bg-green-900/40 hover:bg-green-300/70 dark:hover:bg-green-900/50'
+                    : 'bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-700/50'
               }`}
               onDragOver={!isEmpty ? handleDragOver : undefined}
               onDrop={!isEmpty ? (e) => handleDrop(e, dayData.date) : undefined}
