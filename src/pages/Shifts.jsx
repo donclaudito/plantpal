@@ -1,6 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Filter, X, Download } from 'lucide-react';
@@ -37,7 +35,6 @@ export default function Shifts() {
   const [editingShift, setEditingShift] = useState(null);
 
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
 
   const { data: user, isLoading: isLoadingUser, error: userError } = useQuery({
     queryKey: ['user'],
@@ -62,6 +59,20 @@ export default function Shifts() {
     enabled: !!user,
     staleTime: 1000 * 60 * 5,
     cacheTime: 1000 * 60 * 10,
+  });
+
+  const { data: cirurgias = [] } = useQuery({
+    queryKey: ['cirurgias-agenda', currentYear, currentMonth, user?.email],
+    queryFn: async () => {
+      const mes = String(currentMonth + 1).padStart(2, '0');
+      const ultimoDia = String(new Date(currentYear, currentMonth + 1, 0).getDate()).padStart(2, '0');
+      const page = await base44.entities.Procedimento.filter(
+        { tipo: 'Cirurgia', data: { $gte: `${currentYear}-${mes}-01`, $lte: `${currentYear}-${mes}-${ultimoDia}` } },
+        { limit: 200 }
+      );
+      return page.items || [];
+    },
+    enabled: !!user,
   });
 
   const { data: doctors = [] } = useQuery({
@@ -452,6 +463,7 @@ export default function Shifts() {
         onToggleSelect={isViewer ? null : toggleSelectShift}
         onToggleSelectAll={isViewer ? null : toggleSelectAll}
         onViewShiftDetails={(shift) => setViewDetailsShift(shift)}
+        surgeries={cirurgias}
         isViewer={isViewer}
       />
 
@@ -475,10 +487,12 @@ export default function Shifts() {
         onSaveProcedure={async (data) => {
           await base44.entities.Procedimento.create(data);
           queryClient.invalidateQueries({ queryKey: ['procedimentos'] });
+          queryClient.invalidateQueries({ queryKey: ['cirurgias-data'] });
+          queryClient.invalidateQueries({ queryKey: ['cirurgias-agenda'] });
+          queryClient.invalidateQueries({ queryKey: ['finance'] });
           setIsModalOpen(false);
           setEditingShift(null);
-          showToast('Cirurgia registada nos procedimentos!');
-          navigate(createPageUrl('Procedimentos'));
+          showToast('Cirurgia guardada na agenda!');
         }}
         doctors={doctors}
         hospitals={hospitals}

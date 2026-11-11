@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Trash2, Check, Plus } from 'lucide-react';
 import { getHospitalColor } from '@/lib/hospitalColors';
 
@@ -48,10 +48,24 @@ export default function CalendarView({
   onToggleSelect,
   onToggleSelectAll,
   onViewShiftDetails,
+  surgeries = [],
   isViewer = false
 }) {
   const todayStr = new Date().toISOString().split('T')[0];
   const [draggedShift, setDraggedShift] = useState(null);
+
+  const surgeriesByDate = useMemo(() => {
+    const map = new Map();
+    for (const surgery of surgeries) {
+      const raw = String(surgery.data || '');
+      const key = /^\d{2}\/\d{2}\/\d{4}$/.test(raw)
+        ? `${raw.slice(6)}-${raw.slice(3, 5)}-${raw.slice(0, 2)}`
+        : raw.slice(0, 10);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(surgery);
+    }
+    return map;
+  }, [surgeries]);
 
   const handleDragStart = (e, shift) => {
     e.stopPropagation();
@@ -180,6 +194,21 @@ export default function CalendarView({
                         </div>
                       );
                     })}
+
+                    {(surgeriesByDate.get(dayData.date) || []).map(surgery => (
+                      <div
+                        key={surgery.id}
+                        title={[surgery.hospital_name, surgery.paciente, surgery.descricao].filter(Boolean).join(' • ')}
+                        className="p-2 rounded-xl text-xs bg-rose-100 dark:bg-rose-900/30 border border-rose-400 dark:border-rose-600"
+                      >
+                        <div className="font-black text-rose-800 dark:text-rose-200 truncate text-[10px] uppercase tracking-wide">
+                          Cirurgia • {surgery.hospital_name}
+                        </div>
+                        <div className="text-rose-700 dark:text-rose-300 truncate text-[9px] mt-0.5">
+                          {surgery.paciente || surgery.descricao || 'Programada'}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </>
               )}
