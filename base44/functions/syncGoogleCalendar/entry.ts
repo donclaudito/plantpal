@@ -226,22 +226,40 @@ export default async function (req) {
       [...mapa.values()].map((v) => v.google_event_id)
     );
 
-    const gravarVinculo = async (tipo, recordId, eventoId, data) => {
+    const gravarVinculo = async (tipo, recordId, eventoId, data, marca) => {
       const chave = `${tipo}:${recordId}`;
       const vinculo = mapa.get(chave);
+
       if (vinculo) {
+        if (
+          vinculo.google_event_id === eventoId &&
+          vinculo.event_date === data &&
+          (vinculo.record_updated || null) === (marca || null) &&
+          !vinculo.removido_no_google
+        ) {
+          // Já está exatamente assim no Google: não reenvia
+          return;
+        }
         await base44.asServiceRole.entities.CalendarSync.update(vinculo.id, {
           google_event_id: eventoId,
           event_date: data,
+          record_updated: marca || null,
           removido_no_google: false,
         });
-        mapa.set(chave, { ...vinculo, google_event_id: eventoId, event_date: data, removido_no_google: false });
+        mapa.set(chave, {
+          ...vinculo,
+          google_event_id: eventoId,
+          event_date: data,
+          record_updated: marca || null,
+          removido_no_google: false,
+        });
       } else {
         const criado = await base44.asServiceRole.entities.CalendarSync.create({
           record_type: tipo,
           record_id: recordId,
           google_event_id: eventoId,
           event_date: data,
+          record_updated: marca || null,
           removido_no_google: false,
         });
         mapa.set(chave, criado);
@@ -268,7 +286,7 @@ export default async function (req) {
 
       if (!vinculo) {
         const criado = await salvarEvento(accessToken, null, eventoDoPlantao(shift));
-        await gravarVinculo('Shift', shift.id, criado.id, shift.date);
+        await gravarVinculo('Shift', shift.id, criado.id, shift.date, shift.updated_date);
         contadoresPlantoes.created += 1;
         continue;
       }
@@ -303,8 +321,13 @@ export default async function (req) {
         continue;
       }
 
+      if (vinculo.record_updated && vinculo.record_updated === shift.updated_date) {
+        // Sem alterações desde a última sincronização: nada a reenviar
+        continue;
+      }
+
       const evento = await salvarEvento(accessToken, vinculo.google_event_id, eventoDoPlantao(shift));
-      await gravarVinculo('Shift', shift.id, evento.id, shift.date);
+      await gravarVinculo('Shift', shift.id, evento.id, shift.date, shift.updated_date);
       if (evento.criado) contadoresPlantoes.created += 1;
       else contadoresPlantoes.updated += 1;
     }
@@ -316,7 +339,7 @@ export default async function (req) {
 
       if (!vinculo) {
         const criado = await salvarEvento(accessToken, null, eventoDaCirurgia(cirurgia));
-        await gravarVinculo('Procedimento', cirurgia.id, criado.id, cirurgia.data);
+        await gravarVinculo('Procedimento', cirurgia.id, criado.id, cirurgia.data, cirurgia.updated_date);
         contadoresCirurgias.created += 1;
         continue;
       }
@@ -358,12 +381,17 @@ export default async function (req) {
         continue;
       }
 
+      if (!apagadoNoGoogle && vinculo.record_updated && vinculo.record_updated === cirurgia.updated_date) {
+        // Sem alterações desde a última sincronização: nada a reenviar
+        continue;
+      }
+
       const evento = await salvarEvento(
         accessToken,
         apagadoNoGoogle ? null : vinculo.google_event_id,
         eventoDaCirurgia(cirurgia)
       );
-      await gravarVinculo('Procedimento', cirurgia.id, evento.id, cirurgia.data);
+      await gravarVinculo('Procedimento', cirurgia.id, evento.id, cirurgia.data, cirurgia.updated_date);
       if (evento.criado) contadoresCirurgias.created += 1;
       else contadoresCirurgias.updated += 1;
     }

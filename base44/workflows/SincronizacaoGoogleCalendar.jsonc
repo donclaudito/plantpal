@@ -1,5 +1,5 @@
 {
-  "description": "Mant\u00e9m os plant\u00f5es e cirurgias sincronizados com o Google Calendar a cada 6 horas, com lembretes autom\u00e1ticos.",
+  "description": "Sincroniza plant\u00f5es e cirurgias com o Google Calendar em cont\u00ednuo, a cada 5 minutos, com lembretes autom\u00e1ticos.",
   "definition": {
     "document": {
       "dsl": "1.0.0",
@@ -18,7 +18,7 @@
           "then": "end",
           "x-base44": {
             "title": "Sincronizar Google Calendar",
-            "description": "Cria e atualiza os eventos de plant\u00f5es e cirurgias"
+            "description": "Cria, atualiza e recolhe os eventos de plant\u00f5es e cirurgias"
           }
         }
       }
@@ -31,7 +31,7 @@
       "trigger_type": "scheduled",
       "events": [],
       "schedule_mode": "recurring",
-      "cron_expression": "0 */6 * * *",
+      "cron_expression": "*/5 * * * *",
       "one_time_date": null,
       "timezone": "America/Sao_Paulo",
       "interval_value": null,

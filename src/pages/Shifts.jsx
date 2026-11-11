@@ -15,6 +15,7 @@ import DeleteConfirmation from '@/components/common/DeleteConfirmation';
 import Toast from '@/components/common/Toast';
 import { normalizarHospital } from '@/lib/shiftFilters';
 import { MEDICO_PADRAO } from '@/lib/defaultDoctor';
+import useCalendarSync from '@/lib/useCalendarSync';
 
 const monthNames = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -51,6 +52,10 @@ export default function Shifts() {
   });
 
   console.log('Current user:', user, 'Is Loading User:', isLoadingUser, 'User Error:', userError);
+
+  const { sincronizando, ultimaSincronizacao, resumo, erro, sincronizar } = useCalendarSync({
+    enabled: user?.role === 'admin',
+  });
 
   React.useEffect(() => {
     if (userError && !isLoadingUser) {
@@ -279,6 +284,10 @@ export default function Shifts() {
   }, [currentMonth, currentYear, filteredShifts]);
 
   const handleDayClick = (date) => {
+    if (sincronizando) {
+      showToast('Sincronização em curso. As edições voltam assim que terminar.', 'error');
+      return;
+    }
     setSelectedDate(date);
     setIsModalOpen(true);
   };
@@ -539,7 +548,13 @@ export default function Shifts() {
 
       {!isViewer && (
         <div className="mb-6">
-          <GoogleCalendarSync />
+          <GoogleCalendarSync
+            sincronizando={sincronizando}
+            ultimaSincronizacao={ultimaSincronizacao}
+            resumo={resumo}
+            erro={erro}
+            onSincronizar={sincronizar}
+          />
         </div>
       )}
 
@@ -550,6 +565,16 @@ export default function Shifts() {
         year={currentYear}
       />
 
+      {sincronizando && (
+        <div className="mb-4 flex items-center gap-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 px-4 py-3 rounded-2xl">
+          <div className="w-3 h-3 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-black uppercase tracking-widest">
+            Sincronização em curso — as edições da agenda estão temporariamente bloqueadas
+          </p>
+        </div>
+      )}
+
+      <div className={sincronizando ? 'pointer-events-none opacity-60 transition-opacity' : ''}>
       <CalendarView 
         calendarDays={calendarDays}
         currentMonth={currentMonth}
@@ -567,6 +592,7 @@ export default function Shifts() {
         onViewSurgery={setViewSurgery}
         isViewer={isViewer}
       />
+      </div>
 
 
       <ShiftModal 
