@@ -83,6 +83,15 @@
           }
         }
       }
+    },
+    "recibo_enviado_em": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Momento em que o recibo em PDF foi enviado pelo Gmail"
+    },
+    "recibo_enviado_para": {
+      "type": "string",
+      "description": "E-mail que recebeu o recibo do procedimento"
     }
   },
   "required": [

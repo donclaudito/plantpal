@@ -238,6 +238,11 @@ export default async function (req) {
       }, { status: 502 });
     }
 
+    await base44.asServiceRole.entities.Procedimento.update(procedimento_id, {
+      recibo_enviado_em: new Date().toISOString(),
+      recibo_enviado_para: destinatario,
+    });
+
     return Response.json({ enviado: true, destinatario, assunto });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

@@ -152,6 +152,7 @@ export default function Procedimentos() {
       await base44.entities.Hospital.update(hospital.id, { email: destinatario });
       queryClient.invalidateQueries({ queryKey: ['hospitals'] });
     }
+    queryClient.invalidateQueries({ queryKey: ['procedimentos'] });
     showToast(`Recibo enviado para ${resultado?.destinatario || destinatario}!`);
   };
 

@@ -1,8 +1,9 @@
 import React from 'react';
-import { Edit, Trash2, AlertTriangle, FileText } from 'lucide-react';
+import { Edit, Trash2, AlertTriangle, FileText, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { procedimentoQuantidade, procedimentoTotal } from '@/lib/procedimentoTotals';
 import { formatDatePtBr } from '@/lib/dateKeys';
+import StatusRecibo from '@/components/procedimentos/StatusRecibo';
 
 const CORES_LINHA = {
   Cirurgia: 'bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500',
@@ -30,6 +31,7 @@ export default function ProcedimentoTable({ items, tipo, onEdit, onDelete, onEnv
             <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Qtd</th>
             <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Valor Unit.</th>
             <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recibo</th>
             <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
           </tr>
         </thead>
@@ -63,6 +65,9 @@ export default function ProcedimentoTable({ items, tipo, onEdit, onDelete, onEnv
               </td>
               <td className="px-4 py-4 text-sm text-right font-semibold text-gray-900">
                 R$ {procedimentoTotal(proc).toFixed(2)}
+              </td>
+              <td className="px-4 py-4">
+                <StatusRecibo procedimento={proc} />
               </td>
               <td className="px-4 py-4 text-right">
                 <div className="flex gap-2 justify-end">
