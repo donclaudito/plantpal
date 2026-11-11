@@ -204,7 +204,7 @@ export default function Procedimentos() {
           </div>
         </div>
 
-        <DadosFaltandoAlerta procedimentos={filteredProcedimentos} />
+        <DadosFaltandoAlerta procedimentos={procedimentos} onAbrir={handleEdit} />
 
         <Card>
           <CardHeader>
