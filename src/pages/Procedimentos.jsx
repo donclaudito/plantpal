@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import ProcedimentoModal from '@/components/procedimentos/ProcedimentoModal';
 import Toast from '@/components/common/Toast';
 import { procedimentoQuantidade, procedimentoTotal, somaProcedimentos } from '@/lib/procedimentoTotals';
+import { monthKeyFromDate, formatMonthLabel, formatDatePtBr } from '@/lib/dateKeys';
 
 export default function Procedimentos() {
   const [message, setMessage] = useState(null);
@@ -32,7 +33,16 @@ export default function Procedimentos() {
   const { data: procedimentos = [], isLoading } = useQuery({
     queryKey: ['procedimentos', user?.email],
     queryFn: async () => {
-      const all = await base44.entities.Procedimento.list('-data');
+      const all = [];
+      let cursor = null;
+      let hasMore = true;
+      while (hasMore) {
+        const page = await base44.entities.Procedimento.filter({}, { sort: '-data', limit: 200, ...(cursor ? { cursor } : {}) });
+        all.push(...page.items);
+        hasMore = page.has_more;
+        cursor = page.next_cursor;
+        if (!cursor) break;
+      }
       return all.filter(p => p.created_by === user?.email);
     },
     enabled: !!user,
@@ -111,11 +121,7 @@ export default function Procedimentos() {
     if (filters.doctor !== 'all' && p.doctor_id !== filters.doctor) return false;
     if (filters.hospital !== 'all' && p.hospital_id !== filters.hospital) return false;
     if (filters.tipo_pagamento !== 'all' && p.tipo_pagamento !== filters.tipo_pagamento) return false;
-    if (filters.mes !== 'all') {
-      const procData = new Date(p.data);
-      const mesAno = `${procData.getFullYear()}-${String(procData.getMonth() + 1).padStart(2, '0')}`;
-      if (mesAno !== filters.mes) return false;
-    }
+    if (filters.mes !== 'all' && monthKeyFromDate(p.data) !== filters.mes) return false;
     return true;
   });
 
@@ -177,13 +183,8 @@ export default function Procedimentos() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
-                    {Array.from(new Set(procedimentos.map(p => {
-                      const d = new Date(p.data);
-                      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                    }))).sort().reverse().map(mes => (
-                      <SelectItem key={mes} value={mes}>
-                        {new Date(mes + '-01').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
-                      </SelectItem>
+                    {Array.from(new Set(procedimentos.map(p => monthKeyFromDate(p.data)).filter(Boolean))).sort().reverse().map(mes => (
+                      <SelectItem key={mes} value={mes}>{formatMonthLabel(mes)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -283,7 +284,7 @@ export default function Procedimentos() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {cirurgias.map(proc => (
                       <tr key={proc.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-4 text-sm text-gray-900">{new Date(proc.data).toLocaleDateString('pt-BR')}</td>
+                        <td className="px-4 py-4 text-sm text-gray-900">{formatDatePtBr(proc.data)}</td>
                         <td className="px-4 py-4 text-sm text-gray-900">{proc.doctor_name}</td>
                         <td className="px-4 py-4 text-sm text-gray-900">{proc.hospital_name}</td>
                         <td className="px-4 py-4">
@@ -350,7 +351,7 @@ export default function Procedimentos() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {consultas.map(proc => (
                       <tr key={proc.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-4 text-sm text-gray-900">{new Date(proc.data).toLocaleDateString('pt-BR')}</td>
+                        <td className="px-4 py-4 text-sm text-gray-900">{formatDatePtBr(proc.data)}</td>
                         <td className="px-4 py-4 text-sm text-gray-900">{proc.doctor_name}</td>
                         <td className="px-4 py-4 text-sm text-gray-900">{proc.hospital_name}</td>
                         <td className="px-4 py-4">
