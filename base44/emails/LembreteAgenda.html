@@ -1,0 +1,59 @@
+<mjml>
+  <mj-head>
+    <mj-title>Lembrete: seus compromissos de {{data_hoje}}</mj-title>
+    <mj-preview>Plantões e cirurgias de hoje e de amanhã</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Arial, Arial, sans-serif" />
+      <mj-section background-color="#ffffff" padding="0 36px" />
+      <mj-text color="#0a0a0a" font-size="15px" line-height="1.6" padding="0" />
+      <mj-button background-color="#16a34a" color="#000000" border-radius="8px" font-weight="700" inner-padding="14px 28px" align="left" />
+      <mj-class name="label" color="#737373" font-size="11px" font-weight="700" letter-spacing="1px" />
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#ffffff">
+    <mj-section background-color="#16a34a" padding="24px 36px">
+      <mj-column>
+        <mj-image src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6982fbf5fc359e9b5f799311/4edaba94a_logo.png" alt="REFUA CATAN" width="44px" align="left" padding="0 0 0 0" />
+        <mj-text color="#000000" font-size="18px" font-weight="700" padding="10px 0 0 0">REFUA CATAN</mj-text>
+        <mj-text color="#000000" font-size="12px" padding="2px 0 0 0">Agenda de plantões e cirurgias</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="40px 36px 8px">
+      <mj-column>
+        <mj-text font-size="28px" line-height="1.2" font-weight="700">Seus compromissos, {{primeiro_nome}}</mj-text>
+        <mj-text color="#737373" padding="10px 0 0 0">Este é o seu lembrete automático da agenda. Confira o que está marcado para hoje e para amanhã.</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="24px 36px 0">
+      <mj-column background-color="#f6f6f6" border-radius="8px" padding="20px 24px">
+        <mj-text mj-class="label">HOJE · {{data_hoje}}</mj-text>
+        <mj-text padding="8px 0 0 0"><strong>Plantões:</strong> {{hoje_plantoes}}</mj-text>
+        <mj-text padding="4px 0 0 0"><strong>Cirurgias:</strong> {{hoje_cirurgias}}</mj-text>
+        <mj-text padding="8px 0 0 0" color="#737373" font-size="13px">{{total_hoje}}</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="16px 36px 0">
+      <mj-column background-color="#ffffff" border="1px solid #e5e5e5" border-radius="8px" padding="20px 24px">
+        <mj-text mj-class="label">AMANHÃ · {{data_amanha}}</mj-text>
+        <mj-text padding="8px 0 0 0"><strong>Plantões:</strong> {{amanha_plantoes}}</mj-text>
+        <mj-text padding="4px 0 0 0"><strong>Cirurgias:</strong> {{amanha_cirurgias}}</mj-text>
+        <mj-text padding="8px 0 0 0" color="#737373" font-size="13px">{{total_amanha}}</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="28px 36px 40px">
+      <mj-column>
+        <mj-button href="https://refuacatan.base44.app/Shifts">Abrir a agenda</mj-button>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#f6f6f6" padding="20px 36px">
+      <mj-column>
+        <mj-text color="#737373" font-size="12px">Você recebe este lembrete automático porque faz parte da equipe da REFUA CATAN. Os avisos chegam todos os dias às 7h com os compromissos do dia e do dia seguinte.</mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
