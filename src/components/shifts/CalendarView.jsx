@@ -96,16 +96,16 @@ export default function CalendarView({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl dark:shadow-slate-900/30 overflow-hidden border border-slate-200 dark:border-slate-700">
-      <div className="grid grid-cols-7 bg-slate-100 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600">
+    <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl dark:shadow-slate-900/30 overflow-x-auto border border-slate-200 dark:border-slate-700">
+      <div className="grid grid-cols-7 min-w-[820px] bg-slate-100 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600">
         {weekDays.map(day => (
-          <div key={day} className="p-4 text-center">
+          <div key={day} className="p-2 sm:p-4 text-center">
             <span className="text-xs font-black text-slate-600 dark:text-slate-400 tracking-widest">{day}</span>
           </div>
         ))}
       </div>
       
-      <div className="grid grid-cols-7">
+      <div className="grid grid-cols-7 min-w-[820px]">
         {calendarDays.map((dayData, idx) => {
           const isToday = dayData.date === todayStr;
           const isEmpty = !dayData.day;
@@ -141,7 +141,7 @@ export default function CalendarView({
                   {!isViewer && (
                     <button
                       onClick={() => onDayClick(dayData.date)}
-                      className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100"
+                      className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-all flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                     >
                       <Plus size={14} />
                     </button>
@@ -199,7 +199,7 @@ export default function CalendarView({
                                 e.stopPropagation();
                                 onDeleteShift(shift.id, shift.doctor_name);
                               }}
-                              className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 dark:bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg"
+                              className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 dark:bg-red-500 text-white rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg"
                             >
                               <Trash2 size={10} />
                             </button>
@@ -241,7 +241,7 @@ export default function CalendarView({
                               e.stopPropagation();
                               onDeleteSurgery(surgery);
                             }}
-                            className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 dark:bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg"
+                            className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 dark:bg-red-500 text-white rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg"
                           >
                             <Trash2 size={10} />
                           </button>
