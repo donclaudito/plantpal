@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
 import CalendarShiftCard, { ordenarPlantoes } from '@/components/shifts/CalendarShiftCard';
 import CalendarSurgeryCard from '@/components/shifts/CalendarSurgeryCard';
 import AgendaMovel from '@/components/shifts/AgendaMovel';
+import { dataHoje } from '@/lib/shiftConflicts';
 
 const weekDays = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
 
@@ -23,7 +24,7 @@ export default function CalendarView({
   onViewSurgery,
   isViewer = false
 }) {
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = dataHoje();
   const [draggedShift, setDraggedShift] = useState(null);
   const [draggedSurgery, setDraggedSurgery] = useState(null);
 

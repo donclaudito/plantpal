@@ -26,12 +26,14 @@ export const janelaDoPlantao = (shift) => {
   return JANELAS_POR_PERIODO[normalizar(shift.period)] || null;
 };
 
-export const dataHoje = () => {
-  const agora = new Date();
-  const mes = String(agora.getMonth() + 1).padStart(2, '0');
-  const dia = String(agora.getDate()).padStart(2, '0');
-  return `${agora.getFullYear()}-${mes}-${dia}`;
-};
+// Data de hoje no fuso de Brasília, independente do fuso do dispositivo
+export const dataHoje = () =>
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
 
 export const formatarDataCurta = (data) => {
   const partes = String(data || '').split('-');

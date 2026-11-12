@@ -357,7 +357,7 @@ export default function Shifts() {
     );
   }
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = dataHoje();
   const todayShifts = filteredShifts.filter(s => s.date === todayStr);
   const upcomingShifts = filteredShifts.filter(s => s.date > todayStr).sort((a, b) => a.date.localeCompare(b.date));
   const nextShift = upcomingShifts[0];
