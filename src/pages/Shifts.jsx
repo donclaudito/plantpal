@@ -12,6 +12,7 @@ import AlertasAgenda from '@/components/shifts/AlertasAgenda';
 import GoogleCalendarSync from '@/components/shifts/GoogleCalendarSync';
 import ImportarPlantoesSheets from '@/components/shifts/ImportarPlantoesSheets';
 import ResumoPlantaoHoje from '@/components/shifts/ResumoPlantaoHoje';
+import CirurgiasDoDia from '@/components/shifts/CirurgiasDoDia';
 import { dataHoje } from '@/lib/shiftConflicts';
 import DeleteConfirmation from '@/components/common/DeleteConfirmation';
 import Toast from '@/components/common/Toast';
@@ -398,9 +399,10 @@ export default function Shifts() {
               <p className="text-xs opacity-90 mt-1">Médicos de serviço:</p>
               <div className="divide-y divide-white/25">
                 {todayShifts.map((s) => (
-                  <ResumoPlantaoHoje key={s.id} shift={s} cirurgias={cirurgiasHoje} />
+                  <ResumoPlantaoHoje key={s.id} shift={s} />
                 ))}
               </div>
+              <CirurgiasDoDia cirurgias={cirurgiasHoje} medico={filterDoctor} />
             </div>
           </div>
         </div>
@@ -417,6 +419,7 @@ export default function Shifts() {
                   Próximo plantão: {new Date(nextShift.date + 'T00:00:00').toLocaleDateString('pt-PT', { day: 'numeric', month: 'long' })} • <strong>{nextShift.doctor_name}</strong> em {nextShift.hospital} ({nextShift.shift_type})
                 </p>
               )}
+              <CirurgiasDoDia cirurgias={cirurgiasHoje} medico={filterDoctor} />
             </div>
           </div>
         </div>
