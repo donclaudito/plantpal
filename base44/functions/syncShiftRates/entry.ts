@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
-import { loadPricing, readDistinct, quoteShift, resolveParties, hospitalKey, normalizeName, money } from '../../shared/shiftPricing.ts';
+import { loadPricing, readDistinct, quoteShift, resolveParties, hospitalKey, normalizeName, money, hospitalGroup, AMBULATORIO_GROUP } from '../../shared/shiftPricing.ts';
 
 export default async function(req) {
   try {
@@ -13,11 +13,17 @@ export default async function(req) {
     const config = context.rates.find(c => c.id === configId);
     if (!config) return Response.json({ error: 'Configuração não encontrada.' }, { status: 404 });
     const query = { status: 'Realizado' };
+    let hospitalIds = [];
     if (config.hospital_id) {
       const hospital = context.hospitals.find(h => h.id === config.hospital_id);
       if (!hospital) return Response.json({ error: 'Hospital da configuração não encontrado.' }, { status: 400 });
+      // Uma tabela de ambulatório vale para todas as unidades de ambulatório (SUS e Convênio).
+      const group = hospitalGroup(hospital.name);
+      hospitalIds = group === AMBULATORIO_GROUP
+        ? context.hospitals.filter(h => hospitalGroup(h.name) === group).map(h => h.id)
+        : [hospital.id];
       const { items: names } = await readDistinct(client.entities.Shift, 'hospital');
-      query.hospital = { $in: names.filter(name => hospitalKey(name) === hospitalKey(hospital.name)) };
+      query.hospital = { $in: names.filter(name => hospitalIds.includes(context.hospitals.find(h => hospitalKey(h.name) === hospitalKey(name))?.id)) };
     }
     if (config.doctor_id) {
       const doctor = context.doctors.find(d => d.id === config.doctor_id);
@@ -32,7 +38,7 @@ export default async function(req) {
       for (const shift of page.items) {
         if (shift.usar_valor_informado === true) continue;
         const parties = resolveParties(context, shift);
-        if ((config.doctor_id && parties.doctorId !== config.doctor_id) || (config.hospital_id && parties.hospitalId !== config.hospital_id)) continue;
+        if ((config.doctor_id && parties.doctorId !== config.doctor_id) || (hospitalIds.length > 0 && !hospitalIds.includes(parties.hospitalId))) continue;
         const quote = quoteShift(context, shift);
         const period = quote.billingMode === 'por_periodo' ? 'consultas' : shift.period;
         if (quote.configured && (money(shift.value) !== quote.value || period !== shift.period)) changes.push({ id: shift.id, value: quote.value, period });

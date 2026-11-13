@@ -4,7 +4,7 @@ const money = value => Number(value || 0).toLocaleString('pt-BR', { style: 'curr
 
 export default function RateSummary({ config }) {
   if (config.tipo_calculo === 'por_periodo') return <div className="space-y-1">
-    <p className="text-sm text-muted-foreground">Valor por consulta no Ambulatório SUS</p>
+    <p className="text-sm text-muted-foreground">Valor por consulta no Ambulatório (SUS e Convênio)</p>
     <p className="font-bold text-foreground">Manhã: {money(config.valor_consulta_manha)} por consulta</p>
     <p className="font-bold text-foreground">Tarde: {money(config.valor_consulta_tarde)} por consulta</p>
     {Number(config.valor_periodo) > 0 && <p className="text-sm text-muted-foreground">Sem quantidade informada: {money(config.valor_periodo)} por período</p>}

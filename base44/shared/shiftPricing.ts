@@ -50,14 +50,20 @@ export const hospitalGroup = (value) => (normalizeName(value).includes('AMBUL') 
 
 // A tabela de valores do Ambulatório SUS (por consulta, manhã/tarde) vale para
 // qualquer unidade de ambulatório, incluindo o AMBULATORIO CONVENIO.
+// 3 = mesma unidade, 1 = outra unidade do mesmo grupo de ambulatório, 0 = não aplica.
+export const hospitalMatch = (config, hospitalId, hospitalName = '', context = null) => {
+  if (!config.hospital_id) return 0;
+  if (config.hospital_id === hospitalId) return 3;
+  const group = hospitalGroup(hospitalName);
+  if (group !== AMBULATORIO_GROUP) return 0;
+  const configHospital = context?.hospitals?.find(h => h.id === config.hospital_id);
+  return hospitalGroup(configHospital?.name) === group ? 1 : 0;
+};
+
 export const appliesTo = (config, doctorId, hospitalId, hospitalName = '', context = null) => {
   if (config.doctor_id && config.doctor_id !== doctorId) return false;
   if (!config.hospital_id) return true;
-  if (config.hospital_id === hospitalId) return true;
-  const group = hospitalGroup(hospitalName);
-  if (group !== AMBULATORIO_GROUP) return false;
-  const configHospital = context?.hospitals?.find(h => h.id === config.hospital_id);
-  return hospitalGroup(configHospital?.name) === group;
+  return hospitalMatch(config, hospitalId, hospitalName, context) > 0;
 };
 export function periodValue(config, period) {
   if (config.tipo_calculo === 'por_periodo') return money(config.valor_periodo);
@@ -77,7 +83,7 @@ export function consultationUnitValue(config, shift) {
 }
 export function quoteSurgeries(context, row) {
   const parties = resolveParties(context, row);
-  const rank = c => (c.doctor_id ? 2 : 0) + (c.hospital_id ? 1 : 0);
+  const rank = c => (c.doctor_id ? 2 : 0) + hospitalMatch(c, parties.hospitalId, parties.hospitalName, context);
   const rate = context.rates
     .filter(c => c.tipo_calculo === 'por_cirurgia' && appliesTo(c, parties.doctorId, parties.hospitalId, parties.hospitalName, context))
     .sort((a, b) => rank(b) - rank(a) || String(b.updated_date).localeCompare(String(a.updated_date)))[0];
@@ -90,7 +96,7 @@ export function quoteSurgeries(context, row) {
 export function quoteShift(context, shift) {
   const parties = resolveParties(context, shift);
   const candidates = context.rates.filter(c => appliesTo(c, parties.doctorId, parties.hospitalId, parties.hospitalName, context)).sort((a, b) => {
-    const score = c => (c.doctor_id ? 2 : 0) + (c.hospital_id ? (c.tipo_calculo === 'por_periodo' ? 4 : 1) : 0);
+    const score = c => (c.doctor_id ? 2 : 0) + hospitalMatch(c, parties.hospitalId, parties.hospitalName, context) * (c.tipo_calculo === 'por_periodo' ? 4 : 1);
     return score(b) - score(a) || String(b.updated_date).localeCompare(String(a.updated_date));
   });
   const rate = candidates.find(c => c.tipo_calculo === 'por_periodo' || periodValue(c, shift.period) > 0);

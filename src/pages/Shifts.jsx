@@ -231,7 +231,8 @@ export default function Shifts() {
       hospital_id: hospitals.find(h => normalizarHospital(h.name) === normalizarHospital(shift.hospital))?.id || '',
       hospital_name: shift.hospital || '',
       data: shift.date,
-      tipo_pagamento: existente?.tipo_pagamento || 'SUS',
+      tipo_pagamento: existente?.tipo_pagamento
+        || (normalizarHospital(shift.hospital).includes('SUS') ? 'SUS' : 'Convenio'),
       descricao: existente?.descricao && existente.descricao !== '-' ? existente.descricao : rotulo,
       quantidade: Number(shift.quantidade_consultas) || 0,
       valor: Number(shift.valor_consulta) || 0,
