@@ -7,6 +7,8 @@ import { Download } from 'lucide-react';
 import { formatQuantity } from '@/lib/quantity';
 import { MEDICO_PADRAO } from '@/lib/defaultDoctor';
 import HospitalGanhos from '@/components/relatorios/HospitalGanhos';
+import GanhosMensais from '@/components/relatorios/GanhosMensais';
+import { normalizarNome, normalizarHospital } from '@/lib/shiftFilters';
 
 export default function Relatorios() {
   const [selectedMonth, setSelectedMonth] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`);
@@ -39,8 +41,46 @@ export default function Relatorios() {
     enabled: !!user,
   });
 
+  const { data: shifts = [], isPending: loadingGanhos } = useQuery({
+    queryKey: ['shifts', 'relatorios', user?.email],
+    queryFn: async () => {
+      const todos = [];
+      let cursor = null;
+      do {
+        const page = await base44.entities.Shift.filter({}, { sort: '-date', limit: 200, ...(cursor ? { cursor } : {}) });
+        todos.push(...page.items);
+        cursor = page.has_more ? page.next_cursor : null;
+      } while (cursor);
+      return todos;
+    },
+    enabled: !!user,
+  });
+
+  const { data: cirurgias = [], isPending: loadingCirurgias } = useQuery({
+    queryKey: ['cirurgias', 'relatorios', user?.email],
+    queryFn: async () => {
+      const todas = [];
+      let cursor = null;
+      do {
+        const page = await base44.entities.Procedimento.filter({ tipo: 'Cirurgia' }, { sort: '-data', limit: 200, ...(cursor ? { cursor } : {}) });
+        todas.push(...page.items);
+        cursor = page.has_more ? page.next_cursor : null;
+      } while (cursor);
+      return todas;
+    },
+    enabled: !!user,
+  });
+
   const reports = financialData?.reports || { totals: { bruto: 0, descontos: 0, liquido: 0, numShifts: 0 }, byHospital: [], byDoctor: [], byDoctorHospital: [] };
   const availableMonths = financialData?.availableMonths || [];
+
+  const mesmoMedico = (nome) =>
+    selectedDoctor === 'all' || normalizarNome(nome) === normalizarNome(selectedDoctor);
+  const mesmoHospital = (nome) =>
+    selectedHospital === 'all' || normalizarHospital(nome) === normalizarHospital(selectedHospital);
+
+  const plantoesFiltrados = shifts.filter((s) => mesmoMedico(s.doctor_name) && mesmoHospital(s.hospital));
+  const cirurgiasFiltradas = cirurgias.filter((p) => mesmoMedico(p.doctor_name) && mesmoHospital(p.hospital_name));
 
   const monthNames = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -84,7 +124,7 @@ export default function Relatorios() {
 
   if (financeError) return <div className="p-6 space-y-3"><p role="alert" className="text-destructive">Não foi possível carregar o relatório: {financeError.message}</p><Button onClick={() => reloadFinance()}>Tentar novamente</Button></div>;
 
-  if (!user || loadingFinance) {
+  if (!user || loadingFinance || loadingGanhos || loadingCirurgias) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
@@ -170,6 +210,12 @@ export default function Relatorios() {
           </div>
         </div>
       </div>
+
+      <GanhosMensais
+        shifts={plantoesFiltrados}
+        procedimentos={cirurgiasFiltradas}
+        selectedMonth={selectedMonth}
+      />
 
       <HospitalGanhos summary={financialData?.summary || []} />
 
