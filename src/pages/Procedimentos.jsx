@@ -100,14 +100,19 @@ export default function Procedimentos() {
     setTimeout(() => setMessage(null), 3000);
   };
 
-  const handleSave = (data) => {
+  const handleSave = async (data) => {
     const { id, created_by, created_by_id, created_date, updated_date, ...payload } = data;
-    if (editingProcedimento) {
-      updateMutation.mutate({ id: editingProcedimento.id, data: payload });
-    } else {
-      createMutation.mutate(payload);
+    try {
+      if (editingProcedimento) {
+        await updateMutation.mutateAsync({ id: editingProcedimento.id, data: payload });
+      } else {
+        await createMutation.mutateAsync(payload);
+      }
+    } catch (e) {
+      showToast(e?.message || 'Não foi possível guardar o procedimento.', 'error');
+    } finally {
+      setEditingProcedimento(null);
     }
-    setEditingProcedimento(null);
   };
 
   const handleEdit = (procedimento) => {

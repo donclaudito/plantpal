@@ -207,6 +207,43 @@ export default function Shifts() {
     setTimeout(() => setMessage(null), 3000);
   };
 
+  const sincronizarConsultaNoProcedimento = async (shift) => {
+    if (!shift || shift.period !== 'consultas') return;
+
+    const rotulo = `Consultas · ${shift.shift_type || ''}`.trim();
+    const mesmoMedico = (procedimento) =>
+      String(procedimento.doctor_name || '').trim().toUpperCase() === String(shift.doctor_name || '').trim().toUpperCase();
+
+    const page = await base44.entities.Procedimento.filter(
+      { tipo: 'Consulta', data: shift.date },
+      { limit: 100 }
+    );
+    const candidatos = (page.items || []).filter(
+      (p) => mesmoMedico(p) && normalizarHospital(p.hospital_name) === normalizarHospital(shift.hospital)
+    );
+    const existente = candidatos.find((p) => (p.descricao || '').trim() === rotulo)
+      || candidatos.find((p) => !p.descricao || p.descricao === '-');
+
+    const dados = {
+      tipo: 'Consulta',
+      doctor_id: shift.doctor_id || '',
+      doctor_name: shift.doctor_name || '',
+      hospital_id: hospitals.find(h => normalizarHospital(h.name) === normalizarHospital(shift.hospital))?.id || '',
+      hospital_name: shift.hospital || '',
+      data: shift.date,
+      tipo_pagamento: existente?.tipo_pagamento || 'SUS',
+      descricao: existente?.descricao && existente.descricao !== '-' ? existente.descricao : rotulo,
+      quantidade: Number(shift.quantidade_consultas) || 0,
+      valor: Number(shift.valor_consulta) || 0,
+    };
+
+    if (existente) {
+      await base44.entities.Procedimento.update(existente.id, dados);
+    } else {
+      await base44.entities.Procedimento.create(dados);
+    }
+  };
+
   const handlePreviousMonth = () => {
     if (currentMonth === 0) {
       setCurrentMonth(11);
@@ -614,12 +651,24 @@ export default function Shifts() {
           setEditingShift(null);
         }}
         onSave={async (data) => {
+          const sincronizados = [];
           if (editingShift) {
-            await updateShiftMutation.mutateAsync({ id: editingShift.id, data });
+            const atualizado = await updateShiftMutation.mutateAsync({ id: editingShift.id, data });
+            sincronizados.push({ ...data, ...(atualizado || {}) });
           } else if (Array.isArray(data)) {
-            await bulkCreateShiftMutation.mutateAsync(data);
+            const criados = await bulkCreateShiftMutation.mutateAsync(data);
+            const lista = Array.isArray(criados) ? criados : data;
+            sincronizados.push(...lista);
           } else {
-            await createShiftMutation.mutateAsync(data);
+            const criado = await createShiftMutation.mutateAsync(data);
+            sincronizados.push(criado || data);
+          }
+
+          for (const shift of sincronizados) {
+            await sincronizarConsultaNoProcedimento(shift);
+          }
+          if (sincronizados.some(s => s.period === 'consultas')) {
+            queryClient.invalidateQueries({ queryKey: ['procedimentos'] });
           }
           setEditingShift(null);
         }}
