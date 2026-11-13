@@ -101,17 +101,18 @@ export default function Procedimentos() {
   };
 
   const handleSave = (data) => {
+    const { id, created_by, created_by_id, created_date, updated_date, ...payload } = data;
     if (editingProcedimento) {
-      updateMutation.mutate({ id: editingProcedimento.id, data });
+      updateMutation.mutate({ id: editingProcedimento.id, data: payload });
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(payload);
     }
     setEditingProcedimento(null);
   };
 
   const handleEdit = (procedimento) => {
     setEditingProcedimento(procedimento);
-    setTipoModal(procedimento.tipo);
+    setTipoModal(procedimento?.tipo || 'Cirurgia');
     setShowModal(true);
   };
 
@@ -256,6 +257,7 @@ export default function Procedimentos() {
       <Toast message={message?.text} type={message?.type} />
 
       <ProcedimentoModal
+        key={editingProcedimento?.id || `novo-${tipoModal}`}
         isOpen={showModal}
         onClose={() => {
           setShowModal(false);

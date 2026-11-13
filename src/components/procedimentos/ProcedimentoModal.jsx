@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,23 +7,50 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { procedimentoQuantidade, procedimentoTotal } from '@/lib/procedimentoTotals';
 
+const normalizar = (valor) => String(valor || '').trim().toUpperCase();
+
+const criarFormulario = ({ initialData, doctors, hospitals, tipo }) => {
+  const base = {
+    tipo: tipo || 'Cirurgia',
+    doctor_id: '',
+    doctor_name: '',
+    hospital_id: '',
+    hospital_name: '',
+    data: '',
+    tipo_pagamento: 'SUS',
+    descricao: '',
+    valor: 0,
+    observacoes: '',
+    paciente: '',
+    ...(initialData || {}),
+  };
+
+  const medico =
+    doctors.find((d) => d.id === base.doctor_id) ||
+    doctors.find((d) => normalizar(d.full_name) === normalizar(base.doctor_name));
+  const hospital =
+    hospitals.find((h) => h.id === base.hospital_id) ||
+    hospitals.find((h) => normalizar(h.name) === normalizar(base.hospital_name));
+
+  return {
+    ...base,
+    doctor_id: medico?.id || base.doctor_id || '',
+    doctor_name: base.doctor_name || medico?.full_name || '',
+    hospital_id: hospital?.id || base.hospital_id || '',
+    hospital_name: base.hospital_name || hospital?.name || '',
+    quantidade: procedimentoQuantidade(base),
+  };
+};
+
 export default function ProcedimentoModal({ isOpen, onClose, onSave, doctors, hospitals, initialData, tipo }) {
-  const [formData, setFormData] = useState({
-    ...(initialData || {
-      tipo: tipo || 'Cirurgia',
-      doctor_id: '',
-      doctor_name: '',
-      hospital_id: '',
-      hospital_name: '',
-      data: '',
-      tipo_pagamento: 'SUS',
-      descricao: '',
-      valor: 0,
-      observacoes: '',
-      paciente: ''
-    }),
-    quantidade: procedimentoQuantidade(initialData),
-  });
+  const [formData, setFormData] = useState(() => criarFormulario({ initialData, doctors, hospitals, tipo }));
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData(criarFormulario({ initialData, doctors, hospitals, tipo }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, initialData?.id]);
 
   const handleDoctorChange = (doctorId) => {
     const doctor = doctors.find(d => d.id === doctorId);
@@ -55,12 +82,14 @@ export default function ProcedimentoModal({ isOpen, onClose, onSave, doctors, ho
 
   if (!isOpen) return null;
 
+  const editando = !!initialData?.id;
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
           <h2 className="text-2xl font-bold text-gray-900">
-            Novo Procedimento
+            {editando ? `Editar ${formData.tipo}` : `Novo ${formData.tipo}`}
           </h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
             <X className="text-gray-400" size={24} />
@@ -86,7 +115,7 @@ export default function ProcedimentoModal({ isOpen, onClose, onSave, doctors, ho
               <Label>Data</Label>
               <Input
                 type="date"
-                value={formData.data}
+                value={formData.data || ''}
                 onChange={(e) => setFormData({ ...formData, data: e.target.value })}
                 required
               />
@@ -94,7 +123,7 @@ export default function ProcedimentoModal({ isOpen, onClose, onSave, doctors, ho
 
             <div>
               <Label>Médico</Label>
-              <Select value={formData.doctor_id} onValueChange={handleDoctorChange} required>
+              <Select value={formData.doctor_id || ''} onValueChange={handleDoctorChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um médico" />
                 </SelectTrigger>
@@ -108,7 +137,7 @@ export default function ProcedimentoModal({ isOpen, onClose, onSave, doctors, ho
 
             <div>
               <Label>Hospital / Local</Label>
-              <Select value={formData.hospital_id} onValueChange={handleHospitalChange} required>
+              <Select value={formData.hospital_id || ''} onValueChange={handleHospitalChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um hospital" />
                 </SelectTrigger>
@@ -148,7 +177,7 @@ export default function ProcedimentoModal({ isOpen, onClose, onSave, doctors, ho
               <Input
                 type="number"
                 step="0.01"
-                value={formData.valor}
+                value={formData.valor ?? 0}
                 onChange={(e) => setFormData({ ...formData, valor: parseFloat(e.target.value) || 0 })}
                 required
               />
@@ -177,7 +206,7 @@ export default function ProcedimentoModal({ isOpen, onClose, onSave, doctors, ho
           <div>
             <Label>Descrição do Procedimento</Label>
             <Textarea
-              value={formData.descricao}
+              value={formData.descricao || ''}
               onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
               placeholder="Descreva o procedimento realizado..."
               rows={3}
@@ -187,7 +216,7 @@ export default function ProcedimentoModal({ isOpen, onClose, onSave, doctors, ho
           <div>
             <Label>Observações</Label>
             <Textarea
-              value={formData.observacoes}
+              value={formData.observacoes || ''}
               onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
               placeholder="Observações adicionais..."
               rows={2}
@@ -199,7 +228,7 @@ export default function ProcedimentoModal({ isOpen, onClose, onSave, doctors, ho
               Cancelar
             </Button>
             <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700">
-              {initialData ? 'Atualizar' : 'Salvar'}
+              {editando ? 'Atualizar' : 'Salvar'}
             </Button>
           </div>
         </form>
