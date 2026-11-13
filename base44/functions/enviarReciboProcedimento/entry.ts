@@ -12,6 +12,14 @@ const formatarData = (valor) => {
 
 const formatarMoeda = (valor) => `R$ ${(Number(valor) || 0).toFixed(2)}`;
 
+const normalizarNome = (valor) =>
+  String(valor || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+
 const quantidadeDe = (procedimento) => {
   const quantidade = Number(procedimento?.quantidade);
   return quantidade > 0 ? quantidade : 1;
@@ -44,11 +52,14 @@ function montarRecibo(procedimento, hospital, emitidoEm) {
   doc.setDrawColor(229, 231, 235);
   doc.line(margem, y, margem + largura, y);
 
+  const ficha = procedimento.ficha || {};
+  const ehCirurgia = procedimento.tipo === 'Cirurgia';
+
   const linhas: [string, string][] = [
     ['Paciente', procedimento.paciente || '-'],
     ['Médico', procedimento.doctor_name || '-'],
     ['Hospital', hospital?.name || procedimento.hospital_name || '-'],
-    ['Data do procedimento', formatarData(procedimento.data)],
+    [ehCirurgia ? 'Data da cirurgia' : 'Data do procedimento', formatarData(procedimento.data)],
     ['Tipo', procedimento.tipo || '-'],
     ['Pagamento', procedimento.tipo_pagamento || '-'],
   ];
@@ -68,13 +79,48 @@ function montarRecibo(procedimento, hospital, emitidoEm) {
   y += 4;
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(55, 65, 81);
-  doc.text('Descrição', margem, y);
+  doc.text(ehCirurgia ? 'Cirurgia' : 'Descrição', margem, y);
   y += 5;
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(17, 24, 39);
   const descricao = doc.splitTextToSize(procedimento.descricao || '-', largura);
   doc.text(descricao, margem, y);
-  y += descricao.length * 5 + 6;
+  y += descricao.length * 5 + 4;
+
+  const dadosCirurgia: [string, string][] = [
+    ['Prontuário', ficha.prontuario],
+    ['Atendimento', ficha.atendimento],
+    ['Prescrição', ficha.prescricao],
+    ['Código da cirurgia', ficha.cirurgia_codigo],
+    ['Caráter cirúrgico', ficha.carater_cirurgico],
+    ['Duração', ficha.duracao],
+    ['Setor', ficha.setor],
+    ['Acomodação', ficha.acomodacao],
+    ['Internamento', ficha.tipo_internamento],
+    ['Nascimento', ficha.data_nascimento],
+    ['Mãe', ficha.mae],
+  ].filter(([, valor]) => String(valor || '').trim());
+
+  if (dadosCirurgia.length) {
+    y += 3;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(55, 65, 81);
+    doc.text('Dados da cirurgia', margem, y);
+    y += 6;
+    doc.setFontSize(9);
+    for (const [rotulo, valor] of dadosCirurgia) {
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(107, 114, 128);
+      doc.text(rotulo, margem, y);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(17, 24, 39);
+      doc.text(doc.splitTextToSize(String(valor), 110), margem + 60, y);
+      y += 6;
+    }
+    doc.setFontSize(10);
+  }
+
+  y += 4;
 
   doc.setFillColor(243, 244, 246);
   doc.rect(margem, y, largura, 22, 'F');
@@ -226,7 +272,7 @@ export default async function (req) {
 
     const { items: hospitais } = await base44.entities.Hospital.filter({}, { limit: 200 });
     const hospital = hospitais.find((h) => h.id === procedimento.hospital_id)
-      || hospitais.find((h) => h.name === procedimento.hospital_name)
+      || hospitais.find((h) => normalizarNome(h.name) === normalizarNome(procedimento.hospital_name))
       || null;
 
     const destinatario = String(email_destino || hospital?.email || '').trim();
@@ -254,6 +300,7 @@ export default async function (req) {
       '',
       `Paciente: ${procedimento.paciente || '-'}`,
       `Médico: ${procedimento.doctor_name || '-'}`,
+      `Hospital: ${hospital?.name || procedimento.hospital_name || '-'}`,
       `Data: ${formatarData(procedimento.data)}`,
       `Procedimento: ${procedimento.tipo || '-'} - ${procedimento.descricao || '-'}`,
       `Total: ${formatarMoeda(totalDe(procedimento))}`,
