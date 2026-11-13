@@ -2,6 +2,8 @@ import React, { useRef, useState } from 'react';
 import { Camera, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import DadosFolhaSala from '@/components/shifts/DadosFolhaSala';
+import NomeCirurgiaSelect from '@/components/shifts/NomeCirurgiaSelect';
+import useNomesCirurgia from '@/lib/useNomesCirurgia';
 import { CAMPOS_INTERNAMENTO } from '@/lib/prontuario';
 
 const campos = [
@@ -16,6 +18,7 @@ export default function ProntuarioSection({ dados, onChange }) {
   const [isExtracting, setIsExtracting] = useState(false);
   const [error, setError] = useState('');
   const [fileName, setFileName] = useState('');
+  const { data: nomesCirurgia = [] } = useNomesCirurgia();
 
   const handleFile = async (event) => {
     const file = event.target.files?.[0];
@@ -78,12 +81,20 @@ export default function ProntuarioSection({ dados, onChange }) {
             <label className="block text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
               {campo.label}
             </label>
-            <input
-              type="text"
-              value={dados[campo.key] || ''}
-              onChange={(e) => onChange({ [campo.key]: e.target.value })}
-              className="w-full px-4 py-3 bg-white dark:bg-slate-700 border-2 border-transparent focus:border-blue-600 dark:focus:border-blue-400 rounded-xl font-bold text-slate-900 dark:text-white transition-colors"
-            />
+            {campo.key === 'nomeCirurgia' ? (
+              <NomeCirurgiaSelect
+                value={dados.nomeCirurgia || ''}
+                onChange={(valor) => onChange({ nomeCirurgia: valor })}
+                nomes={nomesCirurgia}
+              />
+            ) : (
+              <input
+                type="text"
+                value={dados[campo.key] || ''}
+                onChange={(e) => onChange({ [campo.key]: e.target.value })}
+                className="w-full px-4 py-3 bg-white dark:bg-slate-700 border-2 border-transparent focus:border-blue-600 dark:focus:border-blue-400 rounded-xl font-bold text-slate-900 dark:text-white transition-colors"
+              />
+            )}
           </div>
         ))}
 
