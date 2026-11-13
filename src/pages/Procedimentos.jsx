@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Filter, List, Paperclip } from 'lucide-react';
@@ -116,6 +116,44 @@ export default function Procedimentos() {
     setMessage({ text, type });
     setTimeout(() => setMessage(null), 3000);
   };
+
+  // Cirurgias antigas sem valor recebem o valor configurado em Settings (ConfiguracaoPlantao).
+  const correcaoValores = useRef(false);
+  useEffect(() => {
+    if (correcaoValores.current || !user || isLoading) return;
+    const nomeHospitalDe = (p) =>
+      p.hospital_name || hospitals.find(h => h.id === p.hospital_id)?.name || '';
+    const idMedicoDe = (p) =>
+      p.doctor_id
+      || doctors.find(d => normalizarNome(d.full_name) === normalizarNome(p.doctor_name))?.id
+      || '';
+    const semValor = procedimentos.filter(p => p.tipo === 'Cirurgia' && !(Number(p.valor) > 0) && nomeHospitalDe(p));
+    if (semValor.length === 0) return;
+    correcaoValores.current = true;
+    (async () => {
+      let corrigidas = 0;
+      for (const procedimento of semValor) {
+        try {
+          const { data } = await base44.functions.invoke('getShiftQuote', {
+            tipo: 'cirurgia',
+            doctorId: idMedicoDe(procedimento),
+            hospital: nomeHospitalDe(procedimento),
+          });
+          const valor = Number(data?.value) || 0;
+          if (valor > 0) {
+            await base44.entities.Procedimento.update(procedimento.id, { valor });
+            corrigidas += 1;
+          }
+        } catch (e) {
+          // Cirurgia sem configuração de valor em Settings: mantém como está.
+        }
+      }
+      if (corrigidas > 0) {
+        queryClient.invalidateQueries({ queryKey: ['procedimentos'] });
+        showToast(`Valor configurado aplicado a ${corrigidas} cirurgia(s) antiga(s).`);
+      }
+    })();
+  }, [procedimentos, user, isLoading, doctors, hospitals, queryClient]);
 
   const handleSave = async (data) => {
     const { id, created_by, created_by_id, created_date, updated_date, ...payload } = data;
