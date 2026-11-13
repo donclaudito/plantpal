@@ -5,8 +5,9 @@ import { base44 } from '@/api/base44Client';
 export default function useShiftQuote({
   doctorId,
   hospital,
-  period,
+  period = '12h',
   shiftType = '',
+  tipo = 'plantao',
   enabled = true,
   grossValue = null,
   quantity = 0,
@@ -18,9 +19,9 @@ export default function useShiftQuote({
     return () => clearTimeout(timeout);
   }, [grossValue]);
   const query = useQuery({
-    queryKey: ['shiftQuote', doctorId, hospital, period, shiftType, quotedGross, quantity, valorConsulta],
+    queryKey: ['shiftQuote', tipo, doctorId, hospital, period, shiftType, quotedGross, quantity, valorConsulta],
     queryFn: async () => {
-      const response = await base44.functions.invoke('getShiftQuote', { doctorId, hospital, period, shiftType, grossValue: quotedGross, quantity, valorConsulta });
+      const response = await base44.functions.invoke('getShiftQuote', { tipo, doctorId, hospital, period, shiftType, grossValue: quotedGross, quantity, valorConsulta });
       return response.data;
     },
     enabled: enabled && !!doctorId && !!hospital,

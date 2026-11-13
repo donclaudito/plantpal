@@ -55,6 +55,19 @@ export default function ShiftModal({ isOpen, onClose, onSave, onSaveProcedure, d
   }, [isOpen, byConsultations, valorConsultaPeriodo]);
   const isSurgery = !editingShift && isSurgeryHospital(formData.unit);
   const shiftValue = quote?.configured || quote?.manual ? quote.value : Number(formData.value) || 0;
+  const { data: cirurgiaQuote } = useShiftQuote({
+    doctorId: formData.doctorId,
+    hospital: formData.unit,
+    tipo: 'cirurgia',
+    enabled: isOpen && isSurgery,
+  });
+
+  // Valor por cirurgia configurado no Settings entra como valor unitário do procedimento.
+  useEffect(() => {
+    const valorTabela = Number(cirurgiaQuote?.value) || 0;
+    if (!isSurgery || !cirurgiaQuote?.configured || valorTabela <= 0) return;
+    setProntuario(prev => (Number(prev.valor) > 0 ? prev : { ...prev, valor: String(valorTabela) }));
+  }, [isSurgery, cirurgiaQuote]);
 
   useEffect(() => {
     if (isOpen) { // Adicionado: Só inicializa/reseta quando o modal abre
@@ -161,7 +174,7 @@ export default function ShiftModal({ isOpen, onClose, onSave, onSaveProcedure, d
           descricao: [prontuario.nomeCirurgia, prontuario.tipoCirurgia].filter(Boolean).join(' • '),
           observacoes: prontuario.convenio ? `Convênio: ${prontuario.convenio}` : '',
           quantidade: 1,
-          valor: Number(prontuario.valor) || 0,
+          valor: Number(prontuario.valor) || Number(cirurgiaQuote?.value) || 0,
           ficha: internamentoDoProntuario(prontuario)
         });
         onClose();

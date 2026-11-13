@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Trash2, ArrowRight, Loader2 } from 'lucide-react';
 import ProntuarioSection from '@/components/shifts/ProntuarioSection';
+import useShiftQuote from '@/lib/useShiftQuote';
 import { emptyProntuario, fichaDoProcedimento, internamentoDoProntuario, tipoPagamentoDoConvenio } from '@/lib/prontuario';
 
 const toIsoDate = (value) => {
@@ -33,6 +34,21 @@ export default function SurgeryModal({ surgery, isOpen, onClose, doctors = [], h
     setError('');
   }, [surgery]);
 
+  const hospitalNome = hospitals.find(h => h.id === form.hospital_id)?.name || surgery?.hospital_name || '';
+  const { data: cirurgiaQuote } = useShiftQuote({
+    doctorId: form.doctor_id,
+    hospital: hospitalNome,
+    tipo: 'cirurgia',
+    enabled: isOpen,
+  });
+
+  // Valor por cirurgia configurado no Settings entra como valor unitário em Procedimentos.
+  useEffect(() => {
+    const valorTabela = Number(cirurgiaQuote?.value) || 0;
+    if (!cirurgiaQuote?.configured || valorTabela <= 0) return;
+    setFicha(prev => (Number(prev.valor) > 0 ? prev : { ...prev, valor: String(valorTabela) }));
+  }, [cirurgiaQuote]);
+
   if (!isOpen || !surgery) return null;
 
   const handleImportacao = (patch) => {
@@ -56,7 +72,7 @@ export default function SurgeryModal({ surgery, isOpen, onClose, doctors = [], h
       paciente: ficha.paciente.trim(),
       tipo_pagamento: convenio ? tipoPagamentoDoConvenio(convenio) : form.tipo_pagamento,
       descricao: [ficha.nomeCirurgia.trim(), ficha.tipoCirurgia.trim()].filter(Boolean).join(' • '),
-      valor: Number(ficha.valor) || 0,
+      valor: Number(ficha.valor) || Number(cirurgiaQuote?.value) || 0,
       quantidade: Number(form.quantidade) || 1,
       observacoes,
       ficha: internamentoDoProntuario(ficha),
