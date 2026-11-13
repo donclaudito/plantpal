@@ -20,6 +20,11 @@ const normalizarNome = (valor) =>
     .trim()
     .toUpperCase();
 
+const convenioDe = (procedimento) => {
+  const achado = /Conv[eê]nio:\s*([^•\n]+)/i.exec(String(procedimento?.observacoes || ''));
+  return achado ? achado[1].trim() : '';
+};
+
 const quantidadeDe = (procedimento) => {
   const quantidade = Number(procedimento?.quantidade);
   return quantidade > 0 ? quantidade : 1;
@@ -63,6 +68,8 @@ function montarRecibo(procedimento, hospital, emitidoEm) {
     ['Tipo', procedimento.tipo || '-'],
     ['Pagamento', procedimento.tipo_pagamento || '-'],
   ];
+  const convenio = convenioDe(procedimento);
+  if (convenio) linhas.push(['Convênio', convenio]);
 
   y += 8;
   doc.setFontSize(10);
@@ -97,6 +104,7 @@ function montarRecibo(procedimento, hospital, emitidoEm) {
     ['Setor', ficha.setor],
     ['Acomodação', ficha.acomodacao],
     ['Internamento', ficha.tipo_internamento],
+    ['Sexo', ficha.sexo],
     ['Nascimento', ficha.data_nascimento],
     ['Mãe', ficha.mae],
   ].filter(([, valor]) => String(valor || '').trim());
@@ -137,14 +145,19 @@ function montarRecibo(procedimento, hospital, emitidoEm) {
   doc.text(formatarMoeda(totalDe(procedimento)), margem + largura - 4, y + 16, { align: 'right' });
 
   y += 32;
-  if (procedimento.observacoes) {
+  const observacoesTexto = String(procedimento.observacoes || '')
+    .replace(/Conv[eê]nio:\s*[^•\n]*/i, '')
+    .replace(/^•\s*/, '')
+    .replace(/\s*•\s*$/, '')
+    .trim();
+  if (observacoesTexto) {
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(55, 65, 81);
     doc.text('Observações', margem, y);
     y += 5;
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(17, 24, 39);
-    const observacoes = doc.splitTextToSize(procedimento.observacoes, largura);
+    const observacoes = doc.splitTextToSize(observacoesTexto, largura);
     doc.text(observacoes, margem, y);
     y += observacoes.length * 5;
   }
