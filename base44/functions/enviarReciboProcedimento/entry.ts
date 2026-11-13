@@ -20,6 +20,33 @@ const normalizarNome = (valor) =>
     .trim()
     .toUpperCase();
 
+const nomeProprio = (valor) =>
+  String(valor || '')
+    .toLowerCase()
+    .replace(/(^|[\s-])([a-zà-öø-ÿ])/g, (_, separador, letra) => separador + letra.toUpperCase())
+    .trim();
+
+const nomeMedicoDe = (procedimento, medicos) => {
+  const alvo = normalizarNome(procedimento?.doctor_name);
+  const medico =
+    medicos.find((d) => d.id && d.id === procedimento?.doctor_id) ||
+    medicos.find((d) => normalizarNome(d.full_name) === alvo) ||
+    (alvo ? medicos.find((d) => normalizarNome(d.full_name).includes(alvo)) : null) ||
+    null;
+  const bruto = nomeProprio(medico?.full_name || procedimento?.doctor_name || '');
+  if (!bruto) return '-';
+  const titulo = /^(dr|dra)\.?\s+/i.exec(bruto);
+  const semTitulo = bruto.replace(/^(dr|dra)\.?\s+/i, '');
+  const prefixo = titulo ? titulo[1][0].toUpperCase() + titulo[1].slice(1).toLowerCase() : 'Dr';
+  return `${prefixo} ${semTitulo}`.trim();
+};
+
+const escaparHtml = (valor) =>
+  String(valor ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
 const convenioDe = (procedimento) => {
   const achado = /Conv[eê]nio:\s*([^•\n]+)/i.exec(String(procedimento?.observacoes || ''));
   return achado ? achado[1].trim() : '';
@@ -246,6 +273,62 @@ const quebrarLinhas = (base64: string) => base64.replace(/(.{76})/g, '$1\r\n');
 const base64Url = (texto: string) =>
   paraBase64(new TextEncoder().encode(texto)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
+function montarCorpoHtml({ nomeMedico, referencia, emitidoEm, linhas, total, emitidoPor }) {
+  const detalhes = linhas
+    .map(
+      ([rotulo, valor]) => `<tr>
+              <td style="padding:6px 0;font-size:13px;color:#737373;width:140px;vertical-align:top;">${escaparHtml(rotulo)}</td>
+              <td style="padding:6px 0;font-size:14px;color:#0a0a0a;font-weight:bold;">${escaparHtml(valor)}</td>
+            </tr>`
+    )
+    .join('');
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<body style="margin:0;padding:0;background:#f4f5f7;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%;background:#ffffff;border:1px solid #e5e5e5;border-radius:8px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;">
+          <tr>
+            <td style="background:#16a34a;padding:16px 24px;font-size:16px;font-weight:bold;color:#000000;letter-spacing:0.5px;">PROCEDIMENTO REALIZADO</td>
+          </tr>
+          <tr>
+            <td style="padding:24px 24px 4px;">
+              <p style="margin:0;font-size:22px;font-weight:bold;color:#0a0a0a;">${escaparHtml(nomeMedico)}</p>
+              <p style="margin:6px 0 0;font-size:12px;color:#737373;">Recibo nº ${escaparHtml(referencia)} &middot; Emitido em ${escaparHtml(emitidoEm)}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:12px 24px 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${detalhes}
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 24px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
+                <tr>
+                  <td style="padding:14px 16px;font-size:14px;color:#166534;font-weight:bold;">Total</td>
+                  <td align="right" style="padding:14px 16px;font-size:20px;color:#166534;font-weight:bold;">${escaparHtml(total)}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 24px 24px;font-size:12px;color:#737373;line-height:1.6;">
+              Segue também em anexo o recibo em PDF.<br />
+              Emitido por: ${escaparHtml(emitidoPor)}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
 function montarMensagem({ destinatario, assunto, corpo, pdfBase64, nomeFicheiro }) {
   const fronteira = `recibo_${crypto.randomUUID()}`;
   const partes = [
@@ -255,7 +338,7 @@ function montarMensagem({ destinatario, assunto, corpo, pdfBase64, nomeFicheiro 
     `Content-Type: multipart/mixed; boundary="${fronteira}"`,
     '',
     `--${fronteira}`,
-    'Content-Type: text/plain; charset="UTF-8"',
+    'Content-Type: text/html; charset="UTF-8"',
     'Content-Transfer-Encoding: base64',
     '',
     quebrarLinhas(textoParaBase64(corpo)),
@@ -293,13 +376,17 @@ export default async function (req) {
       || hospitais.find((h) => normalizarNome(h.name) === normalizarNome(procedimento.hospital_name))
       || null;
 
+    const { items: medicos } = await base44.entities.Doctor.filter({}, { limit: 200 });
+    const nomeMedico = nomeMedicoDe(procedimento, medicos);
+    const procedimentoExibicao = { ...procedimento, doctor_name: nomeMedico };
+
     const destinatario = String(email_destino || hospital?.email || '').trim();
     if (!/.+@.+\..+/.test(destinatario)) {
       return Response.json({ error: 'Indique um e-mail válido do hospital.' }, { status: 400 });
     }
 
     const emitidoEm = formatarData(new Date().toISOString());
-    const pdf = new Uint8Array(montarRecibo(procedimento, hospital, emitidoEm));
+    const pdf = new Uint8Array(montarRecibo(procedimentoExibicao, hospital, emitidoEm));
 
     const referencia = String(procedimento.id || '').slice(-8).toLowerCase();
     const nomeFicheiro = `recibo-${referencia}.pdf`;
@@ -313,18 +400,22 @@ export default async function (req) {
       copiaDrive = { erro: e.message };
     }
     const assunto = `Recibo de procedimento - ${hospital?.name || procedimento.hospital_name || 'hospital'} - ${formatarData(procedimento.data)}`;
-    const corpo = [
-      'Segue em anexo o recibo do procedimento realizado.',
-      '',
-      `Paciente: ${procedimento.paciente || '-'}`,
-      `Médico: ${procedimento.doctor_name || '-'}`,
-      `Hospital: ${hospital?.name || procedimento.hospital_name || '-'}`,
-      `Data: ${formatarData(procedimento.data)}`,
-      `Procedimento: ${procedimento.tipo || '-'} - ${procedimento.descricao || '-'}`,
-      `Total: ${formatarMoeda(totalDe(procedimento))}`,
-      '',
-      `Emitido por: ${user.full_name || user.email}`,
-    ].join('\n');
+    const linhasEmail: [string, string][] = [
+      ['Paciente', procedimento.paciente || '-'],
+      ['Médico', nomeMedico],
+      ['Hospital', hospital?.name || procedimento.hospital_name || '-'],
+      ['Data', formatarData(procedimento.data)],
+      ['Procedimento', `${procedimento.tipo || '-'} - ${procedimento.descricao || '-'}`],
+      ['Pagamento', procedimento.tipo_pagamento || '-'],
+    ];
+    const corpo = montarCorpoHtml({
+      nomeMedico,
+      referencia: String(procedimento.id || '').slice(-8).toUpperCase(),
+      emitidoEm,
+      linhas: linhasEmail,
+      total: formatarMoeda(totalDe(procedimento)),
+      emitidoPor: user.full_name || user.email,
+    });
 
     const mensagem = montarMensagem({
       destinatario,
