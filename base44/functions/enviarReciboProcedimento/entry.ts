@@ -273,13 +273,24 @@ const quebrarLinhas = (base64: string) => base64.replace(/(.{76})/g, '$1\r\n');
 const base64Url = (texto: string) =>
   paraBase64(new TextEncoder().encode(texto)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
-function montarCorpoHtml({ nomeMedico, referencia, emitidoEm, linhas, total, emitidoPor }) {
+function montarCorpoHtml({ tipo, paciente, prontuario, atendimento, data, procedimento, convenio, nomeMedico, referencia, valor }) {
+  const linhas: [string, string][] = [
+    ['Paciente', paciente],
+    ['Prontuário', prontuario],
+    ['Atendimento', atendimento],
+    ['Data do Procedimento', data],
+    ['Procedimento', procedimento],
+    ['Convênio', convenio],
+    ['Médico Responsável', nomeMedico],
+    ['Procedimento nº', `${referencia} (Valor: ${valor})`],
+  ];
+
   const detalhes = linhas
     .map(
-      ([rotulo, valor]) => `<tr>
-              <td style="padding:6px 0;font-size:13px;color:#737373;width:140px;vertical-align:top;">${escaparHtml(rotulo)}</td>
-              <td style="padding:6px 0;font-size:14px;color:#0a0a0a;font-weight:bold;">${escaparHtml(valor)}</td>
-            </tr>`
+      ([rotulo, conteudo]) => `<tr>
+                <td style="padding:8px 0;font-size:13px;color:#737373;width:170px;vertical-align:top;border-bottom:1px solid #f0f0f0;">${escaparHtml(rotulo)}</td>
+                <td style="padding:8px 0;font-size:14px;color:#0a0a0a;border-bottom:1px solid #f0f0f0;">${escaparHtml(conteudo)}</td>
+              </tr>`
     )
     .join('');
 
@@ -289,36 +300,31 @@ function montarCorpoHtml({ nomeMedico, referencia, emitidoEm, linhas, total, emi
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:24px 12px;">
     <tr>
       <td align="center">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%;background:#ffffff;border:1px solid #e5e5e5;border-radius:8px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%;background:#ffffff;border:1px solid #e5e5e5;border-radius:8px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#0a0a0a;">
           <tr>
-            <td style="background:#16a34a;padding:16px 24px;font-size:16px;font-weight:bold;color:#000000;letter-spacing:0.5px;">PROCEDIMENTO REALIZADO</td>
+            <td style="height:6px;background:#16a34a;font-size:0;line-height:0;">&nbsp;</td>
           </tr>
           <tr>
-            <td style="padding:24px 24px 4px;">
-              <p style="margin:0;font-size:22px;font-weight:bold;color:#0a0a0a;">${escaparHtml(nomeMedico)}</p>
-              <p style="margin:6px 0 0;font-size:12px;color:#737373;">Recibo nº ${escaparHtml(referencia)} &middot; Emitido em ${escaparHtml(emitidoEm)}</p>
+            <td style="padding:24px 28px 0;">
+              <p style="margin:0 0 6px;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#16a34a;font-weight:bold;">Encaminhamento de documentação</p>
+              <p style="margin:0;font-size:18px;font-weight:bold;">Faturamento de ${escaparHtml(tipo)}</p>
             </td>
           </tr>
           <tr>
-            <td style="padding:12px 24px 0;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${detalhes}
+            <td style="padding:16px 28px 0;font-size:14px;line-height:1.65;">
+              <p style="margin:0 0 14px;">Prezada equipe do Setor de Faturamento,</p>
+              <p style="margin:0 0 20px;">Encaminho em anexo a documentação referente ao procedimento realizado.</p>
+              <p style="margin:0 0 6px;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;color:#166534;">Dados do atendimento</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                ${detalhes}
               </table>
             </td>
           </tr>
           <tr>
-            <td style="padding:16px 24px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
-                <tr>
-                  <td style="padding:14px 16px;font-size:14px;color:#166534;font-weight:bold;">Total</td>
-                  <td align="right" style="padding:14px 16px;font-size:20px;color:#166534;font-weight:bold;">${escaparHtml(total)}</td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:0 24px 24px;font-size:12px;color:#737373;line-height:1.6;">
-              Segue também em anexo o recibo em PDF.<br />
-              Emitido por: ${escaparHtml(emitidoPor)}
+            <td style="padding:20px 28px 24px;font-size:14px;line-height:1.65;">
+              <p style="margin:0 0 18px;">Fico à disposição caso seja necessário o envio de qualquer documento complementar para a regularização do processo.</p>
+              <p style="margin:0;">Atenciosamente,</p>
+              <p style="margin:2px 0 0;font-weight:bold;">${escaparHtml(nomeMedico)}</p>
             </td>
           </tr>
         </table>
@@ -399,22 +405,21 @@ export default async function (req) {
     } catch (e: any) {
       copiaDrive = { erro: e.message };
     }
-    const assunto = `Recibo de procedimento - ${hospital?.name || procedimento.hospital_name || 'hospital'} - ${formatarData(procedimento.data)}`;
-    const linhasEmail: [string, string][] = [
-      ['Paciente', procedimento.paciente || '-'],
-      ['Médico', nomeMedico],
-      ['Hospital', hospital?.name || procedimento.hospital_name || '-'],
-      ['Data', formatarData(procedimento.data)],
-      ['Procedimento', `${procedimento.tipo || '-'} - ${procedimento.descricao || '-'}`],
-      ['Pagamento', procedimento.tipo_pagamento || '-'],
-    ];
+    const tipo = procedimento.tipo || 'Procedimento';
+    const paciente = procedimento.paciente || 'não informado';
+    const ficha = (procedimento.ficha || {}) as Record<string, unknown>;
+    const assunto = `Encaminhamento de Documentação – Faturamento de ${tipo} (Paciente: ${paciente})`;
     const corpo = montarCorpoHtml({
+      tipo,
+      paciente,
+      prontuario: ficha.prontuario || '-',
+      atendimento: ficha.atendimento || '-',
+      data: formatarData(procedimento.data),
+      procedimento: `${tipo} - ${procedimento.descricao || '-'}`,
+      convenio: hospital?.name || procedimento.hospital_name || '-',
       nomeMedico,
       referencia: String(procedimento.id || '').slice(-8).toUpperCase(),
-      emitidoEm,
-      linhas: linhasEmail,
-      total: formatarMoeda(totalDe(procedimento)),
-      emitidoPor: user.full_name || user.email,
+      valor: formatarMoeda(totalDe(procedimento)),
     });
 
     const mensagem = montarMensagem({
