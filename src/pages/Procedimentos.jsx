@@ -10,6 +10,7 @@ import ProcedimentoTable from '@/components/procedimentos/ProcedimentoTable';
 import CirurgiasPendentes from '@/components/procedimentos/CirurgiasPendentes';
 import DadosFaltandoAlerta from '@/components/procedimentos/DadosFaltandoAlerta';
 import ReciboEnvioModal from '@/components/procedimentos/ReciboEnvioModal';
+import SurgeryModal from '@/components/shifts/SurgeryModal';
 import Toast from '@/components/common/Toast';
 import { procedimentoTotal, somaProcedimentos } from '@/lib/procedimentoTotals';
 import { monthKeyFromDate, formatMonthLabel } from '@/lib/dateKeys';
@@ -17,6 +18,22 @@ import { normalizarHospital, normalizarNome } from '@/lib/shiftFilters';
 import { idMedicoPadrao } from '@/lib/defaultDoctor';
 
 const SEM_HOSPITAL = '__sem-hospitais__';
+
+const hojeIso = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+
+const novaCirurgia = () => ({
+  tipo: 'Cirurgia',
+  data: hojeIso(),
+  hospital_id: '',
+  hospital_name: '',
+  doctor_id: '',
+  doctor_name: '',
+  tipo_pagamento: 'Convenio',
+  quantidade: 1,
+  paciente: '',
+  valor: 0,
+  ficha: {},
+});
 
 export default function Procedimentos() {
   const [message, setMessage] = useState(null);
@@ -241,6 +258,8 @@ export default function Procedimentos() {
     return true;
   });
 
+  const cirurgiaEmEdicao = useMemo(() => editingProcedimento || novaCirurgia(), [editingProcedimento]);
+
   const cirurgias = filteredProcedimentos.filter(p => p.tipo === 'Cirurgia');
   const consultas = filteredProcedimentos.filter(p => p.tipo === 'Consulta');
   const cirurgiasPendentes = cirurgias.filter(p => !(p.anexos || []).length);
@@ -261,19 +280,43 @@ export default function Procedimentos() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
       <Toast message={message?.text} type={message?.type} />
 
-      <ProcedimentoModal
-        key={editingProcedimento?.id || `novo-${tipoModal}`}
-        isOpen={showModal}
-        onClose={() => {
-          setShowModal(false);
-          setEditingProcedimento(null);
-        }}
-        onSave={handleSave}
-        doctors={doctors}
-        hospitals={hospitals}
-        initialData={editingProcedimento}
-        tipo={tipoModal}
-      />
+      {tipoModal === 'Cirurgia' ? (
+        <SurgeryModal
+          key={editingProcedimento?.id || 'nova-cirurgia'}
+          surgery={cirurgiaEmEdicao}
+          isOpen={showModal}
+          onClose={() => {
+            setShowModal(false);
+            setEditingProcedimento(null);
+          }}
+          doctors={doctors}
+          hospitals={hospitals}
+          onSave={async (data) => {
+            await handleSave({ ...data, tipo: 'Cirurgia' });
+            setShowModal(false);
+          }}
+          onDelete={(procedimento) => {
+            setShowModal(false);
+            setEditingProcedimento(null);
+            handleDelete(procedimento.id);
+          }}
+          onGoToProcedimentos={() => setShowModal(false)}
+        />
+      ) : (
+        <ProcedimentoModal
+          key={editingProcedimento?.id || `novo-${tipoModal}`}
+          isOpen={showModal}
+          onClose={() => {
+            setShowModal(false);
+            setEditingProcedimento(null);
+          }}
+          onSave={handleSave}
+          doctors={doctors}
+          hospitals={hospitals}
+          initialData={editingProcedimento}
+          tipo={tipoModal}
+        />
+      )}
 
       <ReciboEnvioModal
         procedimento={reciboProcedimento}
