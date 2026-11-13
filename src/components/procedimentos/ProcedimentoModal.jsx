@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { procedimentoQuantidade, procedimentoTotal } from '@/lib/procedimentoTotals';
+import useShiftQuote from '@/lib/useShiftQuote';
 
 const normalizar = (valor) => String(valor || '').trim().toUpperCase();
 
@@ -52,6 +53,20 @@ export default function ProcedimentoModal({ isOpen, onClose, onSave, doctors, ho
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialData?.id]);
 
+  const { data: cirurgiaQuote } = useShiftQuote({
+    doctorId: formData.doctor_id,
+    hospital: formData.hospital_name,
+    tipo: 'cirurgia',
+    enabled: isOpen && formData.tipo === 'Cirurgia',
+  });
+
+  // Valor por cirurgia configurado no Settings preenche o valor unitário vazio.
+  useEffect(() => {
+    const valorTabela = Number(cirurgiaQuote?.value) || 0;
+    if (!cirurgiaQuote?.configured || valorTabela <= 0) return;
+    setFormData(prev => (prev.tipo === 'Cirurgia' && !(Number(prev.valor) > 0) ? { ...prev, valor: valorTabela } : prev));
+  }, [cirurgiaQuote]);
+
   const handleDoctorChange = (doctorId) => {
     const doctor = doctors.find(d => d.id === doctorId);
     if (doctor) {
@@ -76,7 +91,7 @@ export default function ProcedimentoModal({ isOpen, onClose, onSave, doctors, ho
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(formData);
+    onSave({ ...formData, valor: Number(formData.valor) || Number(cirurgiaQuote?.value) || 0 });
     onClose();
   };
 
