@@ -44,9 +44,14 @@ function montarRecibo(procedimento, hospital, emitidoEm) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(17);
   doc.setTextColor(17, 24, 39);
-  doc.text('RECIBO DE PROCEDIMENTO', margem, y);
+  doc.text('PROCEDIMENTO REALIZADO', margem, y);
 
   y += 7;
+  doc.setFontSize(11);
+  doc.setTextColor(55, 65, 81);
+  doc.text(procedimento.doctor_name || '-', margem, y);
+
+  y += 6;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(107, 114, 128);
