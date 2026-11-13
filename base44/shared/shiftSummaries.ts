@@ -48,7 +48,7 @@ export function summarizeShifts(context, rows, allMonths, surgeryRows = []) {
     const key = JSON.stringify([item.doctorId || normalizeName(item.doctorName), item.hospitalId || hospitalKey(item.hospitalName), item.monthKey]);
     if (!fixedApplied.has(key)) {
       fixedApplied.add(key);
-      for (const d of context.discounts.filter(d => d.tipo_desconto === 'valor_fixo' && appliesTo(d, item.doctorId, item.hospitalId))) {
+      for (const d of context.discounts.filter(d => d.tipo_desconto === 'valor_fixo' && appliesTo(d, item.doctorId, item.hospitalId, item.hospitalName, context))) {
         item.discountValue += Number(d.valor_desconto) || 0;
         item.discountDetails.push({ descricao: d.descricao, tipo: d.tipo_desconto, valor_config: d.valor_desconto, valor_calculado: d.valor_desconto });
       }
