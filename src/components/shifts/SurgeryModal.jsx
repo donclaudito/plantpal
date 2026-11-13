@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Trash2, ArrowRight, Loader2 } from 'lucide-react';
 import ProntuarioSection from '@/components/shifts/ProntuarioSection';
-import { tipoPagamentoDoConvenio } from '@/lib/prontuario';
+import { emptyProntuario, fichaDoProcedimento, internamentoDoProntuario, tipoPagamentoDoConvenio } from '@/lib/prontuario';
 
 const toIsoDate = (value) => {
   const raw = String(value || '').trim();
@@ -11,28 +11,17 @@ const toIsoDate = (value) => {
   return iso ? `${iso[1]}-${iso[2]}-${iso[3]}` : '';
 };
 
-const convenioDaObservacao = (observacoes) => {
-  const match = String(observacoes || '').match(/Conv[eê]nio:\s*([^•\n]+)/i);
-  return match ? match[1].trim() : '';
-};
-
 const inputClass = 'w-full px-4 py-3 bg-white dark:bg-slate-700 border-2 border-transparent focus:border-rose-500 dark:focus:border-rose-400 rounded-xl font-bold text-slate-900 dark:text-white transition-colors';
 
 export default function SurgeryModal({ surgery, isOpen, onClose, doctors = [], hospitals = [], onSave, onDelete, onGoToProcedimentos, isViewer = false }) {
-  const [ficha, setFicha] = useState({ paciente: '', convenio: '', tipoCirurgia: '', nomeCirurgia: '', valor: '' });
+  const [ficha, setFicha] = useState(emptyProntuario());
   const [form, setForm] = useState({ data: '', hospital_id: '', doctor_id: '', tipo_pagamento: 'SUS', quantidade: 1, observacoes: '' });
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!surgery) return;
-    setFicha({
-      paciente: surgery.paciente || '',
-      convenio: convenioDaObservacao(surgery.observacoes),
-      tipoCirurgia: '',
-      nomeCirurgia: surgery.descricao || '',
-      valor: surgery.valor ?? '',
-    });
+    setFicha(fichaDoProcedimento(surgery));
     setForm({
       data: toIsoDate(surgery.data),
       hospital_id: surgery.hospital_id || '',
@@ -70,6 +59,7 @@ export default function SurgeryModal({ surgery, isOpen, onClose, doctors = [], h
       valor: Number(ficha.valor) || 0,
       quantidade: Number(form.quantidade) || 1,
       observacoes,
+      ficha: internamentoDoProntuario(ficha),
     };
   };
 

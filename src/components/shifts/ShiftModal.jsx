@@ -6,7 +6,7 @@ import EspecialidadeSelect from '@/components/EspecialidadeSelect';
 import ConsultationValueFields from '@/components/shifts/ConsultationValueFields';
 import ProntuarioSection from '@/components/shifts/ProntuarioSection';
 import AvisoCirurgiaData from '@/components/shifts/AvisoCirurgiaData';
-import { emptyProntuario, isSurgeryHospital, tipoPagamentoDoConvenio } from '@/lib/prontuario';
+import { emptyProntuario, internamentoDoProntuario, isSurgeryHospital, tipoPagamentoDoConvenio } from '@/lib/prontuario';
 
 const shiftTypes = ["DIURNO MANHÃ", "DIURNO TARDE", "DIURNO", "NOTURNO", "24H", "PARCIAL", "ESPECIAL(DAS10 AS 22)"];
 
@@ -161,7 +161,8 @@ export default function ShiftModal({ isOpen, onClose, onSave, onSaveProcedure, d
           descricao: [prontuario.nomeCirurgia, prontuario.tipoCirurgia].filter(Boolean).join(' • '),
           observacoes: prontuario.convenio ? `Convênio: ${prontuario.convenio}` : '',
           quantidade: 1,
-          valor: Number(prontuario.valor) || 0
+          valor: Number(prontuario.valor) || 0,
+          ficha: internamentoDoProntuario(prontuario)
         });
         onClose();
       } catch (error) {

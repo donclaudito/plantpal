@@ -1,6 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { Camera, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import DadosFolhaSala from '@/components/shifts/DadosFolhaSala';
+import { CAMPOS_INTERNAMENTO } from '@/lib/prontuario';
 
 const campos = [
   { key: 'paciente', label: 'Paciente' },
@@ -33,6 +35,7 @@ export default function ProntuarioSection({ dados, onChange }) {
         tipoCirurgia: extraido.tipo_cirurgia || '',
         nomeCirurgia: extraido.nome_cirurgia || '',
         data: extraido.data || '',
+        ...CAMPOS_INTERNAMENTO.reduce((acc, campo) => ({ ...acc, [campo.key]: extraido[campo.key] || '' }), {}),
       });
     } catch (e) {
       setError('Não foi possível ler o prontuário. Preencha os campos manualmente.');
@@ -99,6 +102,8 @@ export default function ProntuarioSection({ dados, onChange }) {
           />
         </div>
       </div>
+
+      <DadosFolhaSala dados={dados} onChange={onChange} />
     </div>
   );
 }

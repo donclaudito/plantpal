@@ -62,6 +62,60 @@
       "type": "string",
       "description": "Observa\u00e7\u00f5es adicionais"
     },
+    "ficha": {
+      "type": "object",
+      "description": "Dados da folha de sala / ficha da cirurgia lidos na foto",
+      "properties": {
+        "mae": {
+          "type": "string",
+          "description": "Nome da m\u00e3e do paciente"
+        },
+        "prontuario": {
+          "type": "string",
+          "description": "N\u00famero do prontu\u00e1rio"
+        },
+        "data_nascimento": {
+          "type": "string",
+          "description": "Data de nascimento do paciente"
+        },
+        "atendimento": {
+          "type": "string",
+          "description": "N\u00famero do atendimento"
+        },
+        "prescricao": {
+          "type": "string",
+          "description": "N\u00famero da prescri\u00e7\u00e3o"
+        },
+        "cirurgia_codigo": {
+          "type": "string",
+          "description": "C\u00f3digo da cirurgia"
+        },
+        "sexo": {
+          "type": "string",
+          "description": "Sexo do paciente"
+        },
+        "duracao": {
+          "type": "string",
+          "description": "Dura\u00e7\u00e3o da cirurgia"
+        },
+        "carater_cirurgico": {
+          "type": "string",
+          "description": "Car\u00e1ter cir\u00fargico (eletiva, urg\u00eancia)"
+        },
+        "setor": {
+          "type": "string",
+          "description": "Setor do internamento"
+        },
+        "acomodacao": {
+          "type": "string",
+          "description": "Acomoda\u00e7\u00e3o (enfermaria, apartamento)"
+        },
+        "tipo_internamento": {
+          "type": "string",
+          "description": "Tipo de internamento"
+        }
+      }
+    },
     "anexos": {
       "type": "array",
       "description": "Documentos e fotos do prontu\u00e1rio enviados para a cirurgia",
