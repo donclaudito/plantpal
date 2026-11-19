@@ -33,8 +33,15 @@ const Caixa = ({ titulo, quantidade, valor, unidade, destaque }) => (
   </div>
 );
 
+const OPCOES = [
+  { valor: 'Todos', label: 'Tudo' },
+  { valor: 'Consulta', label: 'Consultas' },
+  { valor: 'Cirurgia', label: 'Cirurgias' },
+];
+
 export default function ResumoAtendimentosModal({ isOpen, onClose, procedimentos = [] }) {
   const [mes, setMes] = useState('');
+  const [escopo, setEscopo] = useState('Todos');
 
   const meses = Array.from(
     new Set(procedimentos.map((p) => monthKeyFromDate(p.data)).filter(Boolean))
@@ -42,9 +49,10 @@ export default function ResumoAtendimentosModal({ isOpen, onClose, procedimentos
   const mesSelecionado = mes || meses[0] || '';
 
   const doMes = procedimentos.filter((p) => monthKeyFromDate(p.data) === mesSelecionado);
-  const consultas = doMes.filter((p) => p.tipo === 'Consulta');
-  const cirurgias = doMes.filter((p) => p.tipo === 'Cirurgia');
-  const total = somar(doMes);
+  const filtrados = doMes.filter((p) => escopo === 'Todos' || p.tipo === escopo);
+  const consultas = filtrados.filter((p) => p.tipo === 'Consulta');
+  const cirurgias = filtrados.filter((p) => p.tipo === 'Cirurgia');
+  const total = somar(filtrados);
   const manha = somar(consultas.filter((c) => periodoDe(c) === 'Manhã'));
   const tarde = somar(consultas.filter((c) => periodoDe(c) === 'Tarde'));
 
@@ -74,34 +82,61 @@ export default function ResumoAtendimentosModal({ isOpen, onClose, procedimentos
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Incluir no PDF</label>
+              <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+                {OPCOES.map((opcao) => (
+                  <button
+                    key={opcao.valor}
+                    type="button"
+                    onClick={() => setEscopo(opcao.valor)}
+                    className={`px-4 h-9 text-sm font-semibold transition-colors ${
+                      escopo === opcao.valor ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {opcao.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <Button
-              disabled={doMes.length === 0}
-              onClick={() => gerarPdfResumoAtendimentos({ mesLabel: formatMonthLabel(mesSelecionado), itens: doMes })}
+              disabled={filtrados.length === 0}
+              onClick={() =>
+                gerarPdfResumoAtendimentos({
+                  mesLabel: formatMonthLabel(mesSelecionado),
+                  escopoLabel: OPCOES.find((o) => o.valor === escopo).label,
+                  itens: filtrados,
+                })
+              }
             >
               <FileDown className="w-4 h-4 mr-2" />
               Gerar PDF
             </Button>
           </div>
 
-          {doMes.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">Nenhum atendimento registado neste mês.</p>
+          {filtrados.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">Nenhum atendimento registado com este filtro.</p>
           ) : (
             <>
               <Caixa
-                titulo={`Total de atendimentos · ${formatMonthLabel(mesSelecionado)}`}
+                titulo={`${escopo === 'Todos' ? 'Total de atendimentos' : escopo === 'Consulta' ? 'Total de consultas' : 'Total de cirurgias'} · ${formatMonthLabel(mesSelecionado)}`}
                 quantidade={total.quantidade}
                 valor={total.valor}
-                unidade="atendimentos"
+                unidade={escopo === 'Cirurgia' ? 'cirurgias' : escopo === 'Consulta' ? 'consultas' : 'atendimentos'}
                 destaque
               />
-              <div className="grid grid-cols-2 gap-3">
-                <Caixa titulo="Consultas" quantidade={somar(consultas).quantidade} valor={somar(consultas).valor} unidade="consultas" />
-                <Caixa titulo="Cirurgias" quantidade={somar(cirurgias).quantidade} valor={somar(cirurgias).valor} unidade="cirurgias" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Caixa titulo="Consultas de manhã" quantidade={manha.quantidade} valor={manha.valor} unidade="consultas" />
-                <Caixa titulo="Consultas de tarde" quantidade={tarde.quantidade} valor={tarde.valor} unidade="consultas" />
-              </div>
+              {escopo === 'Todos' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Caixa titulo="Consultas" quantidade={somar(consultas).quantidade} valor={somar(consultas).valor} unidade="consultas" />
+                  <Caixa titulo="Cirurgias" quantidade={somar(cirurgias).quantidade} valor={somar(cirurgias).valor} unidade="cirurgias" />
+                </div>
+              )}
+              {escopo !== 'Cirurgia' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Caixa titulo="Consultas de manhã" quantidade={manha.quantidade} valor={manha.valor} unidade="consultas" />
+                  <Caixa titulo="Consultas de tarde" quantidade={tarde.quantidade} valor={tarde.valor} unidade="consultas" />
+                </div>
+              )}
             </>
           )}
         </div>
