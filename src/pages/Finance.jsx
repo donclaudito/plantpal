@@ -7,6 +7,7 @@ import Toast from '@/components/common/Toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatQuantity } from '@/lib/quantity';
 import { MEDICO_PADRAO } from '@/lib/defaultDoctor';
+import ConsultasDetalheModal from '@/components/finance/ConsultasDetalheModal';
 
 
 const PERIOD_LABELS = { consultas: 'Período de consultas', cirurgias: 'Cirurgias do convênio' };
@@ -19,6 +20,7 @@ export default function Finance() {
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
   const [isSyncing, setIsSyncing] = useState(false);
   const [message, setMessage] = useState(null);
+  const [detalheConsultas, setDetalheConsultas] = useState(null);
   const queryClient = useQueryClient();
 
   const showToast = (text, type = 'success') => {
@@ -121,6 +123,11 @@ export default function Finance() {
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
       <Toast message={message?.text} type={message?.type} />
+      <ConsultasDetalheModal
+        open={!!detalheConsultas}
+        onClose={() => setDetalheConsultas(null)}
+        item={detalheConsultas}
+      />
       <div className="flex justify-between items-center gap-3 flex-wrap">
         <h1 className="text-3xl font-black text-slate-900 dark:text-white">Finanças</h1>
         <div className="flex items-center gap-3">
@@ -272,7 +279,18 @@ export default function Finance() {
                   <td className="px-6 py-4 text-sm font-bold text-slate-900 dark:text-white">{item.doctorName}</td>
                   <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{item.hospitalName}</td>
                   <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{PERIOD_LABELS[item.period] || item.period}</td>
-                  <td className="px-6 py-4 text-sm text-right font-bold text-slate-900 dark:text-white">{formatQuantity(item.quantity)}</td>
+                  <td className="px-6 py-4 text-sm text-right font-bold text-slate-900 dark:text-white">
+                    {item.period === 'consultas' ? (
+                      <button
+                        type="button"
+                        onClick={() => setDetalheConsultas(item)}
+                        className="font-bold text-blue-600 dark:text-blue-400 underline decoration-dotted underline-offset-4 hover:text-blue-800 dark:hover:text-blue-300"
+                        title="Ver todas as consultas realizadas"
+                      >
+                        {formatQuantity(item.quantity)}
+                      </button>
+                    ) : formatQuantity(item.quantity)}
+                  </td>
                   <td className="px-6 py-4 text-sm text-right font-bold text-green-600 dark:text-green-400">R$ {item.grossValue.toFixed(2)}</td>
                   <td className="px-6 py-4 text-sm">
                     <div className="font-bold text-red-600 dark:text-red-400">R$ {item.discountValue.toFixed(2)}</div>

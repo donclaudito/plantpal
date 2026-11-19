@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
 import { loadPricing, readDistinct, readPages, hospitalKey, normalizeName } from '../../shared/shiftPricing.ts';
-import { casarConsultas, linhaDoProcedimento, linhaDoPlantao } from '../../shared/consultasProcedimentos.ts';
+import { casarConsultas, linhaDoProcedimento, linhaDoPlantao, isoDate } from '../../shared/consultasProcedimentos.ts';
 import { summarizeShifts, financialViews, monthKeyOfDate } from '../../shared/shiftSummaries.ts';
 
 export default async function(req) {
@@ -89,9 +89,29 @@ export default async function(req) {
       ...plantoesSemProcedimento.map(linhaDoPlantao),
     ];
     const summary = summarizeShifts(context, [...estimated.rows, ...actual.rows.map(row => ({ ...row, period: row.period || 'consultas', usar_valor_informado: true })), ...consultaRows], allMonths, surgeries.rows);
+    // Cada consulta realizada (por dia e período) para detalhar a quantidade no relatório.
+    const chaveDetalhe = (doctorName, hospitalName) => JSON.stringify([normalizeName(doctorName), hospitalKey(hospitalName)]);
+    const consultasPorChave = new Map();
+    for (const linha of consultaRows) {
+      const key = chaveDetalhe(linha.doctor_name, linha.hospital);
+      if (!consultasPorChave.has(key)) consultasPorChave.set(key, []);
+      consultasPorChave.get(key).push({
+        data: isoDate(linha.date),
+        periodo: String(linha.shift_type || '').trim(),
+        quantidade: Number(linha.quantidade_consultas) || 0,
+        valorConsulta: Number(linha.valor_consulta) || 0,
+        total: Number(linha.sum_value) || 0,
+      });
+    }
+    const summaryDetalhado = summary.map(item => ({
+      ...item,
+      consultas: item.period === 'consultas'
+        ? (consultasPorChave.get(chaveDetalhe(item.doctorName, item.hospitalName)) || []).sort((a, b) => a.data.localeCompare(b.data))
+        : undefined,
+    }));
     const views = financialViews(summary);
     const availableMonths = Array.from(new Set(dates.items.map(monthKeyOfDate).filter(Boolean))).sort().reverse();
-    return Response.json({ summary, ...views, availableMonths, doctorOptions: options(context.doctors, doctorNames.items, 'full_name', normalizeName), hospitalOptions: options(context.hospitals, hospitalNames.items, 'name', hospitalKey) });
+    return Response.json({ summary: summaryDetalhado, ...views, availableMonths, doctorOptions: options(context.doctors, doctorNames.items, 'full_name', normalizeName), hospitalOptions: options(context.hospitals, hospitalNames.items, 'name', hospitalKey) });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
