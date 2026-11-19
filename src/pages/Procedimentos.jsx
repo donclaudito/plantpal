@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Filter, List, Paperclip, BarChart3 } from 'lucide-react';
+import { Plus, Filter, List, Paperclip, BarChart3, Printer } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -13,6 +13,7 @@ import ConsultasPorPeriodo from '@/components/procedimentos/ConsultasPorPeriodo'
 import DadosFaltandoAlerta from '@/components/procedimentos/DadosFaltandoAlerta';
 import ReciboEnvioModal from '@/components/procedimentos/ReciboEnvioModal';
 import ResumoAtendimentosModal from '@/components/procedimentos/ResumoAtendimentosModal';
+import { imprimirResumoAtendimentos } from '@/lib/resumoAtendimentosPdf';
 import SurgeryModal from '@/components/shifts/SurgeryModal';
 import Toast from '@/components/common/Toast';
 import { procedimentoTotal, somaProcedimentos } from '@/lib/procedimentoTotals';
@@ -318,6 +319,21 @@ export default function Procedimentos() {
     return true;
   });
 
+  const handleImprimirSelecao = () => {
+    imprimirResumoAtendimentos({
+      mesLabel: filters.mes === 'all' ? 'Todos os meses' : formatMonthLabel(filters.mes),
+      escopo: filters.tipo === 'all' ? 'Todos' : filters.tipo,
+      rotulo: [
+        filters.tipo === 'all' ? 'Tudo' : filters.tipo === 'Consulta' ? 'Consultas' : 'Cirurgias',
+        filters.tipo_pagamento === 'all'
+          ? null
+          : filters.tipo_pagamento === 'Convenio' ? 'Convênio' : filters.tipo_pagamento,
+      ].filter(Boolean).join(' · '),
+      itens: filteredProcedimentos,
+      mostrarValores: true,
+    });
+  };
+
   const cirurgiaEmEdicao = useMemo(() => editingProcedimento || novaCirurgia(), [editingProcedimento]);
 
   const cirurgias = filteredProcedimentos.filter(p => p.tipo === 'Cirurgia');
@@ -417,6 +433,10 @@ export default function Procedimentos() {
             <Button variant="outline" size="sm" onClick={() => setShowResumo(true)}>
               <BarChart3 className="w-4 h-4 mr-2" />
               Resumo do mês
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleImprimirSelecao} disabled={filteredProcedimentos.length === 0}>
+              <Printer className="w-4 h-4 mr-2" />
+              Imprimir / PDF
             </Button>
             <div className="flex gap-2 bg-white border border-gray-200 p-1.5 rounded-2xl w-fit">
               <Button variant={view === 'todas' ? 'default' : 'ghost'} size="sm" onClick={() => setView('todas')}>

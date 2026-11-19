@@ -195,21 +195,6 @@ export default function gerarPdfResumoAtendimentos(opcoes) {
 export function imprimirResumoAtendimentos(opcoes) {
   const doc = construirDoc(opcoes);
   const url = doc.output('bloburl');
-
-  const iframe = document.createElement('iframe');
-  iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
-  iframe.style.border = '0';
-  iframe.src = url;
-
-  iframe.onload = () => {
-    iframe.contentWindow.focus();
-    iframe.contentWindow.print();
-  };
-
-  document.body.appendChild(iframe);
-  setTimeout(() => iframe.remove(), 60000);
+  const janela = window.open(url, '_blank');
+  if (!janela) doc.save(`${nomeArquivo(opcoes.mesLabel, opcoes.rotulo)}.pdf`);
 }
