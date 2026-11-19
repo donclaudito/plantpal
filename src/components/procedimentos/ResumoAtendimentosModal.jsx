@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
+import { FileDown } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import { procedimentoQuantidade, procedimentoTotal } from '@/lib/procedimentoTotals';
 import { monthKeyFromDate, formatMonthLabel } from '@/lib/dateKeys';
+import gerarPdfResumoAtendimentos from '@/lib/resumoAtendimentosPdf';
 
 const brl = (valor) => Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -53,22 +56,31 @@ export default function ResumoAtendimentosModal({ isOpen, onClose, procedimentos
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="w-56">
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Mês</label>
-            <Select value={mesSelecionado} onValueChange={setMes}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o mês" />
-              </SelectTrigger>
-              <SelectContent>
-                {meses.length === 0 ? (
-                  <SelectItem value="vazio" disabled>Sem atendimentos registados</SelectItem>
-                ) : (
-                  meses.map((chave) => (
-                    <SelectItem key={chave} value={chave}>{formatMonthLabel(chave)}</SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="w-56">
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Mês</label>
+              <Select value={mesSelecionado} onValueChange={setMes}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o mês" />
+                </SelectTrigger>
+                <SelectContent>
+                  {meses.length === 0 ? (
+                    <SelectItem value="vazio" disabled>Sem atendimentos registados</SelectItem>
+                  ) : (
+                    meses.map((chave) => (
+                      <SelectItem key={chave} value={chave}>{formatMonthLabel(chave)}</SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              disabled={doMes.length === 0}
+              onClick={() => gerarPdfResumoAtendimentos({ mesLabel: formatMonthLabel(mesSelecionado), itens: doMes })}
+            >
+              <FileDown className="w-4 h-4 mr-2" />
+              Gerar PDF
+            </Button>
           </div>
 
           {doMes.length === 0 ? (
