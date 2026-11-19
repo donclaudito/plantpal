@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Filter, List, Paperclip } from 'lucide-react';
+import { Plus, Filter, List, Paperclip, BarChart3 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,6 +12,7 @@ import FiltroConsultaPagamento from '@/components/procedimentos/FiltroConsultaPa
 import ConsultasPorPeriodo from '@/components/procedimentos/ConsultasPorPeriodo';
 import DadosFaltandoAlerta from '@/components/procedimentos/DadosFaltandoAlerta';
 import ReciboEnvioModal from '@/components/procedimentos/ReciboEnvioModal';
+import ResumoAtendimentosModal from '@/components/procedimentos/ResumoAtendimentosModal';
 import SurgeryModal from '@/components/shifts/SurgeryModal';
 import Toast from '@/components/common/Toast';
 import { procedimentoTotal, somaProcedimentos } from '@/lib/procedimentoTotals';
@@ -47,6 +48,7 @@ export default function Procedimentos() {
   const [concluindoId, setConcluindoId] = useState(null);
   const [filtroConsulta, setFiltroConsulta] = useState('all');
   const [mesConsulta, setMesConsulta] = useState('all');
+  const [showResumo, setShowResumo] = useState(false);
   const [filters, setFilters] = useState({
     tipo: 'all',
     doctor: null,
@@ -397,6 +399,12 @@ export default function Procedimentos() {
         onSent={handleReciboEnviado}
       />
 
+      <ResumoAtendimentosModal
+        isOpen={showResumo}
+        onClose={() => setShowResumo(false)}
+        procedimentos={procedimentos}
+      />
+
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -405,15 +413,21 @@ export default function Procedimentos() {
               Faturamento dos procedimentos filtrados: <span className="font-bold text-gray-900">R$ {somaProcedimentos(filteredProcedimentos).toFixed(2)}</span>
             </p>
           </div>
-          <div className="flex gap-2 bg-white border border-gray-200 p-1.5 rounded-2xl w-fit">
-            <Button variant={view === 'todas' ? 'default' : 'ghost'} size="sm" onClick={() => setView('todas')}>
-              <List className="w-4 h-4 mr-2" />
-              Todas
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowResumo(true)}>
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Resumo do mês
             </Button>
-            <Button variant={view === 'pendentes' ? 'default' : 'ghost'} size="sm" onClick={() => setView('pendentes')}>
-              <Paperclip className="w-4 h-4 mr-2" />
-              Sem documentos ({cirurgiasPendentes.length})
-            </Button>
+            <div className="flex gap-2 bg-white border border-gray-200 p-1.5 rounded-2xl w-fit">
+              <Button variant={view === 'todas' ? 'default' : 'ghost'} size="sm" onClick={() => setView('todas')}>
+                <List className="w-4 h-4 mr-2" />
+                Todas
+              </Button>
+              <Button variant={view === 'pendentes' ? 'default' : 'ghost'} size="sm" onClick={() => setView('pendentes')}>
+                <Paperclip className="w-4 h-4 mr-2" />
+                Sem documentos ({cirurgiasPendentes.length})
+              </Button>
+            </div>
           </div>
         </div>
 
