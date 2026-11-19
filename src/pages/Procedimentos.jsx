@@ -9,6 +9,7 @@ import ProcedimentoModal from '@/components/procedimentos/ProcedimentoModal';
 import ProcedimentoTable from '@/components/procedimentos/ProcedimentoTable';
 import CirurgiasPendentes from '@/components/procedimentos/CirurgiasPendentes';
 import FiltroConsultaPagamento from '@/components/procedimentos/FiltroConsultaPagamento';
+import ConsultasPorPeriodo from '@/components/procedimentos/ConsultasPorPeriodo';
 import DadosFaltandoAlerta from '@/components/procedimentos/DadosFaltandoAlerta';
 import ReciboEnvioModal from '@/components/procedimentos/ReciboEnvioModal';
 import SurgeryModal from '@/components/shifts/SurgeryModal';
@@ -45,6 +46,7 @@ export default function Procedimentos() {
   const [reciboProcedimento, setReciboProcedimento] = useState(null);
   const [concluindoId, setConcluindoId] = useState(null);
   const [filtroConsulta, setFiltroConsulta] = useState('all');
+  const [mesConsulta, setMesConsulta] = useState('all');
   const [filters, setFilters] = useState({
     tipo: 'all',
     doctor: null,
@@ -318,12 +320,20 @@ export default function Procedimentos() {
 
   const cirurgias = filteredProcedimentos.filter(p => p.tipo === 'Cirurgia');
   const consultas = filteredProcedimentos.filter(p => p.tipo === 'Consulta');
-  const consultasVisiveis = filtroConsulta === 'all' ? consultas : consultas.filter(p => p.tipo_pagamento === filtroConsulta);
+  const consultasDoMes = mesConsulta === 'all'
+    ? consultas
+    : consultas.filter(p => monthKeyFromDate(p.data) === mesConsulta);
+  const consultasVisiveis = filtroConsulta === 'all'
+    ? consultasDoMes
+    : consultasDoMes.filter(p => p.tipo_pagamento === filtroConsulta);
   const contagemConsultas = {
-    all: consultas.length,
-    SUS: consultas.filter(p => p.tipo_pagamento === 'SUS').length,
-    Convenio: consultas.filter(p => p.tipo_pagamento === 'Convenio').length,
+    all: consultasDoMes.length,
+    SUS: consultasDoMes.filter(p => p.tipo_pagamento === 'SUS').length,
+    Convenio: consultasDoMes.filter(p => p.tipo_pagamento === 'Convenio').length,
   };
+  const mesesConsulta = Array.from(
+    new Set(consultas.map(p => monthKeyFromDate(p.data)).filter(Boolean))
+  ).sort().reverse();
   const cirurgiasPendentes = cirurgias.filter(p => !(p.anexos || []).length);
   const semHospital = filteredProcedimentos.filter(p => !nomeHospital(p)).length;
 
@@ -545,6 +555,9 @@ export default function Procedimentos() {
                   value={filtroConsulta}
                   onChange={setFiltroConsulta}
                   contagens={contagemConsultas}
+                  mes={mesConsulta}
+                  onMesChange={setMesConsulta}
+                  meses={mesesConsulta}
                 />
                 <Button onClick={() => handleNewProcedimento('Consulta')}>
                   <Plus className="w-4 h-4 mr-2" />
@@ -554,6 +567,7 @@ export default function Procedimentos() {
             </div>
           </CardHeader>
           <CardContent>
+            <ConsultasPorPeriodo consultas={consultasVisiveis} />
             {consultasVisiveis.length === 0 ? (
               <p className="text-gray-500 text-center py-8">
                 {filtroConsulta === 'all' ? 'Nenhuma consulta cadastrada' : `Nenhuma consulta ${filtroConsulta === 'SUS' ? 'SUS' : 'de convênio'}`}
