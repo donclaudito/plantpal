@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import EspecialidadeSelect from '@/components/EspecialidadeSelect';
 import { procedimentoQuantidade, procedimentoTotal } from '@/lib/procedimentoTotals';
 import useShiftQuote from '@/lib/useShiftQuote';
 
@@ -27,6 +28,7 @@ const criarFormulario = ({ initialData, doctors, hospitals, tipo }) => {
     tipo: tipo || 'Cirurgia',
     doctor_id: '',
     doctor_name: '',
+    especialidade: '',
     hospital_id: '',
     hospital_name: '',
     data: '',
@@ -85,7 +87,8 @@ export default function ProcedimentoModal({ isOpen, onClose, onSave, doctors, ho
       setFormData({
         ...formData,
         doctor_id: doctor.id,
-        doctor_name: doctor.full_name
+        doctor_name: doctor.full_name,
+        especialidade: doctor.specialty || formData.especialidade || ''
       });
     }
   };
@@ -178,6 +181,15 @@ export default function ProcedimentoModal({ isOpen, onClose, onSave, doctors, ho
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="md:col-span-2">
+              <Rotulo>Especialidade</Rotulo>
+              <EspecialidadeSelect
+                value={formData.especialidade || ''}
+                onChange={(valor) => setFormData({ ...formData, especialidade: valor })}
+                className={campo}
+              />
             </div>
 
             <div>
