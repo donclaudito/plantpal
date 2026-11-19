@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
 import {
+  especialidadeDe,
   formatarData,
   formatarMoeda,
   montarRecibo,
@@ -186,7 +187,11 @@ export default async function (req) {
 
     const { items: medicos } = await base44.entities.Doctor.filter({}, { limit: 200 });
     const nomeMedico = nomeMedicoDe(procedimento, medicos);
-    const procedimentoExibicao = { ...procedimento, doctor_name: nomeMedico };
+    const procedimentoExibicao = {
+      ...procedimento,
+      doctor_name: nomeMedico,
+      especialidade: especialidadeDe(procedimento, medicos),
+    };
 
     const destinatario = String(email_destino || hospital?.email || '').trim();
     if (!/.+@.+\..+/.test(destinatario)) {

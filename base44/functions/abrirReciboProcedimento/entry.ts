@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
 import {
+  especialidadeDe,
   formatarData,
   montarRecibo,
   nomeMedicoDe,
@@ -29,9 +30,12 @@ export default async function (req) {
 
     const { items: medicos } = await base44.entities.Doctor.filter({}, { limit: 200 });
     const nomeMedico = nomeMedicoDe(procedimento, medicos);
+    const especialidade = especialidadeDe(procedimento, medicos);
 
     const emitidoEm = formatarData(new Date().toISOString());
-    const pdf = new Uint8Array(montarRecibo({ ...procedimento, doctor_name: nomeMedico }, hospital, emitidoEm));
+    const pdf = new Uint8Array(
+      montarRecibo({ ...procedimento, doctor_name: nomeMedico, especialidade }, hospital, emitidoEm)
+    );
 
     return Response.json({
       pdf_base64: paraBase64(pdf),

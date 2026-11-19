@@ -40,6 +40,15 @@ export const nomeMedicoDe = (procedimento, medicos) => {
   return `${prefixo} ${semTitulo}`.trim();
 };
 
+export const especialidadeDe = (procedimento, medicos) => {
+  const alvo = normalizarNome(procedimento?.doctor_name);
+  const medico =
+    medicos.find((d) => d.id && d.id === procedimento?.doctor_id) ||
+    medicos.find((d) => normalizarNome(d.full_name) === alvo) ||
+    null;
+  return String(medico?.specialty || procedimento?.especialidade || '').trim();
+};
+
 export const convenioDe = (procedimento) => {
   const achado = /Conv[eê]nio:\s*([^•\n]+)/i.exec(String(procedimento?.observacoes || ''));
   return achado ? achado[1].trim() : '';
@@ -84,7 +93,7 @@ export function montarRecibo(procedimento, hospital, emitidoEm) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(107, 114, 128);
-  doc.text(`Recibo nº ${String(procedimento.id || '').slice(-8).toUpperCase()}`, margem, y);
+  doc.text(`Protocolo nº ${String(procedimento.id || '').slice(-8).toUpperCase()}`, margem, y);
   doc.text(`Emitido em ${emitidoEm}`, margem + largura, y, { align: 'right' });
 
   y += 8;
@@ -102,6 +111,8 @@ export function montarRecibo(procedimento, hospital, emitidoEm) {
     ['Tipo', procedimento.tipo || '-'],
     ['Pagamento', procedimento.tipo_pagamento || '-'],
   ];
+  const especialidade = String(procedimento.especialidade || '').trim();
+  if (especialidade) linhas.push(['Especialidade', especialidade]);
   const convenio = convenioDe(procedimento);
   if (convenio) linhas.push(['Convênio', convenio]);
 
