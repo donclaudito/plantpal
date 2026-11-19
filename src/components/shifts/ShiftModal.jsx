@@ -239,6 +239,17 @@ export default function ShiftModal({ isOpen, onClose, onSave, onSaveProcedure, d
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
+                Especialidade
+              </label>
+              <EspecialidadeSelect
+                value={formData.specialty}
+                onChange={(valor) => setFormData({ ...formData, specialty: valor })}
+                className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-700 border-2 border-transparent focus:border-blue-600 dark:focus:border-blue-400 rounded-xl font-bold text-slate-900 dark:text-white transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
                 Data
               </label>
               <input
@@ -265,17 +276,6 @@ export default function ShiftModal({ isOpen, onClose, onSave, onSaveProcedure, d
                   <option key={d.id} value={d.id}>{d.full_name}</option>
                 ))}
               </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
-                Especialidade
-              </label>
-              <EspecialidadeSelect
-                value={formData.specialty}
-                onChange={(valor) => setFormData({ ...formData, specialty: valor })}
-                className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-700 border-2 border-transparent focus:border-blue-600 dark:focus:border-blue-400 rounded-xl font-bold text-slate-900 dark:text-white transition-colors"
-              />
             </div>
 
             <div>
