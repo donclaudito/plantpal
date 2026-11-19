@@ -39,9 +39,18 @@ const OPCOES = [
   { valor: 'Cirurgia', label: 'Cirurgias' },
 ];
 
+const PAGAMENTOS = [
+  { valor: 'Todos', label: 'Tudo' },
+  { valor: 'SUS', label: 'SUS' },
+  { valor: 'Convenio', label: 'Convênio' },
+  { valor: 'Particular', label: 'Particular' },
+];
+
 export default function ResumoAtendimentosModal({ isOpen, onClose, procedimentos = [] }) {
   const [mes, setMes] = useState('');
   const [escopo, setEscopo] = useState('Todos');
+  const [pagamento, setPagamento] = useState('Todos');
+  const [mostrarValores, setMostrarValores] = useState(true);
 
   const meses = Array.from(
     new Set(procedimentos.map((p) => monthKeyFromDate(p.data)).filter(Boolean))
@@ -49,7 +58,17 @@ export default function ResumoAtendimentosModal({ isOpen, onClose, procedimentos
   const mesSelecionado = mes || meses[0] || '';
 
   const doMes = procedimentos.filter((p) => monthKeyFromDate(p.data) === mesSelecionado);
-  const filtrados = doMes.filter((p) => escopo === 'Todos' || p.tipo === escopo);
+  const filtrados = doMes.filter(
+    (p) =>
+      (escopo === 'Todos' || p.tipo === escopo) &&
+      (pagamento === 'Todos' || p.tipo_pagamento === pagamento)
+  );
+  const rotulo = [
+    OPCOES.find((o) => o.valor === escopo).label,
+    pagamento === 'Todos' ? null : PAGAMENTOS.find((o) => o.valor === pagamento).label,
+  ]
+    .filter(Boolean)
+    .join(' · ');
   const consultas = filtrados.filter((p) => p.tipo === 'Consulta');
   const cirurgias = filtrados.filter((p) => p.tipo === 'Cirurgia');
   const total = somar(filtrados);
@@ -99,19 +118,52 @@ export default function ResumoAtendimentosModal({ isOpen, onClose, procedimentos
                 ))}
               </div>
             </div>
+            <div className="w-40">
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Pagamento</label>
+              <Select value={pagamento} onValueChange={setPagamento}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pagamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGAMENTOS.map((opcao) => (
+                    <SelectItem key={opcao.valor} value={opcao.valor}>{opcao.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Button
               disabled={filtrados.length === 0}
               onClick={() =>
                 gerarPdfResumoAtendimentos({
                   mesLabel: formatMonthLabel(mesSelecionado),
-                  escopoLabel: OPCOES.find((o) => o.valor === escopo).label,
+                  escopo,
+                  rotulo,
                   itens: filtrados,
+                  mostrarValores,
                 })
               }
             >
               <FileDown className="w-4 h-4 mr-2" />
               Gerar PDF
             </Button>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-gray-700">Mostrar valores no PDF</span>
+            <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+              {[{ valor: true, label: 'Sim' }, { valor: false, label: 'Não' }].map((opcao) => (
+                <button
+                  key={opcao.label}
+                  type="button"
+                  onClick={() => setMostrarValores(opcao.valor)}
+                  className={`px-4 h-8 text-sm font-semibold transition-colors ${
+                    mostrarValores === opcao.valor ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {opcao.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {filtrados.length === 0 ? (

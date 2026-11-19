@@ -31,23 +31,27 @@ const corta = (texto, max) => {
   return t.length > max ? `${t.slice(0, max - 3)}...` : t;
 };
 
-export default function gerarPdfResumoAtendimentos({ mesLabel, escopoLabel = 'Tudo', itens }) {
+export default function gerarPdfResumoAtendimentos({
+  mesLabel,
+  escopo = 'Todos',
+  rotulo = 'Tudo',
+  itens,
+  mostrarValores = true,
+}) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const consultas = itens.filter((p) => p.tipo === 'Consulta');
   const cirurgias = itens.filter((p) => p.tipo === 'Cirurgia');
   const total = somar(itens);
 
-  const caixas = [
-    { label: 'TOTAL DE ATENDIMENTOS', dados: total, unidade: 'atendimentos' },
-  ];
-  if (escopoLabel !== 'Cirurgias') {
+  const caixas = [{ label: 'TOTAL DE ATENDIMENTOS', dados: total, unidade: 'atendimentos' }];
+  if (escopo !== 'Cirurgia') {
     caixas.push(
       { label: 'CONSULTAS', dados: somar(consultas), unidade: 'consultas' },
       { label: 'MANHÃ', dados: somar(consultas.filter((c) => periodoDe(c) === 'Manhã')), unidade: 'consultas' },
       { label: 'TARDE', dados: somar(consultas.filter((c) => periodoDe(c) === 'Tarde')), unidade: 'consultas' }
     );
   }
-  if (escopoLabel !== 'Consultas') {
+  if (escopo !== 'Consulta') {
     caixas.push({ label: 'CIRURGIAS', dados: somar(cirurgias), unidade: 'cirurgias' });
   }
 
@@ -63,7 +67,7 @@ export default function gerarPdfResumoAtendimentos({ mesLabel, escopoLabel = 'Tu
   doc.text('RESUMO DE ATENDIMENTOS', 20, 16);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9.5);
-  doc.text(`${mesLabel}  ·  ${escopoLabel}`, 20, 23.5);
+  doc.text(`${mesLabel}  ·  ${rotulo}`, 20, 23.5);
 
   doc.setFontSize(8);
   doc.text('REFUA CATAN', 190, 14, { align: 'right' });
@@ -94,7 +98,8 @@ export default function gerarPdfResumoAtendimentos({ mesLabel, escopoLabel = 'Tu
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
     doc.setTextColor(...CINZA_TEXTO);
-    doc.text(corta(`${caixa.unidade} · ${brl(caixa.dados.valor)}`, largura < 34 ? 22 : 34), x + 4, y + 22);
+    const legenda = mostrarValores ? `${caixa.unidade} · ${brl(caixa.dados.valor)}` : caixa.unidade;
+    doc.text(corta(legenda, largura < 34 ? 22 : 34), x + 4, y + 22);
   });
 
   y += 34;
@@ -105,7 +110,9 @@ export default function gerarPdfResumoAtendimentos({ mesLabel, escopoLabel = 'Tu
   doc.text('DETALHAMENTO', 20, y);
   y += 6;
 
-  const col = { data: 20, tipo: 44, medico: 72, hospital: 122, qtd: 166, valor: 190 };
+  const col = mostrarValores
+    ? { data: 20, tipo: 44, medico: 72, hospital: 122, qtd: 166, valor: 190 }
+    : { data: 20, tipo: 44, medico: 72, hospital: 122, qtd: 190 };
 
   const desenhaCabecalho = () => {
     doc.setFillColor(...ESCURO);
@@ -118,7 +125,7 @@ export default function gerarPdfResumoAtendimentos({ mesLabel, escopoLabel = 'Tu
     doc.text('MÉDICO', col.medico, y + 5.4);
     doc.text('HOSPITAL', col.hospital, y + 5.4);
     doc.text('QTD', col.qtd, y + 5.4, { align: 'right' });
-    doc.text('VALOR', col.valor, y + 5.4, { align: 'right' });
+    if (mostrarValores) doc.text('VALOR', col.valor, y + 5.4, { align: 'right' });
     y += 8;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
@@ -145,7 +152,9 @@ export default function gerarPdfResumoAtendimentos({ mesLabel, escopoLabel = 'Tu
       doc.text(corta(item.doctor_name, 26), col.medico, y + 4.8);
       doc.text(corta(item.hospital_name, 22), col.hospital, y + 4.8);
       doc.text(String(procedimentoQuantidade(item)), col.qtd, y + 4.8, { align: 'right' });
-      doc.text(brl(procedimentoTotal(item)), col.valor, y + 4.8, { align: 'right' });
+      if (mostrarValores) {
+        doc.text(brl(procedimentoTotal(item)), col.valor, y + 4.8, { align: 'right' });
+      }
       y += 7;
     });
 
@@ -162,7 +171,7 @@ export default function gerarPdfResumoAtendimentos({ mesLabel, escopoLabel = 'Tu
   doc.setTextColor(...ESCURO);
   doc.text('TOTAL', col.tipo, y + 7);
   doc.text(String(total.quantidade), col.qtd, y + 7, { align: 'right' });
-  doc.text(brl(total.valor), col.valor, y + 7, { align: 'right' });
+  if (mostrarValores) doc.text(brl(total.valor), col.valor, y + 7, { align: 'right' });
 
   // Rodapé
   const paginas = doc.getNumberOfPages();
@@ -178,6 +187,6 @@ export default function gerarPdfResumoAtendimentos({ mesLabel, escopoLabel = 'Tu
     doc.text(`Página ${pagina} de ${paginas}`, 190, 288, { align: 'right' });
   }
 
-  const nome = `resumo-${mesLabel}-${escopoLabel}`.normalize('NFD').replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase();
+  const nome = `resumo-${mesLabel}-${rotulo}`.normalize('NFD').replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase();
   doc.save(`${nome}.pdf`);
 }
