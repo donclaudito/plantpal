@@ -6,6 +6,7 @@ import EspecialidadeSelect from '@/components/EspecialidadeSelect';
 import ConsultationValueFields from '@/components/shifts/ConsultationValueFields';
 import ProntuarioSection from '@/components/shifts/ProntuarioSection';
 import AvisoCirurgiaData from '@/components/shifts/AvisoCirurgiaData';
+import AvisoConflitoAgenda from '@/components/shifts/AvisoConflitoAgenda';
 import { emptyProntuario, internamentoDoProntuario, isSurgeryHospital, tipoPagamentoDoConvenio } from '@/lib/prontuario';
 
 const shiftTypes = ["DIURNO MANHÃ", "DIURNO TARDE", "DIURNO", "NOTURNO", "24H", "PARCIAL", "ESPECIAL(DAS10 AS 22)"];
@@ -338,6 +339,16 @@ export default function ShiftModal({ isOpen, onClose, onSave, onSaveProcedure, d
               </div>
             )}
           </div>
+
+          <AvisoConflitoAgenda
+            data={formData.date}
+            doctorName={formData.doctorName}
+            tipo={isSurgery ? 'cirurgia' : 'plantao'}
+            shiftType={formData.type}
+            period={byConsultations ? 'consultas' : formData.period}
+            ignorarIds={[editingShift?.id]}
+            enabled={isOpen}
+          />
 
           {isSurgery && formData.date && <AvisoCirurgiaData date={formData.date} />}
 

@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import EspecialidadeSelect from '@/components/EspecialidadeSelect';
 import { procedimentoQuantidade, procedimentoTotal } from '@/lib/procedimentoTotals';
 import useShiftQuote from '@/lib/useShiftQuote';
+import AvisoConflitoAgenda from '@/components/shifts/AvisoConflitoAgenda';
 
 const normalizar = (valor) => String(valor || '').trim().toUpperCase();
 
@@ -217,6 +218,14 @@ export default function ProcedimentoModal({ isOpen, onClose, onSave, doctors, ho
               </Select>
             </div>
           </div>
+
+          <AvisoConflitoAgenda
+            data={formData.data}
+            doctorName={formData.doctor_name}
+            tipo={formData.tipo === 'Cirurgia' ? 'cirurgia' : 'consulta'}
+            ignorarIds={[initialData?.id]}
+            enabled={isOpen}
+          />
 
           <div className="rounded-xl border border-border bg-muted p-4 space-y-3">
             <p className="text-sm text-muted-foreground">

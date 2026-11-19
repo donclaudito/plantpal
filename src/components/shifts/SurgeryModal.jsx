@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Trash2, ArrowRight, Loader2 } from 'lucide-react';
 import ProntuarioSection from '@/components/shifts/ProntuarioSection';
+import AvisoConflitoAgenda from '@/components/shifts/AvisoConflitoAgenda';
 import useShiftQuote from '@/lib/useShiftQuote';
 import { emptyProntuario, fichaDoProcedimento, internamentoDoProntuario, tipoPagamentoDoConvenio } from '@/lib/prontuario';
 
@@ -171,6 +172,14 @@ export default function SurgeryModal({ surgery, isOpen, onClose, doctors = [], h
               />
             </div>
           </div>
+
+          <AvisoConflitoAgenda
+            data={form.data}
+            doctorName={doctors.find(d => d.id === form.doctor_id)?.full_name || surgery.doctor_name}
+            tipo="cirurgia"
+            ignorarIds={[surgery.id]}
+            enabled={isOpen}
+          />
 
           <ProntuarioSection dados={ficha} onChange={handleImportacao} />
 
