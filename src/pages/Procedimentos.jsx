@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import ProcedimentoModal from '@/components/procedimentos/ProcedimentoModal';
 import ProcedimentoTable from '@/components/procedimentos/ProcedimentoTable';
 import CirurgiasPendentes from '@/components/procedimentos/CirurgiasPendentes';
+import FiltroConsultaPagamento from '@/components/procedimentos/FiltroConsultaPagamento';
 import DadosFaltandoAlerta from '@/components/procedimentos/DadosFaltandoAlerta';
 import ReciboEnvioModal from '@/components/procedimentos/ReciboEnvioModal';
 import SurgeryModal from '@/components/shifts/SurgeryModal';
@@ -43,6 +44,7 @@ export default function Procedimentos() {
   const [view, setView] = useState('todas');
   const [reciboProcedimento, setReciboProcedimento] = useState(null);
   const [concluindoId, setConcluindoId] = useState(null);
+  const [filtroConsulta, setFiltroConsulta] = useState('all');
   const [filters, setFilters] = useState({
     tipo: 'all',
     doctor: null,
@@ -316,6 +318,12 @@ export default function Procedimentos() {
 
   const cirurgias = filteredProcedimentos.filter(p => p.tipo === 'Cirurgia');
   const consultas = filteredProcedimentos.filter(p => p.tipo === 'Consulta');
+  const consultasVisiveis = filtroConsulta === 'all' ? consultas : consultas.filter(p => p.tipo_pagamento === filtroConsulta);
+  const contagemConsultas = {
+    all: consultas.length,
+    SUS: consultas.filter(p => p.tipo_pagamento === 'SUS').length,
+    Convenio: consultas.filter(p => p.tipo_pagamento === 'Convenio').length,
+  };
   const cirurgiasPendentes = cirurgias.filter(p => !(p.anexos || []).length);
   const semHospital = filteredProcedimentos.filter(p => !nomeHospital(p)).length;
 
@@ -528,19 +536,30 @@ export default function Procedimentos() {
 
         <Card className="border-l-4 border-l-orange-500">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-orange-800">Consultas ({consultas.length}) · R$ {somaProcedimentos(consultas).toFixed(2)}</CardTitle>
-              <Button onClick={() => handleNewProcedimento('Consulta')}>
-                <Plus className="w-4 h-4 mr-2" />
-                Nova Consulta
-              </Button>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <CardTitle className="text-orange-800">
+                Consultas ({consultasVisiveis.length}) · R$ {somaProcedimentos(consultasVisiveis).toFixed(2)}
+              </CardTitle>
+              <div className="flex flex-wrap items-center gap-2">
+                <FiltroConsultaPagamento
+                  value={filtroConsulta}
+                  onChange={setFiltroConsulta}
+                  contagens={contagemConsultas}
+                />
+                <Button onClick={() => handleNewProcedimento('Consulta')}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nova Consulta
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
-            {consultas.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">Nenhuma consulta cadastrada</p>
+            {consultasVisiveis.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">
+                {filtroConsulta === 'all' ? 'Nenhuma consulta cadastrada' : `Nenhuma consulta ${filtroConsulta === 'SUS' ? 'SUS' : 'de convênio'}`}
+              </p>
             ) : (
-              <ProcedimentoTable items={consultas} tipo="Consulta" onEdit={handleEdit} onDelete={handleDelete} onEnviarRecibo={setReciboProcedimento} onVerPdf={handleVerPdf} onConcluir={handleConcluir} concluindoId={concluindoId} />
+              <ProcedimentoTable items={consultasVisiveis} tipo="Consulta" onEdit={handleEdit} onDelete={handleDelete} onEnviarRecibo={setReciboProcedimento} onVerPdf={handleVerPdf} onConcluir={handleConcluir} concluindoId={concluindoId} />
             )}
           </CardContent>
         </Card>
