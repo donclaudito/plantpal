@@ -182,6 +182,22 @@ export default function Procedimentos() {
     }
   };
 
+  const handleVerPdf = async (procedimento) => {
+    try {
+      const { data } = await base44.functions.invoke('abrirReciboProcedimento', {
+        procedimento_id: procedimento.id,
+      });
+      const binario = atob(data.pdf_base64);
+      const bytes = new Uint8Array(binario.length);
+      for (let i = 0; i < binario.length; i += 1) bytes[i] = binario.charCodeAt(i);
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) {
+      showToast('Não foi possível abrir o PDF do recibo.', 'error');
+    }
+  };
+
   const handleNewProcedimento = (tipo) => {
     setEditingProcedimento(null);
     setTipoModal(tipo);
@@ -505,7 +521,7 @@ export default function Procedimentos() {
             {cirurgias.length === 0 ? (
               <p className="text-gray-500 text-center py-8">Nenhuma cirurgia cadastrada</p>
             ) : (
-              <ProcedimentoTable items={cirurgias} tipo="Cirurgia" onEdit={handleEdit} onDelete={handleDelete} onEnviarRecibo={setReciboProcedimento} onConcluir={handleConcluir} concluindoId={concluindoId} />
+              <ProcedimentoTable items={cirurgias} tipo="Cirurgia" onEdit={handleEdit} onDelete={handleDelete} onEnviarRecibo={setReciboProcedimento} onVerPdf={handleVerPdf} onConcluir={handleConcluir} concluindoId={concluindoId} />
             )}
           </CardContent>
         </Card>
@@ -524,7 +540,7 @@ export default function Procedimentos() {
             {consultas.length === 0 ? (
               <p className="text-gray-500 text-center py-8">Nenhuma consulta cadastrada</p>
             ) : (
-              <ProcedimentoTable items={consultas} tipo="Consulta" onEdit={handleEdit} onDelete={handleDelete} onEnviarRecibo={setReciboProcedimento} onConcluir={handleConcluir} concluindoId={concluindoId} />
+              <ProcedimentoTable items={consultas} tipo="Consulta" onEdit={handleEdit} onDelete={handleDelete} onEnviarRecibo={setReciboProcedimento} onVerPdf={handleVerPdf} onConcluir={handleConcluir} concluindoId={concluindoId} />
             )}
           </CardContent>
         </Card>
