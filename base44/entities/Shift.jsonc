@@ -15,6 +15,10 @@
       "type": "string",
       "description": "Nome do m\u00e9dico"
     },
+    "specialty": {
+      "type": "string",
+      "description": "Especialidade do plant\u00e3o"
+    },
     "hospital": {
       "type": "string",
       "description": "Nome do hospital"

@@ -46,7 +46,7 @@ export const especialidadeDe = (procedimento, medicos) => {
     medicos.find((d) => d.id && d.id === procedimento?.doctor_id) ||
     medicos.find((d) => normalizarNome(d.full_name) === alvo) ||
     null;
-  return String(medico?.specialty || procedimento?.especialidade || '').trim();
+  return String(procedimento?.especialidade || medico?.specialty || '').trim();
 };
 
 export const convenioDe = (procedimento) => {

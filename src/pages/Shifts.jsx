@@ -234,6 +234,7 @@ export default function Shifts() {
       tipo_pagamento: existente?.tipo_pagamento
         || (normalizarHospital(shift.hospital).includes('SUS') ? 'SUS' : 'Convenio'),
       descricao: existente?.descricao && existente.descricao !== '-' ? existente.descricao : rotulo,
+      especialidade: shift.specialty || existente?.especialidade || '',
       quantidade: Number(shift.quantidade_consultas) || 0,
       valor: Number(shift.valor_consulta) || 0,
     };

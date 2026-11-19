@@ -18,6 +18,10 @@
       "type": "string",
       "description": "Nome do m\u00e9dico"
     },
+    "especialidade": {
+      "type": "string",
+      "description": "Especialidade informada no plant\u00e3o/procedimento"
+    },
     "hospital_id": {
       "type": "string",
       "description": "ID do hospital"
