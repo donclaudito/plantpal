@@ -165,20 +165,14 @@ export function montarRecibo(procedimento, hospital, emitidoEm) {
   y += 4;
 
   doc.setFillColor(243, 244, 246);
-  doc.rect(margem, y, largura, 22, 'F');
+  doc.rect(margem, y, largura, 14, 'F');
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(55, 65, 81);
-  doc.text(ehCirurgia ? 'Quantidade' : 'Consultas', margem + 4, y + 7);
-  doc.text(ehCirurgia ? 'Valor unitário' : 'Valor da consulta', margem + 50, y + 7);
-  doc.text('Total', margem + largura - 4, y + 7, { align: 'right' });
-  doc.setFont('helvetica', 'normal');
+  doc.text(ehCirurgia ? 'Quantidade' : 'Quantidade de consultas', margem + 4, y + 9);
   doc.setTextColor(17, 24, 39);
-  doc.text(String(quantidadeDe(procedimento)), margem + 4, y + 16);
-  doc.text(formatarMoeda(procedimento.valor), margem + 50, y + 16);
-  doc.setFont('helvetica', 'bold');
-  doc.text(formatarMoeda(totalDe(procedimento)), margem + largura - 4, y + 16, { align: 'right' });
+  doc.text(String(quantidadeDe(procedimento)), margem + 78, y + 9);
 
-  y += 32;
+  y += 24;
   const observacoesTexto = String(procedimento.observacoes || '')
     .replace(/Conv[eê]nio:\s*[^•\n]*/i, '')
     .replace(/^•\s*/, '')
