@@ -195,6 +195,20 @@ export default function gerarPdfResumoAtendimentos(opcoes) {
 export function imprimirResumoAtendimentos(opcoes) {
   const doc = construirDoc(opcoes);
   const url = doc.output('bloburl');
-  const janela = window.open(url, '_blank');
+
+  // Janela centrada no ecrã e com proporção próxima da folha A4,
+  // para o documento aparecer enquadrado em vez de encostado à esquerda.
+  const disponivelLargura = window.screen.availWidth || window.innerWidth;
+  const disponivelAltura = window.screen.availHeight || window.innerHeight;
+  const altura = Math.round(Math.min(disponivelAltura * 0.92, 1000));
+  const largura = Math.round(Math.min(disponivelLargura * 0.9, altura * 0.75, 820));
+  const esquerda = Math.max(0, Math.round((disponivelLargura - largura) / 2));
+  const topo = Math.max(0, Math.round((disponivelAltura - altura) / 2));
+
+  const janela = window.open(
+    url,
+    '_blank',
+    `width=${largura},height=${altura},left=${esquerda},top=${topo}`
+  );
   if (!janela) doc.save(`${nomeArquivo(opcoes.mesLabel, opcoes.rotulo)}.pdf`);
 }
