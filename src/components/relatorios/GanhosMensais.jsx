@@ -1,50 +1,11 @@
-import React, { useMemo } from 'react';
-import { monthKeyFromDate, formatMonthLabel } from '@/lib/dateKeys';
-import { procedimentoTotal } from '@/lib/procedimentoTotals';
+import React from 'react';
+import { formatMonthLabel } from '@/lib/dateKeys';
 
 const brl = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const centavos = (value) => Math.round((Number(value) || 0) * 100) / 100;
 
-export default function GanhosMensais({ shifts = [], procedimentos = [], selectedMonth }) {
-  const rows = useMemo(() => {
-    const map = new Map();
-    const linha = (mes) => {
-      if (!map.has(mes)) {
-        map.set(mes, { mes, plantoes: 0, valorPlantoes: 0, cirurgias: 0, valorCirurgias: 0 });
-      }
-      return map.get(mes);
-    };
-
-    shifts.forEach((shift) => {
-      const mes = monthKeyFromDate(shift.date);
-      if (!mes) return;
-      const row = linha(mes);
-      row.plantoes += 1;
-      row.valorPlantoes += Number(shift.value) || 0;
-    });
-
-    procedimentos.forEach((procedimento) => {
-      const mes = monthKeyFromDate(procedimento.data);
-      if (!mes) return;
-      const row = linha(mes);
-      row.cirurgias += 1;
-      row.valorCirurgias += procedimentoTotal(procedimento);
-    });
-
-    return Array.from(map.values()).sort((a, b) => b.mes.localeCompare(a.mes));
-  }, [shifts, procedimentos]);
-
-  const totais = rows.reduce(
-    (acc, row) => ({
-      plantoes: acc.plantoes + row.plantoes,
-      valorPlantoes: centavos(acc.valorPlantoes + row.valorPlantoes),
-      cirurgias: acc.cirurgias + row.cirurgias,
-      valorCirurgias: centavos(acc.valorCirurgias + row.valorCirurgias),
-    }),
-    { plantoes: 0, valorPlantoes: 0, cirurgias: 0, valorCirurgias: 0 }
-  );
-
-  const totalGeral = centavos(totais.valorPlantoes + totais.valorCirurgias);
+export default function GanhosMensais({ resumo, selectedMonth }) {
+  const { rows = [], totais, totalGeral } = resumo || {};
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden">
@@ -71,10 +32,7 @@ export default function GanhosMensais({ shifts = [], procedimentos = [], selecte
             </thead>
             <tbody className="divide-y divide-slate-200">
               {rows.map((row) => (
-                <tr
-                  key={row.mes}
-                  className={row.mes === selectedMonth ? 'bg-blue-50' : 'hover:bg-slate-50'}
-                >
+                <tr key={row.mes} className={row.mes === selectedMonth ? 'bg-blue-50' : 'hover:bg-slate-50'}>
                   <td className="px-6 py-4 text-sm font-bold text-slate-900">{formatMonthLabel(row.mes)}</td>
                   <td className="px-6 py-4 text-sm text-right text-slate-600">{row.plantoes}</td>
                   <td className="px-6 py-4 text-sm text-right text-slate-700">{brl(row.valorPlantoes)}</td>
