@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { FileDown } from 'lucide-react';
+import { FileDown, Printer } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { procedimentoQuantidade, procedimentoTotal } from '@/lib/procedimentoTotals';
 import { monthKeyFromDate, formatMonthLabel } from '@/lib/dateKeys';
-import gerarPdfResumoAtendimentos from '@/lib/resumoAtendimentosPdf';
+import gerarPdfResumoAtendimentos, { imprimirResumoAtendimentos } from '@/lib/resumoAtendimentosPdf';
 
 const brl = (valor) => Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -74,6 +74,13 @@ export default function ResumoAtendimentosModal({ isOpen, onClose, procedimentos
   const total = somar(filtrados);
   const manha = somar(consultas.filter((c) => periodoDe(c) === 'Manhã'));
   const tarde = somar(consultas.filter((c) => periodoDe(c) === 'Tarde'));
+  const dadosPdf = {
+    mesLabel: formatMonthLabel(mesSelecionado),
+    escopo,
+    rotulo,
+    itens: filtrados,
+    mostrarValores,
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(aberto) => !aberto && onClose()}>
@@ -133,18 +140,18 @@ export default function ResumoAtendimentosModal({ isOpen, onClose, procedimentos
             </div>
             <Button
               disabled={filtrados.length === 0}
-              onClick={() =>
-                gerarPdfResumoAtendimentos({
-                  mesLabel: formatMonthLabel(mesSelecionado),
-                  escopo,
-                  rotulo,
-                  itens: filtrados,
-                  mostrarValores,
-                })
-              }
+              onClick={() => gerarPdfResumoAtendimentos(dadosPdf)}
             >
               <FileDown className="w-4 h-4 mr-2" />
               Gerar PDF
+            </Button>
+            <Button
+              variant="outline"
+              disabled={filtrados.length === 0}
+              onClick={() => imprimirResumoAtendimentos(dadosPdf)}
+            >
+              <Printer className="w-4 h-4 mr-2" />
+              Imprimir
             </Button>
           </div>
 

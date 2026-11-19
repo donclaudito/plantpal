@@ -31,13 +31,10 @@ const corta = (texto, max) => {
   return t.length > max ? `${t.slice(0, max - 3)}...` : t;
 };
 
-export default function gerarPdfResumoAtendimentos({
-  mesLabel,
-  escopo = 'Todos',
-  rotulo = 'Tudo',
-  itens,
-  mostrarValores = true,
-}) {
+const nomeArquivo = (mesLabel, rotulo) =>
+  `resumo-${mesLabel}-${rotulo}`.normalize('NFD').replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase();
+
+function construirDoc({ mesLabel, escopo = 'Todos', rotulo = 'Tudo', itens, mostrarValores = true }) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const consultas = itens.filter((p) => p.tipo === 'Consulta');
   const cirurgias = itens.filter((p) => p.tipo === 'Cirurgia');
@@ -187,6 +184,32 @@ export default function gerarPdfResumoAtendimentos({
     doc.text(`Página ${pagina} de ${paginas}`, 190, 288, { align: 'right' });
   }
 
-  const nome = `resumo-${mesLabel}-${rotulo}`.normalize('NFD').replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase();
-  doc.save(`${nome}.pdf`);
+  return doc;
+}
+
+export default function gerarPdfResumoAtendimentos(opcoes) {
+  const doc = construirDoc(opcoes);
+  doc.save(`${nomeArquivo(opcoes.mesLabel, opcoes.rotulo)}.pdf`);
+}
+
+export function imprimirResumoAtendimentos(opcoes) {
+  const doc = construirDoc(opcoes);
+  const url = doc.output('bloburl');
+
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  iframe.src = url;
+
+  iframe.onload = () => {
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+  };
+
+  document.body.appendChild(iframe);
+  setTimeout(() => iframe.remove(), 60000);
 }
