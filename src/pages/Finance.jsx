@@ -57,8 +57,8 @@ export default function Finance() {
         showToast(response.data.error, 'error');
         return;
       }
-      const { criados = 0, atualizados = 0 } = response.data || {};
-      showToast(`${criados} procedimento(s) criado(s) e ${atualizados} valor(es) sincronizado(s).`);
+      const { atualizados = 0 } = response.data || {};
+      showToast(`${atualizados} valor(es) sincronizado(s) entre a agenda e os procedimentos.`);
       queryClient.invalidateQueries({ queryKey: ['procedimentos'] });
       await refetch();
     } catch (error) {

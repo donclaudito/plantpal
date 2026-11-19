@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
 import { readPages, normalizeName, hospitalKey } from '../../shared/shiftPricing.ts';
-import { casarConsultas, momentoDoRegisto, rotuloConsulta } from '../../shared/consultasProcedimentos.ts';
+import { casarConsultas, momentoDoRegisto } from '../../shared/consultasProcedimentos.ts';
 
 const mesmoValor = (a, b) => Math.abs((Number(a) || 0) - (Number(b) || 0)) < 0.005;
 
@@ -37,30 +37,11 @@ export default async function(req) {
 
     const plantoes = shifts.filter(s => doFiltro(s.doctor_name, s.hospital));
     const consultas = procedimentos.filter(p => doFiltro(p.doctor_name, p.hospital_name));
-    const { pares, plantoesSemProcedimento } = casarConsultas(plantoes, consultas);
+    // Apenas alinha os pares que já existem: o plantão da agenda e o registo de
+    // consulta são o mesmo atendimento, por isso nunca se cria um segundo.
+    const { pares } = casarConsultas(plantoes, consultas);
 
     const tarefas = [];
-
-    for (const shift of plantoesSemProcedimento) {
-      const quantidade = Number(shift.quantidade_consultas) || 0;
-      const valor = Number(shift.valor_consulta) || 0;
-      tarefas.push({
-        tipo: 'criado',
-        run: () => client.entities.Procedimento.create({
-          tipo: 'Consulta',
-          doctor_id: shift.doctor_id || '',
-          doctor_name: shift.doctor_name || '',
-          hospital_id: hospitals.find(h => hospitalKey(h.name) === hospitalKey(shift.hospital))?.id || '',
-          hospital_name: shift.hospital || '',
-          data: shift.date,
-          tipo_pagamento: hospitalKey(shift.hospital).includes('SUS') ? 'SUS' : 'Convenio',
-          descricao: rotuloConsulta(shift.shift_type),
-          especialidade: shift.specialty || '',
-          quantidade,
-          valor,
-        }),
-      });
-    }
 
     for (const { shift, procedimento } of pares) {
       const quantidade = Number(shift.quantidade_consultas) || 0;
@@ -91,21 +72,18 @@ export default async function(req) {
       }
     }
 
-    let criados = 0;
     let atualizados = 0;
     let falhas = 0;
     for (let i = 0; i < tarefas.length; i += 6) {
       const lote = tarefas.slice(i, i + 6);
       const resultados = await Promise.allSettled(lote.map(tarefa => tarefa.run()));
-      resultados.forEach((resultado, indice) => {
+      resultados.forEach((resultado) => {
         if (resultado.status === 'rejected') { falhas += 1; return; }
-        if (lote[indice].tipo === 'criado') criados += 1;
-        else atualizados += 1;
+        atualizados += 1;
       });
     }
 
     return Response.json({
-      criados,
       atualizados,
       falhas,
       plantoes: plantoes.length,
