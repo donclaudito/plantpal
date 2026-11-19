@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
-import { loadPricing, readDistinct, hospitalKey, normalizeName } from '../../shared/shiftPricing.ts';
+import { loadPricing, readDistinct, readPages, hospitalKey, normalizeName } from '../../shared/shiftPricing.ts';
+import { casarConsultas, linhaDoProcedimento, linhaDoPlantao } from '../../shared/consultasProcedimentos.ts';
 import { summarizeShifts, financialViews, monthKeyOfDate } from '../../shared/shiftSummaries.ts';
 
 export default async function(req) {
@@ -49,14 +50,45 @@ export default async function(req) {
       surgeryQuery.$and.push({ hospital_name: { $in: hospitalNames.items.filter(name => hospitalKey(name) === hospitalKey(hospitalName)) } });
     }
     const wantsSurgeries = period === 'all' || period === 'cirurgias';
-    const [estimated, actual, surgeries, dates] = await Promise.all([
-      client.entities.Shift.aggregate({ query: { $and: [...query.$and, { usar_valor_informado: { $ne: true } }] }, groupBy, sum: ['value'] }),
-      client.entities.Shift.aggregate({ query: { $and: [...query.$and, { usar_valor_informado: true }] }, groupBy: ['doctor_name', 'hospital', 'valor_bruto_informado', allMonths ? 'date' : 'period'], sum: ['value'] }),
+    const wantsConsultas = period === 'all' || period === 'consultas';
+    // As consultas vêm dos procedimentos registados, por isso os plantões de
+    // consultas ficam fora da agregação para não contar o mesmo período duas vezes.
+    const shiftQuery = { $and: [...query.$and, ...(wantsConsultas ? [{ period: { $ne: 'consultas' } }] : [])] };
+    const consultaQuery = { $and: [{ tipo: 'Consulta' }] };
+    if (!allMonths) {
+      const mm = String(month).padStart(2, '0');
+      const start = `${year}-${mm}-01`, end = `${year}-${mm}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
+      consultaQuery.$and.push({ $or: [{ data: { $gte: start, $lte: end } }, { data: { $regex: `^[0-9]{2}/${mm}/${year}$` } }] });
+    }
+    if (doctor !== 'all') {
+      const doctorName = context.doctors.find(d => d.id === doctor)?.full_name || doctor;
+      const nomes = Array.from(new Set([doctorName, ...doctorNames.items.filter(name => normalizeName(name) === normalizeName(doctorName))]));
+      consultaQuery.$and.push({ doctor_name: { $in: nomes } });
+    }
+    if (hospital !== 'all') {
+      const hospitalName = context.hospitals.find(h => h.id === hospital)?.name || hospital;
+      const nomes = Array.from(new Set([hospitalName, ...hospitalNames.items.filter(name => hospitalKey(name) === hospitalKey(hospitalName))]));
+      consultaQuery.$and.push({ hospital_name: { $in: nomes } });
+    }
+    const consultaShiftQuery = { $and: [...query.$and, { period: 'consultas' }] };
+    const [estimated, actual, surgeries, consultas, plantoesConsulta, dates] = await Promise.all([
+      client.entities.Shift.aggregate({ query: { $and: [...shiftQuery.$and, { usar_valor_informado: { $ne: true } }] }, groupBy, sum: ['value'] }),
+      client.entities.Shift.aggregate({ query: { $and: [...shiftQuery.$and, { usar_valor_informado: true }] }, groupBy: ['doctor_name', 'hospital', 'valor_bruto_informado', allMonths ? 'date' : 'period'], sum: ['value'] }),
       wantsSurgeries ? client.entities.Procedimento.aggregate({ query: surgeryQuery, groupBy: ['doctor_name', 'hospital_name', ...(allMonths ? ['data'] : [])] }) : { rows: [], truncated: false },
+      wantsConsultas ? readPages(client.entities.Procedimento, consultaQuery) : [],
+      wantsConsultas ? readPages(client.entities.Shift, consultaShiftQuery) : [],
       readDistinct(client.entities.Shift, 'date')
     ]);
     if (estimated.truncated || actual.truncated || surgeries.truncated) return Response.json({ error: 'Selecione um médico ou hospital para reduzir o relatório.' }, { status: 400 });
-    const summary = summarizeShifts(context, [...estimated.rows, ...actual.rows.map(row => ({ ...row, period: row.period || 'consultas', usar_valor_informado: true }))], allMonths, surgeries.rows);
+    // Procedimentos faturados + plantões de consultas ainda sem procedimento,
+    // para que nenhum período desapareça do relatório.
+    const { pares, plantoesSemProcedimento, procedimentosSemPlantao } = casarConsultas(plantoesConsulta, consultas);
+    const consultaRows = [
+      ...pares.map(({ procedimento }) => linhaDoProcedimento(procedimento)),
+      ...procedimentosSemPlantao.map(linhaDoProcedimento),
+      ...plantoesSemProcedimento.map(linhaDoPlantao),
+    ];
+    const summary = summarizeShifts(context, [...estimated.rows, ...actual.rows.map(row => ({ ...row, period: row.period || 'consultas', usar_valor_informado: true })), ...consultaRows], allMonths, surgeries.rows);
     const views = financialViews(summary);
     const availableMonths = Array.from(new Set(dates.items.map(monthKeyOfDate).filter(Boolean))).sort().reverse();
     return Response.json({ summary, ...views, availableMonths, doctorOptions: options(context.doctors, doctorNames.items, 'full_name', normalizeName), hospitalOptions: options(context.hospitals, hospitalNames.items, 'name', hospitalKey) });

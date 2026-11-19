@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
-import { Download, DollarSign, TrendingUp, TrendingDown, Calendar } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Download, DollarSign, TrendingUp, TrendingDown, Calendar, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import Toast from '@/components/common/Toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatQuantity } from '@/lib/quantity';
 import { MEDICO_PADRAO } from '@/lib/defaultDoctor';
@@ -16,6 +17,14 @@ export default function Finance() {
   const [filterPeriod, setFilterPeriod] = useState('all');
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth());
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [message, setMessage] = useState(null);
+  const queryClient = useQueryClient();
+
+  const showToast = (text, type = 'success') => {
+    setMessage({ text, type });
+    setTimeout(() => setMessage(null), 4000);
+  };
 
   const { data: user } = useQuery({
     queryKey: ['user'],
@@ -37,6 +46,27 @@ export default function Finance() {
   const doctorOptions = report?.doctorOptions || [];
   const hospitalOptions = report?.hospitalOptions || [];
   const totals = report?.totals || { quantity: 0, grossValue: 0, discountValue: 0, netValue: 0 };
+
+  const sincronizarProcedimentos = async () => {
+    setIsSyncing(true);
+    try {
+      const response = await base44.functions.invoke('sincronizarProcedimentos', {
+        year: filterYear, month: filterMonth + 1, doctor: filterDoctor, hospital: filterHospital,
+      });
+      if (response.data?.error) {
+        showToast(response.data.error, 'error');
+        return;
+      }
+      const { criados = 0, atualizados = 0 } = response.data || {};
+      showToast(`${criados} procedimento(s) criado(s) e ${atualizados} valor(es) sincronizado(s).`);
+      queryClient.invalidateQueries({ queryKey: ['procedimentos'] });
+      await refetch();
+    } catch (error) {
+      showToast(error.message || 'Não foi possível sincronizar os procedimentos.', 'error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const exportToCSV = () => {
     const headers = ['Médico', 'Hospital', 'Período', 'Quantidade', 'Valor Bruto', 'Descontos', 'Valor Líquido'];
@@ -90,12 +120,19 @@ export default function Finance() {
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
+      <Toast message={message?.text} type={message?.type} />
+      <div className="flex justify-between items-center gap-3 flex-wrap">
         <h1 className="text-3xl font-black text-slate-900 dark:text-white">Finanças</h1>
-        <Button onClick={exportToCSV} className="gap-2 bg-green-600 hover:bg-green-700">
-          <Download size={16} />
-          Exportar CSV
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button onClick={sincronizarProcedimentos} disabled={isSyncing} variant="outline" className="gap-2">
+            <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
+            {isSyncing ? 'A sincronizar...' : 'Sincronizar procedimentos'}
+          </Button>
+          <Button onClick={exportToCSV} className="gap-2 bg-green-600 hover:bg-green-700">
+            <Download size={16} />
+            Exportar CSV
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
